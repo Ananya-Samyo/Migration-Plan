@@ -1,5 +1,5 @@
 /* ================= Base ================= */
-.page {
+.main-container {
   max-width: 1280px;
   margin: 40px auto;
   padding: 0 16px;
@@ -8,21 +8,20 @@
   background: #f8fafc;
 }
 
-/* ================= Section Header ================= */
-.section-header {
+/* ================= Header ================= */
+.top-bar {
   text-align: center;
   margin: 32px 0 40px;
 }
 
-.section-header h1 {
+.page-title {
   font-size: 26px;
   font-weight: 600;
   color: #4c1d95;
   margin-bottom: 12px;
 }
 
-/* เส้นคั่นด้านล่าง */
-.section-header::after {
+.top-bar::after {
   content: '';
   display: block;
   width: 400px;
@@ -36,35 +35,23 @@
   );
 }
 
-/* ================= Card ================= */
-.card {
+/* ================= Filter Bar ================= */
+.filter-bar {
   background: #ffffff;
   padding: 24px 26px;
   border-radius: 18px;
   margin-bottom: 28px;
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 18px;
   box-shadow:
     0 10px 30px rgba(76, 29, 149, 0.08),
     0 2px 6px rgba(0, 0, 0, 0.04);
 }
 
-/* ================= Filter ================= */
-.grid-5 {
-  display: grid;
-  grid-template-columns: repeat(5, 1fr);
-  gap: 18px;
-}
-
-label {
-  display: block;
-  font-size: 13px;
-  font-weight: 500;
-  color: #64748b;
-  margin-bottom: 6px;
-}
-
-/* ================= INPUT / SELECT ================= */
-input,
-select {
+/* ================= Input / Select ================= */
+.filter-bar input,
+.filter-bar select {
   width: 100%;
   padding: 10px 12px;
   border-radius: 10px;
@@ -74,129 +61,57 @@ select {
   transition: all 0.2s ease;
 }
 
-input:focus,
-select:focus {
+.filter-bar input:focus,
+.filter-bar select:focus {
   outline: none;
   border-color: #a78bfa;
   box-shadow: 0 0 0 3px rgba(167, 139, 250, 0.25);
 }
 
-/* ================= Thai Date Display (รูปที่ 1) ================= */
-.thai-date-input {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-
-  padding: 10px 16px;
-  border-radius: 999px;
-  border: 1.5px solid #a78bfa;
-  background: #ffffff;
-
-  font-size: 14px;
-  font-weight: 500;
-  color: #4c1d95;
-
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.thai-date-input:hover {
-  background: #f5f3ff;
-  box-shadow: 0 0 0 3px rgba(167, 139, 250, 0.18);
-}
-
-.thai-date-input .placeholder {
-  color: #94a3b8;
-  font-weight: 400;
-}
-
-.thai-date-input .icon {
-  font-size: 16px;
-  opacity: 0.8;
-}
-
-/* ================= Clear Button ================= */
-.clear {
-  margin-top: 18px;
-  align-self: flex-end;
-  background: #9e5fae;
-  border: none;
-  padding: 8px 18px;
-  border-radius: 999px;
-  font-size: 13px;
-  color: #ffffff;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.clear:hover {
-  background: #7c3aed;
-}
-
 /* ================= Table ================= */
-table {
+.modern-table {
   width: 100%;
   border-collapse: separate;
   border-spacing: 0 10px;
 }
 
-thead th {
+.modern-table thead th {
   font-size: 13px;
   font-weight: 600;
   color: #64748b;
   padding: 0 12px 8px;
 }
 
-tbody tr {
+.modern-table tbody tr {
   background: #ffffff;
   border-radius: 14px;
   box-shadow: 0 4px 14px rgba(0,0,0,0.04);
   transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
 
-tbody tr:hover {
+.modern-table tbody tr:hover {
   transform: translateY(-2px);
   box-shadow: 0 8px 22px rgba(76,29,149,0.12);
 }
 
-tbody td {
+.modern-table tbody td {
   padding: 14px 12px;
   font-size: 14px;
   color: #1e293b;
 }
 
-tbody td:first-child {
+.modern-table tbody td:first-child {
   border-top-left-radius: 14px;
   border-bottom-left-radius: 14px;
 }
 
-tbody td:last-child {
+.modern-table tbody td:last-child {
   border-top-right-radius: 14px;
   border-bottom-right-radius: 14px;
 }
 
-/* ================= Badge ================= */
-.badge {
-  display: inline-block;
-  padding: 6px 14px;
-  border-radius: 999px;
-  font-size: 12px;
-  font-weight: 500;
-}
-
-.badge.pass {
-  background: #dcfce7;
-  color: #166534;
-}
-
-.badge.fail {
-  background: #fee2e2;
-  color: #991b1b;
-}
-
 /* ================= Action Button ================= */
-.view {
+.btn-detail {
   background: linear-gradient(135deg, #7c3aed, #a78bfa);
   color: #ffffff;
   border: none;
@@ -207,7 +122,7 @@ tbody td:last-child {
   transition: all 0.2s ease;
 }
 
-.view:hover {
+.btn-detail:hover {
   transform: translateY(-1px);
   box-shadow: 0 6px 14px rgba(124,58,237,0.35);
 }
@@ -232,14 +147,14 @@ tbody td:last-child {
   box-shadow: 0 30px 60px rgba(0,0,0,0.35);
 }
 
-.modal h2 {
+.modal h3 {
   margin-top: 0;
   margin-bottom: 16px;
   font-size: 22px;
   color: #4c1d95;
 }
 
-/* Detail Table */
+/* ================= Detail Table ================= */
 .detail-table {
   width: 100%;
   border-collapse: collapse;
@@ -258,16 +173,12 @@ tbody td:last-child {
   font-size: 14px;
 }
 
-.before {
-  color: #b91c1c;
+.detail-table td:first-child {
+  font-weight: 500;
 }
 
-.after {
-  color: #15803d;
-}
-
-/* Close */
-.close {
+/* ================= Close Button ================= */
+.btn-close {
   margin-top: 24px;
   width: 100%;
   padding: 12px;
@@ -281,104 +192,59 @@ tbody td:last-child {
   transition: all 0.25s ease;
 }
 
-.close:hover {
+.btn-close:hover {
   transform: translateY(-2px);
   box-shadow: 0 12px 28px rgba(124,58,237,0.45);
 }
 
 /* ================= Responsive ================= */
 
-/* ---------- Tablet (≤ 1024px) ---------- */
+/* Tablet */
 @media (max-width: 1024px) {
-  .grid-5 {
+  .filter-bar {
     grid-template-columns: repeat(3, 1fr);
   }
 
-  .section-header::after {
+  .top-bar::after {
     width: 300px;
-  }
-
-  .modal {
-    width: 640px;
   }
 }
 
-/* ---------- Small Tablet / Large Mobile (≤ 768px) ---------- */
+/* Mobile */
 @media (max-width: 768px) {
-  .page {
-    margin: 24px auto;
-  }
-
-  .grid-5 {
+  .filter-bar {
     grid-template-columns: repeat(2, 1fr);
   }
 
-  .section-header h1 {
-    font-size: 22px;
-  }
-
-  .section-header::after {
-    width: 220px;
-  }
-
-  table thead {
+  .modern-table thead {
     display: none;
   }
 
-  table tbody tr {
+  .modern-table tbody tr {
     display: block;
     padding: 12px 14px;
   }
 
-  table tbody td {
+  .modern-table tbody td {
     display: flex;
     justify-content: space-between;
     padding: 8px 0;
     font-size: 13px;
   }
 
-  table tbody td::before {
+  .modern-table tbody td::before {
     content: attr(data-label);
     font-weight: 500;
     color: #64748b;
   }
-
-  tbody td:first-child,
-  tbody td:last-child {
-    border-radius: 0;
-  }
-
-  .modal {
-    width: 100%;
-    padding: 22px;
-  }
 }
 
-/* ---------- Mobile (≤ 480px) ---------- */
 @media (max-width: 480px) {
-  .grid-5 {
+  .filter-bar {
     grid-template-columns: 1fr;
   }
 
-  .card {
-    padding: 20px;
-  }
-
-  .section-header h1 {
+  .page-title {
     font-size: 20px;
-  }
-
-  .thai-date-input {
-    padding: 10px 14px;
-    font-size: 13px;
-  }
-
-  .view {
-    font-size: 12px;
-    padding: 6px 12px;
-  }
-
-  .close {
-    font-size: 14px;
   }
 }

@@ -82,6 +82,7 @@
 <script setup>
 import { ref, onMounted, watch } from 'vue'
 import axios from 'axios'
+import '../../assets/Admin/css/Admin_log.css'
 
 const logs = ref([])
 const departments = ref([])
@@ -120,7 +121,7 @@ const openDetail = async (log) => {
 
   selectedLog.value = {
     ...log,
-    changes: res.data.map(d => ({
+    changes: res.data.changes.map(d => ({
       field: d.field_name,
       before: d.before_value,
       after: d.after_value
