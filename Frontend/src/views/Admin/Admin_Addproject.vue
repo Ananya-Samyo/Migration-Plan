@@ -141,13 +141,9 @@ import Swal from 'sweetalert2'
 import '../../assets/Admin/css/Admin_Addproject.css'
 
 /* ===============================
-   API CONFIG
+   API
 ================================ */
-const BASE_API = import.meta.env.VITE_API_BASE_URL
-
-// ตรวจสอบว่า BASE_API คือ 'http://localhost:3000/api'
-const DEPT_API = `${BASE_API}/departments`     
-const SCOPE_API = `${BASE_API}/admin/scopes`   
+const DEPT_API = 'http://localhost:3000/api/departments'
 
 /* ===============================
    STATE
@@ -180,7 +176,6 @@ const form = ref({
 const loadDepartments = async () => {
   try {
     const res = await fetch(DEPT_API)
-    if (!res.ok) throw new Error('Network response was not ok')
     departments.value = await res.json()
   } catch {
     Swal.fire('ผิดพลาด', 'โหลดข้อมูลกองไม่สำเร็จ', 'error')
@@ -189,7 +184,8 @@ const loadDepartments = async () => {
 
 onMounted(loadDepartments)
 
-// Email State
+// Email
+
 const showEmailPreview = ref(false)
 const emailDraft = ref({
   subject: '',
@@ -199,7 +195,7 @@ const emailDraft = ref({
 
 
 /* ===============================
-   ACTIONS (Add/Remove)
+   ACTIONS
 ================================ */
 const addProject = () => {
   form.value.projects.push({
@@ -236,9 +232,8 @@ const removeGap = (pIndex, gIndex) => {
   form.value.projects[pIndex].gaps.splice(gIndex, 1)
 }
 
-/* ===============================
-   VALIDATION & EMAIL GEN
-================================ */
+// Email
+
 const validateForm = () => {
   if (!form.value.scopeName) {
     Swal.fire('ข้อมูลไม่ครบ', 'กรุณากรอกชื่อขอบเขตงาน', 'warning')
@@ -374,13 +369,12 @@ const generateEmailDraft = () => {
   showEmailPreview.value = true
 }
 
-// ฟังก์ชันนี้อาจไม่ได้ใช้ถ้ามี saveWithConfirm แต่แก้ให้ถูกต้องไว้ก่อน
+
 const confirmSaveAndSend = async () => {
   if (!validateForm()) return
 
   try {
-    // ✅ แก้ไข: ใช้ตัวแปร SCOPE_API
-    const res = await fetch(SCOPE_API, {
+    const res = await fetch('http://localhost:3000/api/scopes', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -406,8 +400,8 @@ const confirmSaveAndSend = async () => {
 
 
 /* ===============================
-   CONFIRM ALERT (Main Save Function)
-================================ */
+   CONFIRM ALERT
+=============================== */
 const saveWithConfirm = async () => {
   if (!validateForm()) return
 
@@ -434,8 +428,7 @@ const saveWithConfirm = async () => {
   })
 
   try {
-    // ✅ แก้ไข: ใช้ตัวแปร SCOPE_API แทน Link เดิมที่เขียนผิด
-    const res = await fetch(SCOPE_API, {
+    const res = await fetch('http://localhost:3000/api/scopes', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -444,10 +437,7 @@ const saveWithConfirm = async () => {
       })
     })
 
-    if (!res.ok) {
-        const errorData = await res.json().catch(() => ({}))
-        throw new Error(errorData.message || 'บันทึกไม่สำเร็จ')
-    }
+    if (!res.ok) throw new Error('บันทึกไม่สำเร็จ')
 
     // ✅ ปิด loading แล้วแสดง success
     Swal.fire('สำเร็จ', 'บันทึกและส่งอีเมลเรียบร้อยแล้ว', 'success')

@@ -55,7 +55,7 @@ const values = ref([])
 const fetchChartData = async () => {
   try {
     const { data } = await axios.get(
-      `${API}/admin/dashboard/gap-closed-chart`
+      `${API}/dashboard/gap-closed-chart`
     )
 
     // backend ส่งมาเป็น [{ label, total }]

@@ -1,230 +1,261 @@
-<template>
-  <div class="dashboard">
-
-    <header class="page-header">
-      <div class="header-title">
-        <h1>📊 Dashboard ติดตามงาน</h1>
-        <p>ภาพรวมสถานะการดำเนินงานและ Gap Analysis</p>
-      </div>
-
-      <div class="header-actions">
-        <div class="control-group date-picker">
-          <span class="label">เริ่มต้น:</span>
-          <input type="date" v-model="selectedDate.start" class="date-input-field" />
-        </div>
-
-        <div class="control-group date-picker">
-          <span class="label">สิ้นสุด:</span>
-          <input type="date" v-model="selectedDate.end" class="date-input-field" />
-        </div>
-
-        <button class="control-group filter-btn" @click="fetchDashboard">
-          <span class="icon">🔍</span>
-          <span>กรองข้อมูล</span>
-        </button>
-
-        <button class="control-group export-btn" @click="exportPNG">
-          <span class="icon">📤</span>
-          <span>Export PNG</span>
-        </button>
-      </div>
-    </header>
-
-    <section class="summary-grid">
-      <SummaryCard title="ขอบเขตงานทั้งหมด" :value="total" type="primary" icon="📁" />
-      <SummaryCard title="ปิด GAP เสร็จแล้ว" :value="closedCount" type="success" icon="✅" />
-      <SummaryCard title="ยังไม่ปิด GAP" :value="openCount" type="warning" icon="📌" />
-      <SummaryCard title="ไม่สามารถปิด GAP แต่ยอมรับได้" :value="acceptableCount" type="danger" icon="⚠️" />
-    </section>
-
-    <div class="overall-progress-bar">
-      <div class="progress-label">
-        ความคืบหน้าการดำเนินงานของระบบโดยรวม (ตามช่วงเวลาที่เลือก)
-        <span>{{ overallProgress }}%</span>
-      </div>
-
-      <div class="progress-track">
-        <div class="progress-fill" :style="{
-          width: overallProgress + '%',
-          backgroundColor: overallProgressColor
-        }" />
-      </div>
-    </div>
-
-    <section class="content-layout">
-
-      <div class="panel chart-area">
-        <div class="panel-header">
-          <h3>📈 สัดส่วนสถานะ</h3>
-        </div>
-        <div class="panel-body">
-          <StatusChart 
-            :open="openCount" 
-            :closed="closedCount" 
-            :acceptable="acceptableCount" 
-          />
-        </div>
-      </div>
-
-      <div class="right-column">
-
-        <div class="panel table-area">
-          <div class="panel-header">
-            <h3>📋 รายการงานในช่วงเวลา</h3>
-            <span class="badge">{{ total }} รายการ</span>
-          </div>
-          <div class="panel-body scrollable">
-            <TaskTable :tasks="tasks" />
-          </div>
-        </div>
-
-        <div class="panel chart-area">
-          <div class="panel-body">
-            <LineChart />
-          </div>
-        </div>
-
-      </div>
-    </section>
-
-    <div v-if="isExporting" class="export-loading">
-      <div class="spinner"></div>
-      <p>กำลังดาวน์โหลดไฟล์...</p>
-    </div>
-
-  </div>
-</template>
-
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed } from 'vue'
 import html2canvas from 'html2canvas'
-import '../../assets/Admin/css/Admin_Dashboard.css'
-
-import SummaryCard from '@/components/user/u_SummaryCard.vue'
-import TaskTable from '@/components/user/u_TaskTable.vue'
-import StatusChart from '@/components/user/u_StatusChart.vue'
-import LineChart from '@/components/user/u_LineChart.vue'
+import { tasks } from '@/data/tasks'
+import SummaryCard from '@/components/SummaryCard.vue'
+import TaskTable from '@/components/TaskTable.vue'
+import StatusChart from '@/components/StatusChart.vue'
 
 /* ===============================
-   CONFIG & STATE
+   Date Handling
 ================================ */
-const API = import.meta.env.VITE_API_BASE_URL 
+const today = new Date().toISOString().slice(0, 10)
+const selectedDate = ref(today)
+const dateInput = ref(null)
 
-// ข้อมูลหลักใน Dashboard
-const tasks = ref([])
-const summary = ref({
-  total: 0,
-  openCount: 0,
-  closedCount: 0,
-  acceptableCount: 0
-})
-const overallProgress = ref(0)
-const isExporting = ref(false)
-
-/* ===============================
-   DATE LOGIC (ประกาศครั้งเดียวจบ)
-================================ */
-const format = (d) => d.toISOString().slice(0, 10)
-const now = new Date()
-
-const selectedDate = ref({
-  start: '',
-  end: ''
-})
-
-/* ===============================
-   FETCH DATA
-================================ */
-const fetchDashboard = async () => {
-  try {
-    const userId = localStorage.getItem('user_id')
-    const token = localStorage.getItem('token') 
-
-    if (!userId || !token) {
-      console.warn('Missing userId or token')
-      return
-    }
-
-    const { start, end } = selectedDate.value
-    const queryParams = `user_id=${userId}&startDate=${start}&endDate=${end}`
-
-    // 2. สร้าง Header ที่มี Authorization
-    const headers = {
-      'Authorization': `Bearer ${token}`,
-      'Content-Type': 'application/json'
-    }
-
-    const [summaryRes, tasksRes, progressRes] = await Promise.all([
-      fetch(`${API}/api/user/user-dashboard/gap-summary?${queryParams}`, { headers }),
-      fetch(`${API}/api/user/user-dashboard/tasks?${queryParams}`, { headers }),
-      fetch(`${API}/api/user/user-dashboard/overall-progress?${queryParams}`, { headers })
-    ])
-
-    // 3. เช็คสถานะ 401
-    if (summaryRes.status === 401) {
-       console.error("Token หมดอายุ หรือไม่ได้เข้าสู่ระบบ")
-       return
-    }
-
-    if (!summaryRes.ok || !tasksRes.ok || !progressRes.ok) throw new Error('Network error')
-
-    const summaryData = await summaryRes.json()
-    const tasksData = await tasksRes.json()
-    const progressData = await progressRes.json()
-
-    // Mapping ข้อมูล... (เหมือนเดิม)
-    summary.value = {
-      total: summaryData.total || 0,
-      openCount: summaryData.open_gap || 0,
-      closedCount: summaryData.closed_gap || 0,
-      acceptableCount: summaryData.accepted_gap || 0
-    }
-    tasks.value = tasksData
-    overallProgress.value = progressData.progress || 0
-
-  } catch (err) {
-    console.error('❌ Fetch Error:', err)
-  }
+const openDate = () => {
+  dateInput.value?.showPicker()
 }
 
-// เรียกข้อมูลเมื่อเข้าหน้าเว็บ
-onMounted(fetchDashboard)
+const selectedDateObj = computed(() => new Date(selectedDate.value))
 
-/* ===============================
-   COMPUTED (สำหรับแสดงผล UI)
-================================ */
-const total = computed(() => summary.value.total)
-const openCount = computed(() => summary.value.openCount)
-const closedCount = computed(() => summary.value.closedCount)
-const acceptableCount = computed(() => summary.value.acceptableCount)
-
-const overallProgressColor = computed(() => {
-  if (overallProgress.value < 50) return '#ef4444'
-  if (overallProgress.value < 80) return '#6d28d9'
-  return '#16a34a'
+const buddhistDateText = computed(() => {
+  const d = selectedDateObj.value
+  const day = d.getDate()
+  const month = d.toLocaleDateString('th-TH', { month: 'long' })
+  const year = d.getFullYear() + 543
+  return `${day} ${month} ${year}`
 })
 
 /* ===============================
-   EXPORT IMAGE
+   Summary Logic
+================================ */
+const total = computed(() => tasks.length)
+
+const todayTasks = computed(() =>
+  tasks.filter(t =>
+    new Date(t.startDate) <= selectedDateObj.value &&
+    new Date(t.endDate) >= selectedDateObj.value
+  )
+)
+
+const overdue = computed(() =>
+  tasks.filter(t =>
+    new Date(t.endDate) < selectedDateObj.value &&
+    t.status !== 'Completed'
+  )
+)
+
+/* ===============================
+   Export PNG
 ================================ */
 const exportPNG = async () => {
   const dashboard = document.querySelector('.dashboard')
   if (!dashboard) return
-  isExporting.value = true
-  try {
-    const canvas = await html2canvas(dashboard, {
-      scale: 2,
-      useCORS: true,
-      backgroundColor: '#f1f5f9'
-    })
-    const link = document.createElement('a')
-    link.download = `User_Report_${selectedDate.value.start}.png`
-    link.href = canvas.toDataURL('image/png')
-    link.click()
-  } catch (err) {
-    console.error('Export error:', err)
-  } finally {
-    isExporting.value = false
-  }
+
+  const canvas = await html2canvas(dashboard, {
+    scale: 2,
+    useCORS: true
+  })
+
+  const link = document.createElement('a')
+  link.download = `dashboard_${selectedDate.value}.png`
+  link.href = canvas.toDataURL('image/png')
+  link.click()
 }
 </script>
+
+<template>
+  <div class="dashboard">
+
+    <!-- ================= Header ================= -->
+    <div class="page-header">
+      <div>
+        <h1>📊 Dashboard</h1>
+        <p>ภาพรวมการติดตามงานทั้งหมด</p>
+      </div>
+
+      <div class="header-actions">
+        <!-- Export Button -->
+        <button class="export-btn" @click="exportPNG">
+          📤 ส่งออกรายงานสรุปการติดตามแผนงาน
+        </button>
+
+        <!-- Date Picker -->
+        <div class="date-picker" @click="openDate">
+          <span class="date-text">{{ buddhistDateText }}</span>
+          <input
+            ref="dateInput"
+            type="date"
+            v-model="selectedDate"
+            class="hidden-date"
+          />
+        </div>
+      </div>
+    </div>
+
+    <!-- ================= Summary ================= -->
+    <div class="summary">
+      <SummaryCard title="งานทั้งหมด" :value="total" type="primary" />
+      <SummaryCard title="งานวันนี้" :value="todayTasks.length" type="info" />
+      <SummaryCard title="เกินกำหนด" :value="overdue.length" type="danger" />
+    </div>
+
+    <!-- ================= Chart ================= -->
+    <section class="panel table">
+      <header class="panel-header">
+        <h3>📈 สถานะงาน</h3>
+        <span>แสดงภาพรวมสถานะทั้งหมด</span>
+      </header>
+      <StatusChart :tasks="tasks" />
+    </section>
+
+    <!-- ================= Table ================= -->
+    <section class="panel">
+      <header class="panel-header">
+        <h3>📋 รายการงาน</h3>
+        <span>รายละเอียดงานทั้งหมด</span>
+      </header>
+      <TaskTable :tasks="tasks" />
+    </section>
+
+  </div>
+</template>
+
+<style scoped>
+:root {
+  --purple-main: #6d28d9;
+  --purple-dark: #4c1d95;
+  --purple-soft: #ede9fe;
+  --text-muted: #64748b;
+}
+
+/* Layout */
+.dashboard {
+  width: 100%;
+  padding: 24px 32px;
+}
+
+/* Header */
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 24px;
+  margin-bottom: 32px;
+  flex-wrap: wrap;
+}
+
+.page-header h1 {
+  margin: 0;
+  font-size: 34px;
+  font-weight: 700;
+  color: var(--purple-dark);
+}
+
+.page-header p {
+  margin-top: 6px;
+  font-size: 16px;
+  color: var(--text-muted);
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+/* Export Button */
+.export-btn {
+  background: var(--purple-main);
+  color: #fff;
+  border: none;
+  padding: 10px 16px;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+}
+
+.export-btn:hover {
+  background: var(--purple-dark);
+}
+
+/* Date Picker */
+.date-picker {
+  display: flex;
+  align-items: center;
+  background: #fff;
+  border: 1px solid var(--purple-soft);
+  padding: 10px 14px;
+  border-radius: 12px;
+}
+
+.date-text {
+  font-size: 14px;
+  color: var(--purple-dark);
+  font-weight: 500;
+}
+
+.hidden-date {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* Summary */
+.summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 20px;
+  margin-bottom: 32px;
+}
+
+/* Panel */
+.panel {
+  background: #fff;
+  border-radius: 18px;
+  padding: 24px;
+  border: 1px solid var(--purple-soft);
+  margin-bottom: 28px;
+}
+
+.panel.table {
+  max-height: 520px;
+  overflow-y: auto;
+}
+
+.panel-header {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 16px;
+  padding-bottom: 10px;
+  border-bottom: 1px dashed #e5e7eb;
+}
+
+.panel-header h3 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--purple-dark);
+}
+
+.panel-header span {
+  font-size: 14px;
+  color: var(--text-muted);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .page-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .header-actions {
+    width: 100%;
+    justify-content: space-between;
+  }
+}
+</style>
