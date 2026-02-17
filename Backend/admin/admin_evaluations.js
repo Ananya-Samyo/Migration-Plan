@@ -1,155 +1,93 @@
 import { Router } from 'express'
-import db from '../../../db.js'
+import db from '../db.js'
+import multer from 'multer'
+import path from 'path'
+import { verifyToken } from '../middleware/auth.js' // 1. นำเข้า Middleware
 
 const router = Router()
 
-// ================= Evaluation =================
-router.get('/evaluations/:projectId', async (req, res) => {
-  res.set('Cache-Control', 'no-store')
-  const { projectId } = req.params
+// สร้าง Middleware สำหรับเช็คสิทธิ์ Admin
+const isAdmin = (req, res, next) => {
+  if (req.user && req.user.role === 'admin') {
+    next();
+  } else {
+    res.status(403).json({ message: 'ปฏิเสธการเข้าถึง: สำหรับผู้ดูแลระบบเท่านั้น' });
+  }
+};
 
+// ตั้งค่า multer สำหรับเก็บไฟล์
+const upload = multer({ dest: 'uploads/' })
+
+/* ======================================================
+   ADMIN EVALUATIONS ROUTES (Protected)
+====================================================== */
+
+// [GET] ดึงข้อมูล (เพิ่มการเช็ค Token และ Admin)
+router.get('/evaluations/:projectId', verifyToken, isAdmin, async (req, res) => {
+  const { projectId } = req.params
   try {
     const [[row]] = await db.query(`
-      SELECT
-        pe.*,
-        s.scope_name,
-        u.user_name AS owner
+      SELECT pe.*, s.scope_name, u.user_name AS owner
       FROM plan_evaluations pe
-      JOIN scopes s ON pe.scope_id = s.scope_id
+      JOIN project_plans pp ON pe.project_plan_id = pp.project_plan_id
+      JOIN scopes s ON pp.scope_id = s.scope_id
       LEFT JOIN users u ON u.user_id = s.coordinator_id
-      WHERE pe.project_plan_id = ?
+      WHERE pp.project_plan_id = ?
     `, [projectId])
-
     res.json(row || null)
   } catch (err) {
-    console.error('GET evaluation error:', err)
+    console.error('get evaluations error:', err)
     res.status(500).json({ message: 'Server error' })
   }
 })
 
-
-router.post('/evaluations/:projectId', async (req, res) => {
+// [PUT] อัปเดตข้อมูล (วาง verifyToken, isAdmin ไว้หน้า upload)
+router.put('/evaluations/:projectId', verifyToken, isAdmin, upload.array('attachments'), async (req, res) => {
   const { projectId } = req.params
-
   const {
-    objective,
-    beforeImprove,
-    expectedAfter,
-    actualResult,
-    suggestion,
-    projectStatus,
-    evaluation
+    objective, beforeImprove, expectedAfter, actualResult,
+    suggestion, projectStatus, evaluation, edit_reason, problem
   } = req.body
 
+  const conn = await db.getConnection()
   try {
-    const [[plan]] = await db.query(
-      `SELECT scope_id FROM project_plans WHERE project_plan_id = ?`,
-      [projectId]
-    )
+    await conn.beginTransaction()
 
-    if (!plan) {
-      return res.status(404).json({ message: 'Project plan not found' })
+    // 1. อัปเดต plan_evaluations
+    await conn.query(`
+      UPDATE plan_evaluations SET 
+        objective = ?, before_plan = ?, expected_outcome = ?, 
+        actual_outcome = ?, recommendation = ?, project_status = ?, 
+        evaluation_status = ?, problem = ?
+      WHERE project_plan_id = ?
+    `, [objective, beforeImprove, expectedAfter, actualResult, suggestion, projectStatus, evaluation, problem, projectId])
+
+    // 2. บันทึกเหตุผลการแก้ไขลงตาราง edit_reasons
+    if (edit_reason) {
+      await conn.query(`
+        INSERT INTO edit_reasons (ref_type, ref_id, reason) 
+        VALUES ('evaluation', ?, ?)
+      `, [projectId, edit_reason])
+
+      // 3. บันทึกไฟล์แนบลงตาราง attachments
+      if (req.files && req.files.length > 0) {
+        for (const file of req.files) {
+          await conn.query(`
+            INSERT INTO attachments (ref_type, ref_id, file_path, file_type) 
+            VALUES ('evaluation', ?, ?, ?)
+          `, [projectId, file.path, file.mimetype])
+        }
+      }
     }
 
-    await db.query(
-      `
-  INSERT INTO plan_evaluations
-  (
-    project_plan_id,
-    scope_id,
-    objective,
-    before_plan,
-    expected_outcome,
-    actual_outcome,
-    recommendation,
-    project_status,
-    evaluation_status
-  )
-  VALUES (?,?,?,?,?,?,?,?,?)
-  `,
-      [
-        projectId,
-        plan.scope_id,
-        objective,
-        beforeImprove,
-        expectedAfter,
-        actualResult,
-        suggestion,
-        projectStatus,
-        evaluation
-      ]
-    )
-
-    res.json({ message: 'created' })
-  } catch (err) {
-    console.error('POST evaluation error:', err)
-    res.status(500).json({ message: 'Server error' })
-  }
-})
-
-
-router.put('/evaluations/:projectId', async (req, res) => {
-  const { projectId } = req.params
-
-  const {
-    objective,
-    beforeImprove,
-    expectedAfter,
-    actualResult,
-    suggestion,
-    projectStatus,
-    evaluation
-  } = req.body
-
-  try {
-    const [[current]] = await db.query(
-      `
-      SELECT pe.project_status
-      FROM plan_evaluations pe
-      JOIN project_plans pp ON pe.scope_id = pp.scope_id
-      WHERE pp.project_plan_id = ?
-      `,
-      [projectId]
-    )
-
-    if (!current) {
-      return res.status(404).json({ message: 'Evaluation not found' })
-    }
-
-    if (current.project_status === 'finish') {
-      return res.status(403).json({ message: 'Project already closed' })
-    }
-
-    await db.query(
-      `
-      UPDATE plan_evaluations pe
-      JOIN project_plans pp ON pe.scope_id = pp.scope_id
-      SET
-        pe.objective = ?,
-        pe.before_plan = ?,
-        pe.expected_outcome = ?,
-        pe.actual_outcome = ?,
-        pe.recommendation = ?,
-        pe.project_status = ?,
-        pe.evaluation_status = ?
-      WHERE pp.project_plan_id = ?
-      `,
-      [
-        objective,
-        beforeImprove,
-        expectedAfter,
-        actualResult,
-        suggestion,
-        projectStatus,
-        evaluation,
-        projectId
-      ]
-    )
-
+    await conn.commit()
     res.json({ message: 'updated' })
   } catch (err) {
-    console.error('PUT evaluation error:', err)
-    res.status(500).json({ message: 'Server error' })
+    await conn.rollback()
+    console.error('update evaluations error:', err)
+    res.status(500).json({ message: 'Error' })
+  } finally {
+    conn.release()
   }
 })
 

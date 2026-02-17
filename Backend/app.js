@@ -4,41 +4,60 @@ dotenv.config()
 import express from 'express'
 import cors from 'cors'
 
-// 1. Import Routes ทั่วไป (เช่น Login, Profile ส่วนตัว)
-import userRoutes from './src/user.js'
+// ✅ Import Middlewares
+import { verifyToken, isAdmin } from './middleware/auth.js'
 
-// 2. Import Admin Routes (แก้ Path เป็น src/admin/)
-import adminUserRoutes from './src/admin/admin_user.js'       
-import adminLogRoutes from './src/admin/admin_log.js'         
-import adminScopeRoutes from './src/admin/admin_scopes.js'    
-import adminProgressRoutes from './src/admin/admin_progress.js'
-import adminEvaluationRoutes from './src/admin/admin_evaluations.js' 
+// ✅ Import Admin Routes 
+import adminDashboardRoutes from './admin/admin_dashboard.js' 
+import adminUserRoutes from './admin/admin_user.js'
+import adminLogRoutes from './admin/admin_log.js'
+import adminScopeRoutes from './admin/admin_scopes.js'
+import adminProgressRoutes from './admin/admin_progress.js'
+import adminEvaluationRoutes from './admin/admin_evaluations.js'
+
+// ✅ Import Global Routes
+import departmentRoutes from './global/departments.js'
+import login from './global/login.js'
+
+// ✅ Import User Routes 
+import userDashboardRouter from './user/user_dashboard.js'
+import userEvaluationRouter from './user/user_evaluation.js'
+import userProgresRouter from './user/user_progress.js'
+import userLogRouter from './user/user_log.js'
+import userScopesRouter from './user/user_scopes.js'
 
 const app = express()
 
-app.use(cors())
+app.use(cors({
+  origin: '*', 
+  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}))
+
 app.use(express.json())
 
 // ================= Register Routes =================
 
-// A. General User API (ถ้ามี)
-app.use('/api', userRoutes) 
+// 1. Public Routes 
+app.use('/api', login)
 
-// B. Admin API Group
-// จัดการ User และ แผนก (GET/POST/PUT/DELETE users, GET departments)
-app.use('/api/admin', adminUserRoutes)
+// 2. Global Routes 
+app.use('/api/departments', verifyToken, departmentRoutes)
 
-// จัดการ Scope และ Project
-app.use('/api/admin', adminScopeRoutes)
+// 3. User API Group 
+app.use('/api/user', verifyToken, userDashboardRouter)
+app.use('/api/user', verifyToken, userEvaluationRouter)
+app.use('/api/user', verifyToken, userProgresRouter)
+app.use('/api/user', verifyToken, userLogRouter)
+app.use('/api/user', verifyToken, userScopesRouter)
 
-// จัดการความก้าวหน้า (Progress & Gaps)
-app.use('/api/admin', adminProgressRoutes)
-
-// จัดการการประเมินผล (Evaluation)
-app.use('/api/admin', adminEvaluationRoutes)
-
-// ดู Log การใช้งาน
-app.use('/api/admin', adminLogRoutes)
+// 4. Admin API Group 
+app.use('/api/admin', verifyToken, isAdmin, adminDashboardRoutes)
+app.use('/api/admin', verifyToken, isAdmin, adminUserRoutes)
+app.use('/api/admin', verifyToken, isAdmin, adminScopeRoutes)
+app.use('/api/admin', verifyToken, isAdmin, adminProgressRoutes)
+app.use('/api/admin', verifyToken, isAdmin, adminEvaluationRoutes)
+app.use('/api/admin', verifyToken, isAdmin, adminLogRoutes)
 
 // ===============================================
 

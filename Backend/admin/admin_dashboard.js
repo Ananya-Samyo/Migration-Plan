@@ -1,7 +1,17 @@
 import { Router } from 'express'
-import db from '../../../db.js'
+import db from '../db.js'
+import { verifyToken } from '../middleware/auth.js' // 1. นำเข้า Middleware
+
 const router = Router()
 
+// สร้าง Middleware ย่อยสำหรับเช็คว่าเป็น Admin เท่านั้น
+const isAdmin = (req, res, next) => {
+  if (req.user && req.user.role === 'admin') {
+    next();
+  } else {
+    res.status(403).json({ message: 'ปฏิเสธการเข้าถึง: สำหรับผู้ดูแลระบบเท่านั้น' });
+  }
+};
 
 const STATUS_MAP = {
   in_progress: 'processing_gap',
@@ -9,13 +19,12 @@ const STATUS_MAP = {
   acceptedGap: 'acceptable_gap'
 }
 
-console.log('ADMIN MAIL_USER:', process.env.MAIL_USER)
-
 /* ======================================================
-   DASHBOARD
+   DASHBOARD ROUTES (Protected by verifyToken & isAdmin)
 ====================================================== */
 
-router.get('/dashboard/overall-progress', async (req, res) => {
+// ใช้ทั้ง verifyToken (เช็คว่า login ไหม) และ isAdmin (เช็คว่าเป็น admin ไหม)
+router.get('/dashboard/overall-progress', verifyToken, isAdmin, async (req, res) => {
   try {
     const [rows] = await db.query(`
       SELECT
@@ -34,7 +43,7 @@ router.get('/dashboard/overall-progress', async (req, res) => {
   }
 })
 
-router.get('/dashboard/tasks', async (req, res) => {
+router.get('/dashboard/tasks', verifyToken, isAdmin, async (req, res) => {
   try {
     const { date } = req.query
 
@@ -52,7 +61,7 @@ router.get('/dashboard/tasks', async (req, res) => {
         OR DATE(s.created_at) = ?
       )
       ORDER BY s.created_at DESC
-    `, [date, date])
+    `, [date || null, date || null]) // ป้องกันค่า undefined
 
     res.json(rows)
   } catch (err) {
@@ -61,7 +70,7 @@ router.get('/dashboard/tasks', async (req, res) => {
   }
 })
 
-router.get('/dashboard/gap-summary', async (req, res) => {
+router.get('/dashboard/gap-summary', verifyToken, isAdmin, async (req, res) => {
   try {
     const [rows] = await db.query(`
       SELECT
@@ -80,14 +89,14 @@ router.get('/dashboard/gap-summary', async (req, res) => {
   }
 })
 
-router.get('/dashboard/progress-range', async (req, res) => {
+router.get('/dashboard/progress-range', verifyToken, isAdmin, async (req, res) => {
   try {
     const [rows] = await db.query(`
       SELECT
-        SUM(progress_percent BETWEEN 0  AND 30)  AS low,
-        SUM(progress_percent BETWEEN 31 AND 60)  AS mid,
-        SUM(progress_percent BETWEEN 61 AND 90)  AS high,
-        SUM(progress_percent = 100)              AS done
+        IFNULL(SUM(progress_percent BETWEEN 0  AND 30), 0)  AS low,
+        IFNULL(SUM(progress_percent BETWEEN 31 AND 60), 0)  AS mid,
+        IFNULL(SUM(progress_percent BETWEEN 61 AND 90), 0)  AS high,
+        IFNULL(SUM(progress_percent = 100), 0)              AS done
       FROM scopes
     `)
 
@@ -98,12 +107,7 @@ router.get('/dashboard/progress-range', async (req, res) => {
   }
 })
 
-/* ======================================================
-   GAP CLOSED CHART
-   /dashboard/gap-closed-chart?mode=day|week|month|year
-====================================================== */
-
-router.get('/dashboard/gap-closed-chart', async (req, res) => {
+router.get('/dashboard/gap-closed-chart', verifyToken, isAdmin, async (req, res) => {
   try {
     const { mode = 'day' } = req.query
 
@@ -115,18 +119,15 @@ router.get('/dashboard/gap-closed-chart', async (req, res) => {
         groupBy = `YEARWEEK(s.created_at, 1)`
         label = `CONCAT('W', WEEK(s.created_at, 1))`
         break
-
       case 'month':
         groupBy = `DATE_FORMAT(s.created_at, '%Y-%m')`
         label = `DATE_FORMAT(s.created_at, '%m/%Y')`
         break
-
       case 'year':
         groupBy = `YEAR(s.created_at)`
         label = `YEAR(s.created_at)`
         break
-
-      default: // day
+      default:
         groupBy = `DATE(s.created_at)`
         label = `DATE_FORMAT(s.created_at, '%d/%m')`
     }
@@ -148,4 +149,5 @@ router.get('/dashboard/gap-closed-chart', async (req, res) => {
     res.status(500).json({ message: 'Server error', error: err.message })
   }
 })
+
 export default router

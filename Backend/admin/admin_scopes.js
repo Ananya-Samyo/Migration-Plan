@@ -1,12 +1,14 @@
 import { Router } from 'express'
-import db from '../../../db.js'
-import { sendMail } from '../mailer.js'
+import db from '../db.js' 
+import { sendMail } from '../global/mailer.js'
+import { verifyToken, isAdmin } from '../middleware/auth.js' // นำเข้า Middleware ตรวจสอบสิทธิ์
 
 const router = Router()
 
-// ================= Scopes =================
-router.post('/scopes', async (req, res) => {
-  const { scopeName, projects } = req.body
+// ================= Scopes : CREATE =================
+// เพิ่ม verifyToken และ isAdmin เพื่อล็อคสิทธิ์เฉพาะผู้ดูแลระบบ
+router.post('/scopes', verifyToken, isAdmin, async (req, res) => {
+  const { scopeName, projects, email } = req.body
   const conn = await db.getConnection()
 
   try {
@@ -18,7 +20,7 @@ router.post('/scopes', async (req, res) => {
     const coordinator = projects[0].coordinator
     let coordinatorId;
 
-    // ✅ แก้ไข: เช็คก่อนว่ามี Email นี้ในระบบหรือยัง
+    // เช็คว่ามี Email นี้ในระบบหรือยัง
     const [[existingCoord]] = await conn.query(
       `SELECT user_id FROM users WHERE email = ?`, 
       [coordinator.email]
@@ -40,7 +42,7 @@ router.post('/scopes', async (req, res) => {
     ----------------------------- */
     const [scopeResult] = await conn.query(
       `INSERT INTO scopes
-       (scope_name, department_id, gap_detail,coordinator_id, status_id)
+        (scope_name, department_id, coordinator_id, status_id)
        VALUES (?, ?, ?, 1)`,
       [
         scopeName,
@@ -55,6 +57,7 @@ router.post('/scopes', async (req, res) => {
        3. CREATE PROJECT PLANS
     ----------------------------- */
     for (const project of projects) {
+      // 3.1 Insert Project Plan
       const [projectResult] = await conn.query(
         `INSERT INTO project_plans
          (scope_id, project_plan_name,  status_id)
@@ -65,12 +68,11 @@ router.post('/scopes', async (req, res) => {
       const projectPlanId = projectResult.insertId
 
       /* -----------------------------
-         4. TEAM MEMBERS
+          4. TEAM MEMBERS
       ----------------------------- */
       for (const member of project.teamMembers) {
         let memberUserId;
 
-        // ✅ แก้ไข: เช็ค Team Member ซ้ำด้วย
         const [[existingMember]] = await conn.query(
             `SELECT user_id FROM users WHERE email = ?`,
             [member.email]
@@ -96,36 +98,36 @@ router.post('/scopes', async (req, res) => {
       }
 
       /* -----------------------------
-         5. GAP → OPERATIONS
+          5. GAP -> OPERATIONS
       ----------------------------- */
-      for (const gap of project.gaps) {
-        await conn.query(
-          `INSERT INTO operational_details
-          (project_plan_id, detail, weight_percent, progress_percent, status_id)
-          VALUES (?, ?, ?, ?, ?)`,
-          [
-            projectPlanId,
-            gap.detail,
-            0,
-            0,
-            1
-          ]
-        )
+      if (project.gaps && project.gaps.length > 0) {
+        for (const gap of project.gaps) {
+            await conn.query(
+              `INSERT INTO operational_details
+              (project_plan_id, detail, weight_percent, progress_percent, status_id)
+              VALUES (?, ?, ?, ?, ?)`,
+              [
+                projectPlanId,
+                gap.detail,
+                0, // weight เริ่มต้น
+                0, // progress เริ่มต้น
+                1  // status_id = 1
+              ]
+            )
+        }
       }
     }
 
     await conn.commit()
 
-    const emailDraft = req.body.email
-
-    if (emailDraft?.recipients?.length) {
+    // ส่งอีเมลแจ้งเตือน
+    if (email?.recipients?.length) {
       try {
         await sendMail({
-          to: emailDraft.recipients.join(','),
-          subject: emailDraft.subject,
-          html: emailDraft.body
+          to: email.recipients.join(','),
+          subject: email.subject,
+          html: email.body
         })
-
       } catch (mailErr) {
         console.error('Send mail failed:', mailErr)
       }
@@ -142,10 +144,9 @@ router.post('/scopes', async (req, res) => {
   }
 })
 
-// ===============================
-// /api/scopes
-// ===============================
-router.get('/scopes', async (req, res) => {
+// ================= Scopes : GET LIST =================
+// ล็อคสิทธิ์การดึงข้อมูลโครงการทั้งหมด
+router.get('/scopes', verifyToken, isAdmin, async (req, res) => {
   try {
     const [rows] = await db.query(`
       SELECT
@@ -153,26 +154,20 @@ router.get('/scopes', async (req, res) => {
         s.scope_name,
         d.department_name,
         u.user_name AS coordinator,
-
         pp.project_plan_id,
         pp.project_plan_name,
         pp.progress_percent AS plan_progress,
-
         od.detail AS gap_detail
-
       FROM scopes s
       LEFT JOIN departments d ON s.department_id = d.department_id
       LEFT JOIN users u ON s.coordinator_id = u.user_id
       LEFT JOIN project_plans pp ON s.scope_id = pp.scope_id
       LEFT JOIN operational_details od ON pp.project_plan_id = od.project_plan_id
-
       ORDER BY s.scope_id DESC, pp.project_plan_id
     `)
 
     const map = {}
-
     for (const r of rows) {
-      // ---------- scope ----------
       if (!map[r.scope_id]) {
         map[r.scope_id] = {
           id: r.scope_id,
@@ -183,12 +178,8 @@ router.get('/scopes', async (req, res) => {
         }
       }
 
-      // ---------- plan ----------
       if (r.project_plan_id) {
-        let plan = map[r.scope_id].plans.find(
-          p => p.id === r.project_plan_id
-        )
-
+        let plan = map[r.scope_id].plans.find(p => p.id === r.project_plan_id)
         if (!plan) {
           plan = {
             id: r.project_plan_id,
@@ -198,35 +189,21 @@ router.get('/scopes', async (req, res) => {
           }
           map[r.scope_id].plans.push(plan)
         }
-
-        // ---------- gap ----------
         if (r.gap_detail) {
           plan.gaps.push(r.gap_detail)
         }
       }
     }
 
-    // ✅ คำนวณ progress ของ scope
     const result = Object.values(map).map(scope => {
-      if (!scope.plans.length) {
-        return {
-          ...scope,
-          progress_percent: 0
-        }
-      }
-
+      if (!scope.plans.length) return { ...scope, progress_percent: 0 }
       const avg = Math.round(
         scope.plans.reduce((sum, p) => sum + p.progress, 0) / scope.plans.length
       )
-
-      return {
-        ...scope,
-        progress_percent: avg
-      }
+      return { ...scope, progress_percent: avg }
     })
 
     res.json(result)
-
   } catch (err) {
     console.error('GET scopes error:', err)
     res.status(500).json({ message: 'Server error' })
