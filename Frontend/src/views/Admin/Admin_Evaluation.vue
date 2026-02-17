@@ -112,17 +112,12 @@ const evaluation = ref({
 })
 
 const originalEvaluation = ref(null)
-
-const hasChanged = () =>
-  JSON.stringify(evaluation.value) !== JSON.stringify(originalEvaluation.value)
-
+const hasChanged = () => JSON.stringify(evaluation.value) !== JSON.stringify(originalEvaluation.value)
 const goBack = () => router.back()
 
 onMounted(async () => {
   try {
     const res = await fetch(`${API}/evaluations/${projectId}`)
-    if (!res.ok) throw new Error('Fetch failed')
-
     const data = await res.json()
     if (!data) return
 
@@ -138,10 +133,9 @@ onMounted(async () => {
       problem: data.problem ?? '',
       suggestion: data.recommendation ?? ''
     }
-
     originalEvaluation.value = JSON.parse(JSON.stringify(evaluation.value))
   } catch (err) {
-    console.error('Load evaluation failed:', err)
+    console.error('Load failed', err)
   }
 })
 
@@ -152,17 +146,16 @@ const saveEvaluation = async () => {
     const result = await Swal.fire({
       title: 'เหตุผลการแก้ไข',
       html: `
-        <textarea id="reason" class="swal2-textarea" placeholder="ระบุเหตุผลการแก้ไข"></textarea>
+        <textarea id="reason" class="swal2-textarea" placeholder="ระบุเหตุผล"></textarea>
         <input id="files" type="file" class="swal2-file" multiple />
       `,
       showCancelButton: true,
-      confirmButtonText: 'บันทึก',
       preConfirm: () => {
         const reason = document.getElementById('reason').value
         const files = document.getElementById('files').files
         if (!reason) {
-          Swal.showValidationMessage('ต้องระบุเหตุผลการแก้ไข')
-          return
+          Swal.showValidationMessage('กรุณาระบุเหตุผล')
+          return false
         }
         return { reason, files }
       }
@@ -172,6 +165,7 @@ const saveEvaluation = async () => {
     editData = result.value
   }
 
+  // ส่งข้อมูลแบบ FormData
   const fd = new FormData()
   Object.entries(evaluation.value).forEach(([k, v]) => fd.append(k, v))
 
@@ -180,12 +174,18 @@ const saveEvaluation = async () => {
     Array.from(editData.files).forEach(f => fd.append('attachments', f))
   }
 
-  await fetch(`${API}/evaluations/${projectId}`, {
-    method: 'PUT',
-    body: fd
-  })
+  try {
+    const res = await fetch(`${API}/evaluations/${projectId}`, {
+      method: 'PUT',
+      body: fd
+    })
 
-  originalEvaluation.value = JSON.parse(JSON.stringify(evaluation.value))
-  await Swal.fire('สำเร็จ', 'บันทึกการประเมินผลเรียบร้อย', 'success')
+    if (res.ok) {
+      originalEvaluation.value = JSON.parse(JSON.stringify(evaluation.value))
+      Swal.fire('สำเร็จ', 'บันทึกเรียบร้อย', 'success')
+    }
+  } catch (err) {
+    Swal.fire('ข้อผิดพลาด', 'ไม่สามารถบันทึกได้', 'error')
+  }
 }
 </script>

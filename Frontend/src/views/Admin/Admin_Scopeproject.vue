@@ -114,6 +114,8 @@ import { useRouter } from 'vue-router'
 import { useRoute } from 'vue-router'
 import '../../assets/Admin/css/Admin_Scopeproject.css'
 
+const API = import.meta.env.VITE_API_BASE_URL
+
 const router = useRouter()
 const route = useRoute()
 const expandedRow = ref(null)
@@ -166,7 +168,7 @@ const scopes = ref([])
 ================================ */
 onMounted(async () => {
     try {
-        const res = await fetch('http://localhost:3000/api/scopes')
+        const res = await fetch(`${API}/admin/scopes`)
         const data = await res.json()
         scopes.value = data
 

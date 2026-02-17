@@ -21,7 +21,7 @@
                   week: 'สัปดาห์นี้',
                   month: 'เดือนนี้',
                   year: 'ปีนี้'
-              }[dateMode]
+                }[dateMode]
               }}
             </span>
 
@@ -153,7 +153,7 @@ const dateInput = ref(null)
 /* ===============================
    DATE STATE
 ================================ */
-const dateMode = ref('today') 
+const dateMode = ref('today')
 const selectedDate = ref({
   start: '',
   end: ''
@@ -236,9 +236,9 @@ const fetchDashboard = async () => {
       tasksRes,
       progressRes
     ] = await Promise.all([
-      fetch(`${API}/dashboard/gap-summary`),
-      fetch(`${API}/dashboard/tasks`),
-      fetch(`${API}/dashboard/overall-progress`)
+      fetch(`${API}/api/admin/dashboard/gap-summary`),
+      fetch(`${API}/api/admin/dashboard/tasks`),
+      fetch(`${API}/api/admin/dashboard/overall-progress`)
     ])
 
     const summaryData = await summaryRes.json()

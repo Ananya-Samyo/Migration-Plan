@@ -87,8 +87,10 @@ import '@/assets/Admin/css/Admin_List.css'
 /* ===============================
    API CONFIG
 ================================ */
-const ADMIN_API = 'http://localhost:3000/api/admin/users'
-const DEPT_API  = 'http://localhost:3000/api/departments'
+const BASE_API = import.meta.env.VITE_API_BASE_URL
+
+const ADMIN_API = `${BASE_API}/admin/users` 
+const DEPT_API  = `${BASE_API}/departments`
 
 /* ===============================
    STATE

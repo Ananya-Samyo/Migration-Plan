@@ -9,6 +9,8 @@
   --text-dark: #1e293b;
   --text-muted: #64748b;
   --border: #e5e7eb;
+  --primary: #4f46e5; /* สีหลักสำหรับปุ่มเข้าสู่ระบบ */
+  --primary-hover: #4338ca;
 }
 
 /* ===============================
@@ -19,15 +21,17 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #f8fafc;
+  background: #f1f5f9; /* ปรับพื้นหลังให้อ่อนลงเล็กน้อย */
 }
 
 .login-card {
-  width: 380px;
+  width: 100%;
+  max-width: 400px;
   background: #ffffff;
-  padding: 36px 32px;
-  border-radius: 18px;
+  padding: 40px 32px;
+  border-radius: 20px;
   text-align: center;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
   border: 1px solid var(--border);
 }
 
@@ -35,93 +39,100 @@
    Logo & Text
 ================================ */
 .logo {
-  width: 80px;
-  margin: 0 auto 14px;
+  width: 90px;
+  margin: 0 auto 20px;
   display: block;
 }
 
-h1 {
-  margin: 0;
-  font-size: 24px;
-  font-weight: 700;
-  color: var(--purple-dark);
-}
-
 .title-box {
-  margin-bottom: 24px;
-  text-align: center;
+  margin-bottom: 30px;
 }
 
 .title-box h1 {
   margin: 0;
   font-size: 26px;
-  font-weight: 700;
-  color: #4c1d95; 
+  font-weight: 800;
+  color: var(--purple-dark);
+  letter-spacing: -0.5px;
 }
 
 .title-box h2 {
-  margin-top: 6px;
-  font-size: 24px;
+  margin-top: 4px;
+  font-size: 18px;
   font-weight: 500;
-  color: #4c1d95; 
-}
-
-.subtitle {
-  margin: 8px 0 26px;
-  font-size: 14px;
   color: var(--text-muted);
 }
 
 /* ===============================
-   Role Select
+   Login Form
 ================================ */
-.role-select {
+.login-form {
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 16px;
+  text-align: left;
+}
+
+.login-input {
+  width: 100%;
+  padding: 14px 16px;
+  border: 2px solid var(--border);
+  border-radius: 12px;
+  font-size: 16px;
+  transition: all 0.2s ease;
+  outline: none;
+  box-sizing: border-box; /* ป้องกัน input ล้นขอบ */
+}
+
+.login-input:focus {
+  border-color: var(--purple);
+  box-shadow: 0 0 0 4px rgba(91, 33, 182, 0.1);
 }
 
 /* ===============================
-   Role Buttons
+   Buttons
 ================================ */
-.role-btn {
+.btn-confirm {
+  width: 100%;
   padding: 14px;
+  background: var(--purple);
+  color: white;
+  border: none;
   border-radius: 12px;
-  font-size: 15px;
+  font-size: 16px;
   font-weight: 600;
   cursor: pointer;
-  border: 1px solid var(--border);
-  background: #ffffff;
-  transition: background 0.2s ease, border 0.2s ease;
+  transition: background 0.2s ease, transform 0.1s ease;
 }
 
-/* Admin */
-.role-btn.admin {
-  color: #78350f;
-  border-color: var(--gold);
-  background: var(--gold-soft);
-}
-
-.role-btn.admin:hover {
-  background: #fde68a;
-}
-
-/* User */
-.role-btn.user {
-  color: #561e8a;
-  border-color: var(--purple);
-  background: var(--purple);
-}
-
-.role-btn.user:hover {
+.btn-confirm:hover {
   background: var(--purple-dark);
 }
 
+.btn-confirm:active {
+  transform: scale(0.98);
+}
+
+.btn-confirm:disabled {
+  background: #cbd5e1;
+  cursor: not-allowed;
+}
+
 /* ===============================
-   Footer
+   Error & Footer
 ================================ */
+.error-text {
+  color: #ef4444;
+  font-size: 14px;
+  margin-top: 12px;
+  font-weight: 500;
+  background: #fef2f2;
+  padding: 8px;
+  border-radius: 8px;
+}
+
 footer {
-  margin-top: 28px;
+  margin-top: 32px;
   font-size: 12px;
   color: #94a3b8;
 }

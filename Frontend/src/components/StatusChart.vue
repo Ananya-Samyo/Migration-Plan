@@ -72,8 +72,8 @@ const progressRange = ref({
 const fetchCharts = async () => {
   try {
     const [gapRes, progressRes] = await Promise.all([
-      axios.get(`${API}/dashboard/gap-summary`),
-      axios.get(`${API}/dashboard/progress-range`)
+      axios.get(`${API}/admin/dashboard/gap-summary`),
+      axios.get(`${API}/admin/dashboard/progress-range`)
     ])
 
     gapSummary.value = gapRes.data

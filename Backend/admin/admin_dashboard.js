@@ -1,33 +1,13 @@
 import { Router } from 'express'
 import db from '../db.js'
-import { verifyToken } from '../middleware/auth.js' // 1. นำเข้า Middleware
 
 const router = Router()
 
-// สร้าง Middleware ย่อยสำหรับเช็คว่าเป็น Admin เท่านั้น
-const isAdmin = (req, res, next) => {
-  if (req.user && req.user.role === 'admin') {
-    next();
-  } else {
-    res.status(403).json({ message: 'ปฏิเสธการเข้าถึง: สำหรับผู้ดูแลระบบเท่านั้น' });
-  }
-};
-
-const STATUS_MAP = {
-  in_progress: 'processing_gap',
-  completed: 'complete_gap',
-  acceptedGap: 'acceptable_gap'
-}
-
-/* ======================================================
-   DASHBOARD ROUTES (Protected by verifyToken & isAdmin)
-====================================================== */
-
-// ใช้ทั้ง verifyToken (เช็คว่า login ไหม) และ isAdmin (เช็คว่าเป็น admin ไหม)
-router.get('/dashboard/overall-progress', verifyToken, isAdmin, async (req, res) => {
+// 1. ดึงภาพรวมความคืบหน้า (Overall Progress)
+router.get('/dashboard/overall-progress', async (req, res) => {
   try {
     const [rows] = await db.query(`
-      SELECT
+      SELECT 
         COUNT(*) AS total_scopes,
         IFNULL(AVG(progress_percent), 0) AS avg_progress
       FROM scopes
@@ -43,17 +23,18 @@ router.get('/dashboard/overall-progress', verifyToken, isAdmin, async (req, res)
   }
 })
 
-router.get('/dashboard/tasks', verifyToken, isAdmin, async (req, res) => {
+// 2. ดึงรายการ Task (รองรับการ Filter ตามวันที่)
+router.get('/dashboard/tasks', async (req, res) => {
   try {
     const { date } = req.query
 
     const [rows] = await db.query(`
-      SELECT
-        s.scope_id        AS id,
-        s.scope_name      AS title,
+      SELECT 
+        s.scope_id         AS id,
+        s.scope_name       AS title,
         st.status_code    AS status,
         s.progress_percent,
-        s.created_at      AS startDate
+        s.created_at       AS startDate
       FROM scopes s
       JOIN status st ON s.status_id = st.status_id
       WHERE (
@@ -61,7 +42,7 @@ router.get('/dashboard/tasks', verifyToken, isAdmin, async (req, res) => {
         OR DATE(s.created_at) = ?
       )
       ORDER BY s.created_at DESC
-    `, [date || null, date || null]) // ป้องกันค่า undefined
+    `, [date || null, date || null])
 
     res.json(rows)
   } catch (err) {
@@ -70,10 +51,11 @@ router.get('/dashboard/tasks', verifyToken, isAdmin, async (req, res) => {
   }
 })
 
-router.get('/dashboard/gap-summary', verifyToken, isAdmin, async (req, res) => {
+// 3. สรุปสถานะ Gap ทั้งหมด
+router.get('/dashboard/gap-summary', async (req, res) => {
   try {
     const [rows] = await db.query(`
-      SELECT
+      SELECT 
         COUNT(DISTINCT s.scope_id) AS total,
         COUNT(DISTINCT CASE WHEN st.status_code = 'processing_gap' THEN s.scope_id END) AS open_gap,
         COUNT(DISTINCT CASE WHEN st.status_code = 'complete_gap' THEN s.scope_id END)   AS closed_gap,
@@ -89,10 +71,11 @@ router.get('/dashboard/gap-summary', verifyToken, isAdmin, async (req, res) => {
   }
 })
 
-router.get('/dashboard/progress-range', verifyToken, isAdmin, async (req, res) => {
+// 4. สถิติช่วงความคืบหน้า (Progress Distribution)
+router.get('/dashboard/progress-range', async (req, res) => {
   try {
     const [rows] = await db.query(`
-      SELECT
+      SELECT 
         IFNULL(SUM(progress_percent BETWEEN 0  AND 30), 0)  AS low,
         IFNULL(SUM(progress_percent BETWEEN 31 AND 60), 0)  AS mid,
         IFNULL(SUM(progress_percent BETWEEN 61 AND 90), 0)  AS high,
@@ -107,7 +90,8 @@ router.get('/dashboard/progress-range', verifyToken, isAdmin, async (req, res) =
   }
 })
 
-router.get('/dashboard/gap-closed-chart', verifyToken, isAdmin, async (req, res) => {
+// 5. ข้อมูลกราฟสรุป Gap ที่ปิดได้ (แบ่งตาม วัน/สัปดาห์/เดือน/ปี)
+router.get('/dashboard/gap-closed-chart', async (req, res) => {
   try {
     const { mode = 'day' } = req.query
 
@@ -133,7 +117,7 @@ router.get('/dashboard/gap-closed-chart', verifyToken, isAdmin, async (req, res)
     }
 
     const [rows] = await db.query(`
-      SELECT
+      SELECT 
         ${label} AS label,
         COUNT(*) AS total
       FROM scopes s
@@ -146,7 +130,7 @@ router.get('/dashboard/gap-closed-chart', verifyToken, isAdmin, async (req, res)
     res.json(rows)
   } catch (err) {
     console.error('gap-closed-chart error:', err)
-    res.status(500).json({ message: 'Server error', error: err.message })
+    res.status(500).json({ message: 'Server error' })
   }
 })
 
