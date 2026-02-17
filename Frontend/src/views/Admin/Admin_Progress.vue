@@ -193,24 +193,31 @@ const originalProject = ref(null)
    LOAD PROJECT FROM API
 ========================= */
 onMounted(async () => {
-  const res = await fetch(`${API}/projects/${route.params.id}`)
-  const data = await res.json()
+  try {
+    const res = await fetch(`${API}/admin/projects/${route.params.id}`)
+    if (!res.ok) throw new Error('Failed to fetch project')
+    
+    const data = await res.json()
 
-  project.value = {
-    id: data.id,
-    name: data.name,
-    scope: data.scope,
-    startDate: data.startDate,
-    endDate: data.endDate,
-    status: data.status,
-    progress: data.progress,
-    gaps: data.gaps || [],
-    details: data.details || '',
-    problems: data.problems || '',
-    solutions: data.solutions || ''
+    project.value = {
+      id: data.id,
+      name: data.name,
+      scope: data.scope,
+      startDate: data.startDate,
+      endDate: data.endDate,
+      status: data.status,
+      progress: Number(data.progress),
+      gaps: data.gaps || [],
+      details: data.details || '',
+      problems: data.problems || '',
+      solutions: data.solutions || ''
+    }
+
+    originalProject.value = JSON.parse(JSON.stringify(project.value))
+  } catch (err) {
+    console.error(err)
+    Swal.fire('ข้อผิดพลาด', 'ไม่สามารถโหลดข้อมูลได้', 'error')
   }
-
-  originalProject.value = JSON.parse(JSON.stringify(project.value))
 })
 
 /* =========================
@@ -224,8 +231,6 @@ const totalWeight = computed(() => {
   )
 })
 
-
-
 const hasProjectChanged = () =>
   JSON.stringify(project.value) !== JSON.stringify(originalProject.value)
 
@@ -234,8 +239,9 @@ const hasProjectChanged = () =>
 ========================= */
 const goBack = () => router.back()
 
+// แก้ไข: เปลี่ยน status เริ่มต้นให้ตรงกับ Database ('processing_gap')
 const addGap = () => {
-  project.value.gaps.push({ text: '', weight: 0, status: 'open' })
+  project.value.gaps.push({ text: '', weight: 0, status: 'processing_gap' })
 }
 
 const removeGap = (i) => project.value.gaps.splice(i, 1)
@@ -269,11 +275,14 @@ const saveProject = async () => {
 
   if (hasProjectChanged()) {
     const result = await Swal.fire({
-      title: 'เหตุผลการแก้ไข',
+      title: 'ยืนยันการแก้ไข',
       html: `
-        <textarea id="reason" class="swal2-textarea"
-          placeholder="กรุณาระบุเหตุผลการแก้ไข"></textarea>
-        <input id="files" type="file" class="swal2-file" multiple />
+        <div style="text-align: left">
+          <label>ระบุเหตุผลการแก้ไข:</label>
+          <textarea id="reason" class="swal2-textarea" style="margin-top:5px;" placeholder="เช่น ปรับปรุงความคืบหน้าประจำสัปดาห์"></textarea>
+          <label style="margin-top:10px; display:block;">แนบไฟล์หลักฐาน (ถ้ามี):</label>
+          <input id="files" type="file" class="swal2-file" multiple />
+        </div>
       `,
       showCancelButton: true,
       confirmButtonText: 'บันทึก',
@@ -283,7 +292,7 @@ const saveProject = async () => {
         const files = document.getElementById('files').files
 
         if (!reason) {
-          Swal.showValidationMessage('ต้องระบุเหตุผลการแก้ไข')
+          Swal.showValidationMessage('กรุณาระบุเหตุผลการแก้ไข')
           return
         }
 
@@ -303,13 +312,23 @@ const saveProject = async () => {
     didOpen: () => Swal.showLoading()
   })
 
-  // ---------- FormData ----------
+  // ---------- FormData Construction ----------
   const fd = new FormData()
   fd.append('name', project.value.name)
   fd.append('status', project.value.status)
   fd.append('progress', project.value.progress)
+  
+  // เพิ่มการส่งข้อมูล Problems และ Solutions
+  fd.append('problems', project.value.problems)
+  fd.append('solutions', project.value.solutions)
+  
   fd.append('gaps', JSON.stringify(project.value.gaps))
 
+  // เพิ่ม User ID (สำหรับ Change Log) - ถ้ามี auth ให้ดึงจาก store หรือ localStorage
+  const userId = localStorage.getItem('userId') || 1
+  fd.append('userId', userId)
+
+  // เพิ่มเหตุผลและไฟล์แนบ (ถ้ามี)
   if (editData) {
     fd.append('edit_reason', editData.reason)
     Array.from(editData.files).forEach(file => {
@@ -318,16 +337,21 @@ const saveProject = async () => {
   }
 
   try {
-    await fetch(`${API}/projects/${project.value.id}`, {
+    const res = await fetch(`${API}/admin/projects/${route.params.id}`
+    , {
       method: 'PUT',
-      body: fd
+      body: fd // ส่งเป็น FormData
     })
 
+    if (!res.ok) throw new Error('Save failed')
+
+    // อัปเดตข้อมูลต้นฉบับเพื่อรีเซ็ตสถานะการแก้ไข
     originalProject.value = JSON.parse(JSON.stringify(project.value))
-    Swal.fire('สำเร็จ', 'บันทึกข้อมูลเรียบร้อย และส่งอีเมลแล้ว', 'success')
+    
+    await Swal.fire('สำเร็จ', 'บันทึกข้อมูลเรียบร้อย และส่งอีเมลแจ้งเตือนแล้ว', 'success')
   } catch (err) {
+    console.error(err)
     Swal.fire('ผิดพลาด', 'ไม่สามารถบันทึกข้อมูลได้', 'error')
   }
 }
-
 </script>

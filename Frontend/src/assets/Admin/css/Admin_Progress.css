@@ -15,6 +15,43 @@
   padding: 0 20px;
 }
 
+.input-readonly {
+  background-color: #f3f4f6; /* สีเทาอ่อน */
+  color: #6b7280; /* สีตัวอักษรจางลง */
+  cursor: not-allowed;
+}
+
+.text-red { color: #dc2626; }
+.text-green { color: #16a34a; }
+
+.input-readonly {
+  background-color: #f3f4f6;
+  color: #6b7280;
+  cursor: not-allowed;
+}
+.text-red { color: #dc2626; }
+.text-green { color: #16a34a; }
+
+/* CSS สำหรับ List Row */
+.flex-row {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+.flex-between {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.empty-state {
+  color: #999;
+  font-style: italic;
+  padding: 10px;
+  text-align: center;
+  background: #fafafa;
+  border-radius: 6px;
+}
+
 /* 2. Top Bar (Header)
 ------------------------------------------ */
 .top-bar {

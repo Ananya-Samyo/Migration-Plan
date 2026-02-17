@@ -1,0 +1,414 @@
+/* =========================================
+   Design Tokens & Variables
+========================================= */
+.dashboard {
+  --primary: #6d28d9;
+  --primary-hover: #5b21b6;
+  --bg-app: #f1f5f9;
+  --bg-panel: #ffffff;
+  --text-main: #1e293b;
+  --text-muted: #64748b;
+  --border: #e2e8f0;
+  --radius: 16px;
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+
+  font-family: 'Sarabun', sans-serif;
+  background-color: var(--bg-app);
+  min-height: 100vh;
+  padding: 24px;
+  box-sizing: border-box;
+  color: var(--text-main);
+}
+
+/* =========================================
+   Header
+========================================= */
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 32px;
+  flex-wrap: wrap;
+  gap: 24px;
+}
+
+.header-title h1 {
+  font-size: 22px;
+}
+
+.header-title p {
+  font-size: 14px;
+}
+
+
+.header-actions {
+  display: flex;
+  gap: 16px;
+}
+
+/* =========================================
+   Quick Date Buttons
+========================================= */
+.quick-date {
+  display: flex;
+  gap: 8px;
+}
+
+.quick-date button {
+  height: 44px;
+  padding: 0 20px;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+
+  background: var(--bg-panel);
+  color: var(--text-main);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-sm);
+
+  transition: all 0.2s ease;
+}
+
+.quick-date button:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+  transform: translateY(-1px);
+}
+
+/* active state */
+.quick-date button.active {
+  background: var(--primary);
+  color: #fff;
+  border-color: var(--primary);
+  box-shadow: 0 4px 10px rgba(109, 40, 217, 0.25);
+}
+
+/* =========================================
+   Date Mode Dropdown
+========================================= */
+.date-dropdown {
+  position: relative; 
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-sm);
+}
+
+.date-dropdown:hover {
+  border-color: var(--primary);
+  transform: translateY(-1px);
+}
+
+.dropdown-select {
+  border: none;
+  outline: none;
+  background: transparent;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  color: var(--text-main);
+
+  appearance: none;
+  padding-right: 12px;
+}
+
+.date-dropdown {
+  position: relative;
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-sm);
+}
+
+.arrow {
+  margin-left: auto;
+}
+
+.dropdown-menu {
+  position: absolute;
+  top: calc(100% + 8px); 
+  left: 0;
+  width: 100%;
+
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: var(--shadow-md);
+  z-index: 9999;
+  padding: 6px 0;
+}
+
+.dropdown-menu li {
+  padding: 10px 16px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.dropdown-menu li:hover {
+  background: #f3e8ff;
+  color: var(--primary);
+}
+
+
+/* =========================================
+   Buttons & Inputs
+========================================= */
+.control-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 44px;
+  padding: 0 20px;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  user-select: none;
+}
+
+/* Date Picker Style */
+.date-picker {
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  color: var(--text-main);
+  box-shadow: var(--shadow-sm);
+  position: relative;
+}
+
+.date-picker:hover {
+  border-color: var(--primary);
+  transform: translateY(-1px);
+}
+
+.hidden-input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+}
+
+/* Export Button Style */
+.export-btn {
+  background: var(--primary);
+  color: #fff;
+  border: none;
+  box-shadow: 0 4px 10px rgba(109, 40, 217, 0.25);
+}
+
+.export-btn:hover {
+  background: var(--primary-hover);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 14px rgba(109, 40, 217, 0.35);
+}
+
+.icon {
+  font-size: 16px;
+}
+
+/* =========================================
+   Summary Grid
+========================================= */
+.summary-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.summary-card {
+  padding: 16px !important;
+  min-height: 110px;
+}
+
+
+/* ===============================
+   Overall Progress Bar
+================================ */
+.overall-progress-bar {
+  margin-bottom: 32px;
+}
+
+.progress-label {
+  display: flex;
+  justify-content: space-between;
+  font-size: 14px;
+  font-weight: 700;
+  color: #1e293b;
+  margin-bottom: 8px;
+}
+
+.progress-track {
+  width: 100%;
+  height: 14px;
+  background: #e5e7eb;
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  border-radius: 999px;
+  transition: width 0.4s ease;
+}
+
+/* =========================================
+   Content Layout (Chart & Table)
+========================================= */
+.content-layout {
+  display: grid;
+  grid-template-columns: 1fr 2fr;
+  gap: 24px;
+  align-items: stretch;
+}
+
+.panel-body {
+  flex: 1;
+}
+
+
+.panel {
+  background: var(--bg-panel);
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-sm);
+  overflow: visible; 
+  display: flex;
+  flex-direction: column;
+}
+
+.page-header {
+  position: relative;
+  z-index: 50;
+}
+
+.panel-header {
+  padding: 20px 24px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #fff;
+}
+
+.panel-header h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text-main);
+}
+
+.badge {
+  background: #f1f5f9;
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 20px;
+  border: 1px solid var(--border);
+}
+
+.panel-body {
+  padding: 24px;
+}
+
+/* จัดการ Scroll Table */
+.scrollable {
+  overflow-x: auto;
+}
+
+.content-layout {
+  display: grid;
+  grid-template-columns: 1fr 2fr;
+  gap: 24px;
+  align-items: start;
+}
+
+.chart-area {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ขวา */
+.right-column {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  height: 100%;
+}
+
+.export-loading {
+  position: fixed;
+  inset: 0;
+  background: rgba(255, 255, 255, 0.75);
+  backdrop-filter: blur(4px);
+  z-index: 9999;
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.export-loading p {
+  margin-top: 14px;
+  font-weight: 600;
+  color: #334155;
+}
+
+/* Spinner */
+.spinner {
+  width: 48px;
+  height: 48px;
+  border: 4px solid #e5e7eb;
+  border-top-color: #6d28d9;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+
+/* =========================================
+   Responsive Design
+========================================= */
+@media (max-width: 1024px) {
+  .content-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .chart-area {
+    order: 1;
+  }
+}
+
+@media (max-width: 640px) {
+  .dashboard {
+    padding: 20px;
+  }
+
+  .page-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
+  }
+
+  .header-actions {
+    width: 100%;
+    flex-direction: column;
+  }
+
+  .control-group {
+    width: 100%;
+    justify-content: center;
+    box-sizing: border-box;
+  }
+}
