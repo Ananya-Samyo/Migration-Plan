@@ -7,7 +7,7 @@
           ระบบติดตามแผนงาน
         </h1>
 
-        <RouterLink to="/user/dashboard" class="nav-link" exact-active-class="active">
+        <RouterLink to="/user" class="nav-link" exact-active-class="active">
           <span class="icon">📊</span>
           <span v-if="!isCollapsed">แดชบอร์ด</span>
         </RouterLink>

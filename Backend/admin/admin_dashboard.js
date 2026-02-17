@@ -23,26 +23,32 @@ router.get('/dashboard/overall-progress', async (req, res) => {
   }
 })
 
-// 2. ดึงรายการ Task (รองรับการ Filter ตามวันที่)
+
+// 2. ดึงรายการ Task (รองรับการ Filter แบบช่วงวันที่ Start - End)
 router.get('/dashboard/tasks', async (req, res) => {
   try {
-    const { date } = req.query
+    // รับค่า startDate และ endDate จาก Query String
+    const { startDate, endDate } = req.query
+
+    // ถ้าส่งมาแค่วันเดียว (startDate) ให้ถือว่า endDate คือวันเดียวกัน
+    const start = startDate || null
+    const end = endDate || startDate || null
 
     const [rows] = await db.query(`
       SELECT 
-        s.scope_id         AS id,
-        s.scope_name       AS title,
+        s.scope_id        AS id,
+        s.scope_name      AS title,
         st.status_code    AS status,
         s.progress_percent,
-        s.created_at       AS startDate
+        s.created_at      AS startDate
       FROM scopes s
       JOIN status st ON s.status_id = st.status_id
       WHERE (
-        ? IS NULL
-        OR DATE(s.created_at) = ?
+        ? IS NULL 
+        OR DATE(s.created_at) BETWEEN ? AND ?
       )
       ORDER BY s.created_at DESC
-    `, [date || null, date || null])
+    `, [start, start, end])
 
     res.json(rows)
   } catch (err) {

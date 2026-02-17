@@ -9,43 +9,39 @@
       </div>
 
       <div class="header-actions">
-        <div class="quick-date">
-          <div class="control-group date-dropdown" @click="isOpen = !isOpen">
-            <span class="icon">🕒</span>
+        <div class="control-group date-dropdown" @click="isOpen = !isOpen">
+          <span class="icon" style="font-size: 1.2rem">🕒</span>
+          <span class="label">
+            {{
+              {
+                today: 'วันนี้',
+                yesterday: 'เมื่อวาน',
+                week: 'สัปดาห์นี้',
+                month: 'เดือนนี้',
+                year: 'ปีนี้'
+              }[dateMode] || 'กำหนดเอง'
+            }}
+          </span>
+          <span class="arrow">▾</span>
 
-            <span class="label">
-              {{
-                {
-                  today: 'วันนี้',
-                  yesterday: 'เมื่อวาน',
-                  week: 'สัปดาห์นี้',
-                  month: 'เดือนนี้',
-                  year: 'ปีนี้'
-                }[dateMode]
-              }}
-            </span>
-
-            <span class="arrow">▾</span>
-
-            <ul v-if="isOpen" class="dropdown-menu">
-              <li @click="selectMode('today')">วันนี้</li>
-              <li @click="selectMode('yesterday')">เมื่อวาน</li>
-              <li @click="selectMode('week')">สัปดาห์นี้</li>
-              <li @click="selectMode('month')">เดือนนี้</li>
-              <li @click="selectMode('year')">ปีนี้</li>
-            </ul>
-          </div>
+          <ul v-if="isOpen" class="dropdown-menu">
+            <li @click="selectMode('today')">วันนี้</li>
+            <li @click="selectMode('yesterday')">เมื่อวาน</li>
+            <li @click="selectMode('week')">สัปดาห์นี้</li>
+            <li @click="selectMode('month')">เดือนนี้</li>
+            <li @click="selectMode('year')">ปีนี้</li>
+          </ul>
         </div>
 
         <div class="control-group date-picker" @click="openDate">
-          <span class="icon">📅</span>
+          <span class="icon" style="font-size: 1.2rem">📅</span>
           <span class="label">{{ buddhistDateText }}</span>
-          <input ref="dateInput" type="date" v-model="selectedDate" class="hidden-input" />
+          <input ref="dateInput" type="date" v-model="selectedDate.start" class="hidden-input" />
         </div>
 
         <button class="control-group export-btn" @click="exportPNG">
           <span class="icon">📤</span>
-          <span>Export PNG</span>
+          <span>Export</span>
         </button>
       </div>
     </header>
@@ -229,34 +225,60 @@ const selectMode = (mode) => {
 /* ===============================
    FETCH DASHBOARD
 ================================ */
+/* ===============================
+   FETCH DASHBOARD (แก้ไขแล้ว)
+================================ */
 const fetchDashboard = async () => {
+
+  const token = localStorage.getItem('token')
+  if (!token) {
+    console.error('No token found')
+    return
+  }
+
+  const headers = {
+    'Content-Type': 'application/json',
+    'Authorization': `Bearer ${token}`
+  }
+
   try {
+
+    const dateQuery = `?startDate=${selectedDate.value.start}&endDate=${selectedDate.value.end}`
+
     const [
       summaryRes,
       tasksRes,
       progressRes
     ] = await Promise.all([
-      fetch(`${API}/api/admin/dashboard/gap-summary`),
-      fetch(`${API}/api/admin/dashboard/tasks`),
-      fetch(`${API}/api/admin/dashboard/overall-progress`)
+      fetch(`${API}/api/admin/dashboard/gap-summary`, { headers }),
+      fetch(`${API}/api/admin/dashboard/tasks${dateQuery}`, { headers }),
+      fetch(`${API}/api/admin/dashboard/overall-progress`, { headers })
     ])
 
-    const summaryData = await summaryRes.json()
-    const progressData = await progressRes.json()
-
-    summary.value = {
-      total:
-        summaryData.open_gap +
-        summaryData.closed_gap +
-        summaryData.accepted_gap,
-      openCount: summaryData.open_gap,
-      closedCount: summaryData.closed_gap,
-      acceptableCount: summaryData.accepted_gap
+    // ...
+    // เช็คว่า Server ตอบกลับมา ok ไหม
+    if (!summaryRes.ok || !tasksRes.ok || !progressRes.ok) {
+      if (summaryRes.status === 401) {
+        alert('Session หมดอายุ กรุณา Login ใหม่')
+      }
+      throw new Error('API Response not ok')
     }
 
-    tasks.value = await tasksRes.json()
+    const summaryData = await summaryRes.json()
+    const tasksData = await tasksRes.json()
+    const progressData = await progressRes.json()
 
-    overallProgress.value = progressData.progress
+    // Map ข้อมูลเข้า State
+    summary.value = {
+      total: summaryData.total || 0,
+      openCount: summaryData.open_gap || 0,
+      closedCount: summaryData.closed_gap || 0,
+      acceptableCount: summaryData.accepted_gap || 0
+    }
+
+    tasks.value = tasksData
+
+    overallProgress.value = progressData.progress || 0
 
   } catch (err) {
     console.error('❌ โหลดข้อมูล dashboard ไม่สำเร็จ:', err)
