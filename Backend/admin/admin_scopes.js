@@ -144,15 +144,46 @@ router.post('/scopes', verifyToken, isAdmin, async (req, res) => {
   }
 })
 
-// ================= Scopes : GET LIST =================
-// ล็อคสิทธิ์การดึงข้อมูลโครงการทั้งหมด
+// ================= Scopes : GET LIST (With Pagination) =================
 router.get('/scopes', verifyToken, isAdmin, async (req, res) => {
   try {
+    // 1. รับค่า page และ limit จาก Frontend (ถ้าไม่ส่งมา ให้ใช้ค่า Default)
+    const page = parseInt(req.query.page) || 1
+    const limit = parseInt(req.query.limit) || 10
+    const offset = (page - 1) * limit
+
+    // 2. หาจำนวน Scope ทั้งหมดก่อน (เพื่อคำนวณ Total Pages)
+    const [countResult] = await db.query(`SELECT COUNT(*) as total FROM scopes`)
+    const totalItems = countResult[0].total
+    const totalPages = Math.ceil(totalItems / limit)
+
+    // 3. ดึงเฉพาะ scope_id ของหน้านั้นๆ (เรียงล่าสุดก่อน)
+    const [scopeIdsResult] = await db.query(
+      `SELECT scope_id FROM scopes ORDER BY scope_id DESC LIMIT ? OFFSET ?`,
+      [limit, offset]
+    )
+
+    // ถ้าไม่มีข้อมูลในหน้านี้เลย ให้ส่งอาเรย์ว่างกลับไป
+    if (scopeIdsResult.length === 0) {
+      return res.json({
+        data: [],
+        meta: {
+          currentPage: page,
+          totalPages: totalPages,
+          totalItems: totalItems
+        }
+      })
+    }
+
+    const scopeIds = scopeIdsResult.map(row => row.scope_id)
+
+    // 4. เอา scope_id ไปดึงรายละเอียดทั้งหมด (JOIN)
+    // ใช้ WHERE s.scope_id IN (?)
     const [rows] = await db.query(`
-      SELECT
-        s.scope_id,
-        s.scope_name,
-        d.department_name,
+      SELECT 
+        s.scope_id, 
+        s.scope_name, 
+        d.department_name, 
         u.user_name AS coordinator,
         pp.project_plan_id,
         pp.project_plan_name,
@@ -163,10 +194,19 @@ router.get('/scopes', verifyToken, isAdmin, async (req, res) => {
       LEFT JOIN users u ON s.coordinator_id = u.user_id
       LEFT JOIN project_plans pp ON s.scope_id = pp.scope_id
       LEFT JOIN operational_details od ON pp.project_plan_id = od.project_plan_id
+      WHERE s.scope_id IN (?) 
       ORDER BY s.scope_id DESC, pp.project_plan_id
-    `)
+    `, [scopeIds])
 
+    // 5. จัดรูปแบบข้อมูล (Logic เดิม)
     const map = {}
+    
+    // วนลูปสร้างโครงสร้างตามลำดับของ scopeIds เพื่อรักษาลำดับการเรียง
+    scopeIds.forEach(id => {
+       // เตรียม Object ไว้รอ (เผื่อบางอันไม่มี row กลับมา แต่จริงๆ ควรมี)
+       // แต่เราจะ build จาก rows เป็นหลัก
+    })
+
     for (const r of rows) {
       if (!map[r.scope_id]) {
         map[r.scope_id] = {
@@ -174,40 +214,58 @@ router.get('/scopes', verifyToken, isAdmin, async (req, res) => {
           scope_name: r.scope_name,
           department_name: r.department_name,
           coordinator: r.coordinator,
+          progress_percent: 0,
           plans: []
         }
       }
 
       if (r.project_plan_id) {
         let plan = map[r.scope_id].plans.find(p => p.id === r.project_plan_id)
+        
         if (!plan) {
           plan = {
             id: r.project_plan_id,
             name: r.project_plan_name,
             progress: Number(r.plan_progress || 0),
+            action: "-", 
             gaps: []
           }
           map[r.scope_id].plans.push(plan)
         }
+
         if (r.gap_detail) {
           plan.gaps.push(r.gap_detail)
         }
       }
     }
 
-    const result = Object.values(map).map(scope => {
-      if (!scope.plans.length) return { ...scope, progress_percent: 0 }
-      const avg = Math.round(
-        scope.plans.reduce((sum, p) => sum + p.progress, 0) / scope.plans.length
-      )
-      return { ...scope, progress_percent: avg }
+    // คำนวณ Progress และแปลงเป็น Array
+    const resultData = Object.values(map).map(scope => {
+      if (!scope.plans.length) {
+        scope.progress_percent = 0
+      } else {
+        const totalProgress = scope.plans.reduce((sum, p) => sum + p.progress, 0)
+        scope.progress_percent = Math.round(totalProgress / scope.plans.length)
+      }
+      return scope
     })
 
-    res.json(result)
+    // เรียงลำดับ resultData ให้ตรงกับ scopeIds อีกครั้ง (เพื่อให้มั่นใจว่า Scope ล่าสุดอยู่บนสุด)
+    const sortedResult = scopeIds.map(id => resultData.find(item => item.id === id)).filter(Boolean)
+
+    // 6. ส่งข้อมูลกลับพร้อม Metadata
+    res.json({
+      data: sortedResult,
+      meta: {
+        currentPage: page,
+        totalPages: totalPages,
+        totalItems: totalItems
+      }
+    })
+
   } catch (err) {
     console.error('GET scopes error:', err)
     res.status(500).json({ message: 'Server error' })
   }
 })
-
 export default router
