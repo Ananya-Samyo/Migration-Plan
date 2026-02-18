@@ -144,9 +144,19 @@ import '../../assets/Admin/css/Admin_Addproject.css'
    API CONFIG
 ================================ */
 const BASE_API = import.meta.env.VITE_API_BASE_URL
-
 const DEPT_API = `${BASE_API}/api/departments`     
 const SCOPE_API = `${BASE_API}/api/admin/scopes`   
+
+/* ===============================
+   HELPER: Get Headers (เพิ่มส่วนนี้)
+================================ */
+const getHeaders = () => {
+  const token = localStorage.getItem('token')
+  return {
+    'Authorization': `Bearer ${token}`,
+    'Content-Type': 'application/json'
+  }
+}
 
 /* ===============================
    STATE
@@ -178,11 +188,18 @@ const form = ref({
 ================================ */
 const loadDepartments = async () => {
   try {
-    const res = await fetch(DEPT_API)
+    // ✅ แก้ไข: เพิ่ม { headers: getHeaders() }
+    const res = await fetch(DEPT_API, { headers: getHeaders() })
+    
+    if (res.status === 401) {
+       throw new Error('Session หมดอายุ กรุณาล็อกอินใหม่')
+    }
     if (!res.ok) throw new Error('Network response was not ok')
+    
     departments.value = await res.json()
-  } catch {
-    Swal.fire('ผิดพลาด', 'โหลดข้อมูลกองไม่สำเร็จ', 'error')
+  } catch (err) {
+    console.error(err)
+    Swal.fire('ผิดพลาด', 'โหลดข้อมูลกองไม่สำเร็จ: ' + err.message, 'error')
   }
 }
 
@@ -373,35 +390,6 @@ const generateEmailDraft = () => {
   showEmailPreview.value = true
 }
 
-const confirmSaveAndSend = async () => {
-  if (!validateForm()) return
-
-  try {
-    const res = await fetch(SCOPE_API, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        ...form.value,
-        email: emailDraft.value
-      })
-    })
-
-    if (!res.ok) throw new Error('บันทึกไม่สำเร็จ')
-
-    Swal.fire('สำเร็จ', 'บันทึกและส่งอีเมลเรียบร้อยแล้ว', 'success')
-    showEmailPreview.value = false
-
-    if (!emailDraft.value.recipients.length) {
-      Swal.fire('ไม่มีผู้รับอีเมล', 'กรุณาตรวจสอบข้อมูลอีเมล', 'warning')
-      return
-    }
-
-  } catch (err) {
-    Swal.fire('ผิดพลาด', err.message, 'error')
-  }
-}
-
-
 /* ===============================
    CONFIRM ALERT (Main Save Function)
 ================================ */
@@ -431,10 +419,10 @@ const saveWithConfirm = async () => {
   })
 
   try {
-    // ✅ แก้ไข: ใช้ตัวแปร SCOPE_API แทน Link เดิมที่เขียนผิด
+    // ✅ แก้ไข: เพิ่ม headers: getHeaders()
     const res = await fetch(SCOPE_API, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: getHeaders(), // <--- สำคัญมาก ต้องมีตรงนี้
       body: JSON.stringify({
         ...form.value,
         email: emailDraft.value
@@ -442,17 +430,20 @@ const saveWithConfirm = async () => {
     })
 
     if (!res.ok) {
+        if (res.status === 401) throw new Error('Session หมดอายุ')
         const errorData = await res.json().catch(() => ({}))
         throw new Error(errorData.message || 'บันทึกไม่สำเร็จ')
     }
 
     // ✅ ปิด loading แล้วแสดง success
-    Swal.fire('สำเร็จ', 'บันทึกและส่งอีเมลเรียบร้อยแล้ว', 'success')
-    showEmailPreview.value = false
+    Swal.fire('สำเร็จ', 'บันทึกและส่งอีเมลเรียบร้อยแล้ว', 'success').then(() => {
+        // อาจจะ Redirect กลับไปหน้า List หรือ Reset Form
+        // router.push('/admin/dashboard') 
+        showEmailPreview.value = false
+    })
 
   } catch (err) {
     Swal.fire('ผิดพลาด', err.message, 'error')
   }
 }
-
 </script>
