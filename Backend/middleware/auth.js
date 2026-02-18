@@ -23,10 +23,14 @@ export const verifyToken = (req, res, next) => {
 };
 
 // ส่วนที่ 2: ตรวจสอบสิทธิ์ Admin
+
 export const isAdmin = (req, res, next) => {
-  if (req.user && req.user.role === 'admin') {
-    next();
-  } else {
-    res.status(403).json({ message: 'สิทธิ์เฉพาะผู้ดูแลระบบเท่านั้น' });
-  }
+    console.log('🕵️ Check Admin Role:', req.user); 
+
+    if (req.user && req.user.role === 'admin') { 
+        next();
+    } else {
+        console.log('⛔ Access Denied! Role is:', req.user?.role); 
+        return res.status(403).json({ message: "Admin role required" });
+    }
 };

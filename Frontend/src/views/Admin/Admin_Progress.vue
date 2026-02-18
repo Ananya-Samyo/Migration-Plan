@@ -100,9 +100,9 @@
           <div class="form-group">
             <label>สถานะ</label>
             <select v-model="project.status">
-              <option value="OPEN">ยังไม่ปิด GAP</option>
-              <option value="CLOSED">ปิด GAP แล้ว</option>
-              <option value="ACCEPTABLE">ยอมรับ GAP</option>
+              <option value="processing_gap">ยังไม่ปิด GAP</option>
+              <option value="complete_gap">ปิด GAP แล้ว </option>
+              <option value="acceptable_gap">ไม่สามารถปิด GAP แต่ยอมรับได้</option>
             </select>
           </div>
 
@@ -169,10 +169,15 @@ import { useRouter, useRoute } from 'vue-router'
 import Swal from 'sweetalert2'
 import '../../assets/Admin/css/Admin_Progress.css'
 
+// ✅ 1. ดึง URL จาก Environment Variable
 const API = import.meta.env.VITE_API_BASE_URL
 const router = useRouter()
 const route = useRoute()
 
+// ✅ 2. ตัวแปรสำหรับเก็บ Token
+const token = localStorage.getItem('token')
+
+// โครงสร้างข้อมูล Project
 const project = ref({
   id: null,
   scope: '',
@@ -181,24 +186,44 @@ const project = ref({
   endDate: '',
   status: '',
   progress: 0,
-  gaps: [],
-  details: '',
-  problems: '',
-  solutions: ''
+  gaps: [],     // เก็บรายการ GAP
+  details: '',  // รายละเอียดเพิ่มเติม (Action Plan Detail)
+  problems: '', // ปัญหา/อุปสรรค
+  solutions: '' // แนวทางแก้ไข
 })
 
+// เก็บค่าเดิมไว้เช็คว่ามีการแก้ไขหรือไม่
 const originalProject = ref(null)
 
 /* =========================
    LOAD PROJECT FROM API
 ========================= */
 onMounted(async () => {
+  // ✅ 3. เช็ค Token ก่อน ถ้าไม่มีให้ไป Login
+  if (!token) {
+    await Swal.fire('Error', 'กรุณาเข้าสู่ระบบก่อนใช้งาน', 'error')
+    router.push('/login')
+    return
+  }
+
   try {
-    const res = await fetch(`${API}/admin/projects/${route.params.id}`)
+    // ✅ 4. ใส่ Header Authorization และแก้ URL ให้ถูกต้อง
+    const res = await fetch(`${API}/api/admin/projects/${route.params.id}`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      }
+    })
+
+    if (res.status === 401) {
+      throw new Error('Unauthorized - กรุณาเข้าสู่ระบบใหม่')
+    }
     if (!res.ok) throw new Error('Failed to fetch project')
-    
+
     const data = await res.json()
 
+    // ✅ 5. Map ข้อมูลจาก API ลงตัวแปร
     project.value = {
       id: data.id,
       name: data.name,
@@ -208,21 +233,29 @@ onMounted(async () => {
       status: data.status,
       progress: Number(data.progress),
       gaps: data.gaps || [],
-      details: data.details || '',
+      details: data.details || '', // รับค่า details จาก Backend
       problems: data.problems || '',
       solutions: data.solutions || ''
     }
 
+    // เก็บค่าตั้งต้นไว้เปรียบเทียบ
     originalProject.value = JSON.parse(JSON.stringify(project.value))
+
   } catch (err) {
     console.error(err)
-    Swal.fire('ข้อผิดพลาด', 'ไม่สามารถโหลดข้อมูลได้', 'error')
+    if (err.message.includes('Unauthorized')) {
+      await Swal.fire('หมดเวลา', 'กรุณาเข้าสู่ระบบใหม่', 'warning')
+      router.push('/login')
+    } else {
+      Swal.fire('ข้อผิดพลาด', 'ไม่สามารถโหลดข้อมูลได้', 'error')
+    }
   }
 })
 
 /* =========================
-   COMPUTED
+   COMPUTED PROPERTIES
 ========================= */
+// คำนวณน้ำหนักรวมของ GAP
 const totalWeight = computed(() => {
   if (!Array.isArray(project.value.gaps)) return 0
   return project.value.gaps.reduce(
@@ -231,19 +264,23 @@ const totalWeight = computed(() => {
   )
 })
 
-const hasProjectChanged = () =>
-  JSON.stringify(project.value) !== JSON.stringify(originalProject.value)
+// เช็คว่ามีการแก้ไขข้อมูลหรือไม่
+const hasProjectChanged = () => {
+  // แปลงเป็น string เพื่อเทียบ (ตัด field ที่ไม่เกี่ยวออกถ้าจำเป็น)
+  return JSON.stringify(project.value) !== JSON.stringify(originalProject.value)
+}
 
 /* =========================
-   METHODS
+   METHODS (ACTIONS)
 ========================= */
 const goBack = () => router.back()
 
-// แก้ไข: เปลี่ยน status เริ่มต้นให้ตรงกับ Database ('processing_gap')
+// เพิ่ม GAP ใหม่ (Default status: processing_gap)
 const addGap = () => {
   project.value.gaps.push({ text: '', weight: 0, status: 'processing_gap' })
 }
 
+// ลบ GAP
 const removeGap = (i) => project.value.gaps.splice(i, 1)
 
 /* =========================
@@ -270,41 +307,47 @@ const saveProject = async () => {
     return
   }
 
-  // ---------- ASK EDIT REASON ----------
-  let editData = null
+  // ---------- ASK EDIT REASON (ถ้ามีการแก้ไข) ----------
+  let editReason = ''
+  let editFiles = null
 
+  // ถ้ามีการแก้ไขข้อมูล ให้ถามเหตุผล
   if (hasProjectChanged()) {
-    const result = await Swal.fire({
+    const { value: formValues } = await Swal.fire({
       title: 'ยืนยันการแก้ไข',
       html: `
         <div style="text-align: left">
           <label>ระบุเหตุผลการแก้ไข:</label>
-          <textarea id="reason" class="swal2-textarea" style="margin-top:5px;" placeholder="เช่น ปรับปรุงความคืบหน้าประจำสัปดาห์"></textarea>
+          <textarea id="swal-reason" class="swal2-textarea" style="margin-top:5px;" placeholder="เช่น ปรับปรุงความคืบหน้าประจำสัปดาห์"></textarea>
+          
           <label style="margin-top:10px; display:block;">แนบไฟล์หลักฐาน (ถ้ามี):</label>
-          <input id="files" type="file" class="swal2-file" multiple />
+          <input id="swal-files" type="file" class="swal2-file" multiple />
         </div>
       `,
       showCancelButton: true,
       confirmButtonText: 'บันทึก',
       cancelButtonText: 'ยกเลิก',
+      focusConfirm: false,
       preConfirm: () => {
-        const reason = document.getElementById('reason').value
-        const files = document.getElementById('files').files
-
-        if (!reason) {
-          Swal.showValidationMessage('กรุณาระบุเหตุผลการแก้ไข')
-          return
+        return {
+          reason: document.getElementById('swal-reason').value,
+          files: document.getElementById('swal-files').files
         }
-
-        return { reason, files }
       }
     })
 
-    if (!result.isConfirmed) return
-    editData = result.value
+    if (!formValues) return // กดยกเลิก
+
+    editReason = formValues.reason
+    editFiles = formValues.files
+
+    if (!editReason) {
+      // ถ้าบังคับให้ใส่เหตุผล ให้เปิด comment นี้
+      // Swal.fire('แจ้งเตือน', 'กรุณาระบุเหตุผลการแก้ไข', 'warning'); return;
+    }
   }
 
-  // ---------- LOADING ----------
+  // ---------- SHOW LOADING ----------
   Swal.fire({
     title: 'กำลังดำเนินการ',
     text: 'กำลังบันทึกข้อมูลและส่งอีเมล...',
@@ -312,46 +355,64 @@ const saveProject = async () => {
     didOpen: () => Swal.showLoading()
   })
 
-  // ---------- FormData Construction ----------
+  // ---------- PREPARE FORMDATA ----------
   const fd = new FormData()
   fd.append('name', project.value.name)
   fd.append('status', project.value.status)
   fd.append('progress', project.value.progress)
-  
-  // เพิ่มการส่งข้อมูล Problems และ Solutions
+
+  // ส่งข้อมูล Text (Problems / Solutions)
   fd.append('problems', project.value.problems)
   fd.append('solutions', project.value.solutions)
-  
+
+  // แปลง Gaps เป็น JSON String ก่อนส่ง
   fd.append('gaps', JSON.stringify(project.value.gaps))
 
-  // เพิ่ม User ID (สำหรับ Change Log) - ถ้ามี auth ให้ดึงจาก store หรือ localStorage
-  const userId = localStorage.getItem('userId') || 1
-  fd.append('userId', userId)
+  // เหตุผลการแก้ไข
+  if (editReason) {
+    fd.append('edit_reason', editReason)
+  }
 
-  // เพิ่มเหตุผลและไฟล์แนบ (ถ้ามี)
-  if (editData) {
-    fd.append('edit_reason', editData.reason)
-    Array.from(editData.files).forEach(file => {
-      fd.append('attachments', file)
-    })
+  // ไฟล์แนบ (วนลูป append ทีละไฟล์)
+  if (editFiles && editFiles.length > 0) {
+    for (let i = 0; i < editFiles.length; i++) {
+      fd.append('attachments', editFiles[i])
+    }
   }
 
   try {
-    const res = await fetch(`${API}/admin/projects/${route.params.id}`
-    , {
+    // ✅ 6. ส่ง Request PUT พร้อม Header Auth
+    const res = await fetch(`${API}/api/admin/projects/${route.params.id}`, {
       method: 'PUT',
-      body: fd // ส่งเป็น FormData
+      headers: {
+        'Authorization': `Bearer ${token}`
+        // Note: ไม่ต้องใส่ 'Content-Type': 'multipart/form-data' 
+        // เพราะ Browser จะจัดการ Boundary ให้เองเมื่อใช้ FormData
+      },
+      body: fd
     })
 
-    if (!res.ok) throw new Error('Save failed')
+    if (res.status === 401) {
+      throw new Error('Unauthorized')
+    }
 
-    // อัปเดตข้อมูลต้นฉบับเพื่อรีเซ็ตสถานะการแก้ไข
+    if (!res.ok) {
+      const errData = await res.json()
+      throw new Error(errData.message || 'Save failed')
+    }
+
+    // ✅ 7. อัปเดตข้อมูลต้นฉบับหลังบันทึกสำเร็จ
     originalProject.value = JSON.parse(JSON.stringify(project.value))
-    
+
     await Swal.fire('สำเร็จ', 'บันทึกข้อมูลเรียบร้อย และส่งอีเมลแจ้งเตือนแล้ว', 'success')
   } catch (err) {
     console.error(err)
-    Swal.fire('ผิดพลาด', 'ไม่สามารถบันทึกข้อมูลได้', 'error')
+    if (err.message === 'Unauthorized') {
+      Swal.fire('หมดเวลา', 'กรุณาเข้าสู่ระบบใหม่', 'error')
+      router.push('/login')
+    } else {
+      Swal.fire('ผิดพลาด', `ไม่สามารถบันทึกข้อมูลได้: ${err.message}`, 'error')
+    }
   }
 }
 </script>

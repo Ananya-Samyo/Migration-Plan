@@ -1,9 +1,13 @@
 import { Router } from 'express'
-import db from '../db.js' 
+import db from '../db.js'
 import { sendMail } from '../global/mailer.js'
-import { verifyToken, isAdmin } from '../middleware/auth.js' 
+import { verifyToken, isAdmin } from '../middleware/auth.js'
+import multer from 'multer' // ✅ 1. Import Multer
 
 const router = Router()
+
+// ✅ 2. Config Multer (ใช้ MemoryStorage เพื่อรับค่าไว้ในตัวแปรชั่วคราว)
+const upload = multer({ storage: multer.memoryStorage() })
 
 // ================= Helpers =================
 const normalize = (v) => {
@@ -45,17 +49,34 @@ const diffHtml = (beforeProject, afterProject, finalStatus) => {
 }
 
 // ================= UPDATE Route =================
-// ใช้ verifyToken และ isAdmin เพื่อความปลอดภัย
-router.put('/projects/:id', verifyToken, isAdmin, async (req, res) => {
+// ✅ 3. เพิ่ม middleware upload.array('attachments') เพื่อรองรับ FormData
+router.put('/projects/:id', verifyToken, isAdmin, upload.array('attachments'), async (req, res) => {
   const { id: projectPlanId } = req.params
-  
-  // ✅ ดึง userId จาก Token (req.user) ที่ Middleware ถอดรหัสให้
-  const changeUserId = req.user.user_id; 
 
-  const { 
-    name, status, progress, gaps, 
-    problems, solutions, edit_reason 
+  // ✅ ดึง userId จาก Token
+  const changeUserId = req.user.user_id;
+
+
+  const {
+    name, status,
+    problems, solutions, edit_reason,
+    details
   } = req.body
+
+  // แปลงค่าตัวเลข (FormData ส่งมาเป็น String)
+  const progress = req.body.progress ? Number(req.body.progress) : undefined;
+
+  // ✅ แปลง gaps จาก JSON String กลับเป็น Object Array
+  let gaps = [];
+  try {
+    gaps = req.body.gaps ? JSON.parse(req.body.gaps) : [];
+  } catch (e) {
+    console.error("Error parsing gaps JSON", e);
+    gaps = [];
+  }
+
+  // ไฟล์แนบจะอยู่ที่ req.files (Array)
+  const files = req.files || [];
 
   const conn = await db.getConnection()
 
@@ -77,71 +98,89 @@ router.put('/projects/:id', verifyToken, isAdmin, async (req, res) => {
     // 2️⃣ หา status_id ใหม่
     const finalStatus = status || beforeProject.status_code
     const [[st]] = await conn.query(`SELECT status_id FROM status WHERE status_code = ?`, [finalStatus])
-    
-    if (!st) throw new Error('Invalid status')
 
-    const parsedProgress = (progress !== undefined && progress !== null && progress !== '') 
-      ? Number(progress) : beforeProject.progress_percent
+    if (!st) throw new Error(`Invalid status: ${finalStatus}`)
+
+    const parsedProgress = (progress !== undefined) ? progress : beforeProject.progress_percent
 
     // 3️⃣ UPDATE Project Plans
     await conn.query(`
-      UPDATE project_plans 
-      SET project_plan_name = ?, progress_percent = ?, status_id = ?
-      WHERE project_plan_id = ?
-    `, [name, parsedProgress, st.status_id, projectPlanId])
+  UPDATE project_plans 
+  SET project_plan_name = ?, progress_percent = ?, status_id = ?, details = ?
+  WHERE project_plan_id = ?
+`, [name, parsedProgress, st.status_id, details || '', projectPlanId])
 
     // 4️⃣ UPDATE GAP (Operational Details)
     await conn.query(`DELETE FROM operational_details WHERE project_plan_id = ?`, [projectPlanId])
-    
-    const gapsList = gaps ? (typeof gaps === 'string' ? JSON.parse(gaps) : gaps) : []
-    for (const gap of gapsList) {
+
+    for (const gap of gaps) {
+      // ค้นหา ID ของสถานะ GAP (processing_gap, complete_gap, etc.)
       const [[gapSt]] = await conn.query(`SELECT status_id FROM status WHERE status_code = ?`, [gap.status])
-      await conn.query(`
-        INSERT INTO operational_details 
-        (project_plan_id, detail, weight_percent, progress_percent, status_id)
-        VALUES (?, ?, ?, ?, ?)
-      `, [projectPlanId, gap.text, gap.weight, gap.progress, gapSt.status_id])
+
+      if (gapSt) {
+        await conn.query(`
+          INSERT INTO operational_details 
+          (project_plan_id, detail, weight_percent, progress_percent, status_id)
+          VALUES (?, ?, ?, ?, ?)
+        `, [projectPlanId, gap.text, gap.weight, 0, gapSt.status_id])
+        // Note: Frontend ไม่ได้ส่ง gap.progress มา จึงใส่ default เป็น 0
+      }
     }
 
     // 5️⃣ PROBLEM / SOLUTION
     if (problems !== undefined) {
-       await conn.query(`DELETE FROM problems WHERE project_plan_id = ?`, [projectPlanId])
-       if (problems?.trim()) {
-         await conn.query(`INSERT INTO problems (project_plan_id, problem_detail) VALUES (?, ?)`, [projectPlanId, problems])
-       }
+      await conn.query(`DELETE FROM problems WHERE project_plan_id = ?`, [projectPlanId])
+      if (problems?.trim()) {
+        await conn.query(`INSERT INTO problems (project_plan_id, problem_detail) VALUES (?, ?)`, [projectPlanId, problems])
+      }
     }
 
     if (solutions !== undefined) {
-       await conn.query(`DELETE FROM solutions WHERE project_plan_id = ?`, [projectPlanId])
-       if (solutions?.trim()) {
-         await conn.query(`INSERT INTO solutions (project_plan_id, solution_detail) VALUES (?, ?)`, [projectPlanId, solutions])
-       }
+      await conn.query(`DELETE FROM solutions WHERE project_plan_id = ?`, [projectPlanId])
+      if (solutions?.trim()) {
+        await conn.query(`INSERT INTO solutions (project_plan_id, solution_detail) VALUES (?, ?)`, [projectPlanId, solutions])
+      }
     }
 
     // 6️⃣ CHANGE LOG & EDIT REASON
     if (edit_reason) {
       await conn.query(
-        `INSERT INTO edit_reasons (ref_type, ref_id, reason) VALUES (?, ?, ?)`,
+        `INSERT INTO edit_reasons (ref_type, ref_id, reason_text) VALUES (?, ?, ?)`,
         ['project_plan', projectPlanId, edit_reason]
       )
     }
 
-    // ดึง department_id ของคนที่แก้ไขจาก DB
+// --- (จุดสำหรับเขียนโค้ดบันทึกไฟล์ req.files) ---
+if (files && files.length > 0) {
+  for (const file of files) {
+    // 1. กำหนด path ของไฟล์ (สมมติว่าใช้ multer เก็บไว้ในโฟลเดอร์ uploads)
+    const filePath = `/uploads/${file.filename}`;
+    const fileType = file.mimetype.split('/')[1]; // เช่น pdf, png, jpg
+
+    // 2. บันทึกลงตาราง attachments ใน Database
+    await conn.query(`
+      INSERT INTO attachments (ref_type, ref_id, file_path, file_type, is_active)
+      VALUES (?, ?, ?, ?, 1)
+    `, ['project_plan', projectPlanId, filePath, fileType]);
+  }
+}
+
+    // ดึง department_id ของคนที่แก้ไข
     const [[userRow]] = await conn.query(
-        `SELECT department_id FROM users WHERE user_id = ?`, 
-        [changeUserId]
+      `SELECT department_id FROM users WHERE user_id = ?`,
+      [changeUserId]
     )
 
-    // บันทึกลง change_logs
+    // บันทึก Change Log
     await conn.query(`
       INSERT INTO change_logs 
       (scope_id, project_plan_id, user_id, department_id, change_date)
       VALUES (?, ?, ?, ?, NOW())
     `, [
-        beforeProject.scope_id, 
-        projectPlanId, 
-        changeUserId, 
-        userRow?.department_id || null
+      beforeProject.scope_id,
+      projectPlanId,
+      changeUserId,
+      userRow?.department_id || null
     ])
 
     await conn.commit()
@@ -171,10 +210,10 @@ router.put('/projects/:id', verifyToken, isAdmin, async (req, res) => {
     `, [projectPlanId, projectPlanId])
 
     if (recipients.length > 0) {
-        sendMail({
-            to: recipients.map(r => r.email).join(','),
-            subject: 'แจ้งปรับปรุงความก้าวหน้าแผนงาน',
-            html: `
+      sendMail({
+        to: recipients.map(r => r.email).join(','),
+        subject: 'แจ้งปรับปรุงความก้าวหน้าแผนงาน',
+        html: `
               <h3>มีการปรับปรุงแผนงาน</h3>
               <p><b>แผนงาน:</b> ${afterProject.project_plan_name}</p>
               <p><b>Scope:</b> ${afterProject.scope_name}</p>
@@ -184,7 +223,7 @@ router.put('/projects/:id', verifyToken, isAdmin, async (req, res) => {
               ${edit_reason ? `<p><b>เหตุผลการแก้ไข:</b> ${edit_reason}</p>` : ''}
               <p style="color:#888; font-size:12px;">แก้ไขโดย: ${req.user.role} (ID: ${changeUserId})</p>
             `
-        }).catch(err => console.error('Send mail error:', err))
+      }).catch(err => console.error('Send mail error:', err))
     }
 
     res.json({ message: 'updated successfully' })
@@ -192,7 +231,7 @@ router.put('/projects/:id', verifyToken, isAdmin, async (req, res) => {
   } catch (err) {
     await conn.rollback()
     console.error('Update project error:', err)
-    res.status(500).json({ message: 'Server error' })
+    res.status(500).json({ message: 'Server error: ' + err.message })
   } finally {
     conn.release()
   }
@@ -204,8 +243,15 @@ router.get('/projects/:id', verifyToken, isAdmin, async (req, res) => {
   try {
     const [[project]] = await db.query(`
       SELECT 
-        p.project_plan_id, p.scope_id, p.project_plan_name, 
-        p.progress_percent, s.scope_name, s.start_date, s.end_date, st.status_code
+        p.project_plan_id, 
+        p.scope_id, 
+        p.project_plan_name, 
+        p.progress_percent, 
+        p.details,           
+        s.scope_name, 
+        s.start_date, 
+        s.end_date, 
+        st.status_code
       FROM project_plans p
       JOIN scopes s ON p.scope_id = s.scope_id
       JOIN status st ON p.status_id = st.status_id
@@ -214,6 +260,7 @@ router.get('/projects/:id', verifyToken, isAdmin, async (req, res) => {
 
     if (!project) return res.status(404).json({ message: 'ไม่พบแผนงาน' })
 
+    // ดึงข้อมูล GAPs
     const [gapRows] = await db.query(`
       SELECT od.detail AS text, od.weight_percent AS weight, 
              od.progress_percent AS progress, st.status_code AS status
@@ -222,6 +269,7 @@ router.get('/projects/:id', verifyToken, isAdmin, async (req, res) => {
       WHERE od.project_plan_id = ?
     `, [id])
 
+    // ดึงข้อมูลปัญหาและทางแก้
     const [problemRows] = await db.query(`SELECT problem_detail FROM problems WHERE project_plan_id = ?`, [id])
     const [solutionRows] = await db.query(`SELECT solution_detail FROM solutions WHERE project_plan_id = ?`, [id])
 
@@ -234,12 +282,13 @@ router.get('/projects/:id', verifyToken, isAdmin, async (req, res) => {
       status: project.status_code,
       progress: Number(project.progress_percent),
       gaps: gapRows,
+      details: project.details || '', // ✅ ส่งค่า p.details กลับไปที่ Frontend
       problems: problemRows.map(r => r.problem_detail).join('\n'),
       solutions: solutionRows.map(r => r.solution_detail).join('\n')
     })
   } catch (err) {
     console.error('GET project error:', err)
-    res.status(500).json({ message: 'Server error' })
+    res.status(500).json({ message: 'Server error', error: err.message })
   }
 })
 
