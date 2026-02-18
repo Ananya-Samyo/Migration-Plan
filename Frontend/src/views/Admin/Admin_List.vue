@@ -1,15 +1,12 @@
 <template>
   <div class="page">
-    <!-- Header -->
     <div class="page-header">
       <h1>รายชื่อผู้ดูแลระบบ</h1>
-
       <button class="btn-primary" @click="openAdd">
         + เพิ่มผู้ดูแล
       </button>
     </div>
 
-    <!-- Card -->
     <div class="card">
       <table>
         <thead>
@@ -21,10 +18,9 @@
             <th>จัดการ</th>
           </tr>
         </thead>
-
         <tbody>
-          <tr v-for="(admin, index) in admins" :key="admin.id">
-            <td>{{ index + 1 }}</td>
+          <tr v-for="(admin, index) in adminsData" :key="admin.id">
+            <td>{{ ((currentPage - 1) * 10) + (index + 1) }}</td>
             <td>{{ admin.name }}</td>
             <td>{{ admin.department || '-' }}</td>
             <td>{{ admin.email }}</td>
@@ -33,15 +29,31 @@
               <button class="btn-delete" @click="removeAdmin(admin.id)">ลบ</button>
             </td>
           </tr>
-
-          <tr v-if="admins.length === 0">
+          <tr v-if="adminsData.length === 0">
             <td colspan="5" class="empty">ไม่มีข้อมูล</td>
           </tr>
         </tbody>
       </table>
+
+      <div class="pagination" v-if="totalPages > 1">
+        <button 
+          class="btn-page" 
+          :disabled="currentPage === 1" 
+          @click="loadAdmins(currentPage - 1)"
+        >
+          ก่อนหน้า
+        </button>
+        <span class="page-info">หน้า {{ currentPage }} / {{ totalPages }}</span>
+        <button 
+          class="btn-page" 
+          :disabled="currentPage === totalPages" 
+          @click="loadAdmins(currentPage + 1)"
+        >
+          ถัดไป
+        </button>
+      </div>
     </div>
 
-    <!-- Modal -->
     <div v-if="showModal" class="modal-backdrop">
       <div class="modal">
         <h2>{{ isEdit ? 'แก้ไขผู้ดูแล' : 'เพิ่มผู้ดูแล' }}</h2>
@@ -53,12 +65,12 @@
 
         <div class="form-group">
           <label>กอง</label>
-          <select v-model="form.department">
+          <select v-model="form.department_id">
             <option value="">-- เลือกกอง --</option>
-            <option
-              v-for="dept in departments"
-              :key="dept.department_id"
-              :value="dept.department_name"
+            <option 
+              v-for="dept in departments" 
+              :key="dept.department_id" 
+              :value="dept.department_id"
             >
               {{ dept.department_name }}
             </option>
@@ -84,96 +96,91 @@ import { ref, onMounted } from 'vue'
 import Swal from 'sweetalert2'
 import '@/assets/Admin/css/Admin_List.css'
 
-/* ===============================
-   API CONFIG
-================================ */
 const BASE_API = import.meta.env.VITE_API_BASE_URL
+const ADMIN_API = `${BASE_API}/api/admin/users`
+const DEPT_API = `${BASE_API}/api/departments`
 
-const ADMIN_API = `${BASE_API}/admin/users` 
-const DEPT_API  = `${BASE_API}/departments`
-
-/* ===============================
-   STATE
-================================ */
-const admins = ref([])
+// State Variables
+const adminsData = ref([]) 
 const departments = ref([])
-
 const showModal = ref(false)
 const isEdit = ref(false)
+const currentPage = ref(1)
+const totalPages = ref(1)
 
+// Form Structure
 const form = ref({
   id: null,
   name: '',
-  department: '',
+  department_id: '',
   email: '',
-  role: 'ผู้ดูแลระบบ'
+  role: 'admin'
 })
 
-/* ===============================
-   LOAD DATA
-================================ */
-const loadAdmins = async () => {
+const getHeaders = () => {
+  const token = localStorage.getItem('token')
+  return {
+    'Authorization': `Bearer ${token}`,
+    'Content-Type': 'application/json'
+  }
+}
+
+// โหลดรายชื่อผู้ดูแล (รองรับ Pagination)
+const loadAdmins = async (page = 1) => {
   try {
-    const res = await fetch(ADMIN_API)
-    admins.value = await res.json()
+    const res = await fetch(`${ADMIN_API}?page=${page}`, { headers: getHeaders() })
+    const result = await res.json()
+    
+    adminsData.value = result.data || [] 
+    currentPage.value = result.currentPage || 1
+    totalPages.value = result.totalPages || 1
   } catch (err) {
-    console.error(err)
-    Swal.fire('ผิดพลาด', 'โหลดข้อมูลผู้ดูแลไม่สำเร็จ', 'error')
+    Swal.fire('ผิดพลาด', 'โหลดข้อมูลไม่สำเร็จ', 'error')
   }
 }
 
 const loadDepartments = async () => {
   try {
-    const res = await fetch(DEPT_API)
+    const res = await fetch(DEPT_API, { headers: getHeaders() })
     departments.value = await res.json()
   } catch (err) {
-    console.error(err)
-    Swal.fire('ผิดพลาด', 'โหลดข้อมูลกองไม่สำเร็จ', 'error')
+    console.error('Load Dept Error:', err)
   }
 }
 
 onMounted(() => {
-  loadAdmins()
+  loadAdmins(1)
   loadDepartments()
 })
 
-/* ===============================
-   ADD
-================================ */
 const openAdd = () => {
   isEdit.value = false
+  form.value = { id: null, name: '', department_id: '', email: '', role: 'admin' }
+  showModal.value = true
+}
+
+const openEdit = (admin) => {
+  isEdit.value = true
   form.value = {
-    id: null,
-    name: '',
-    department: '',
-    email: '',
-    role: 'ผู้ดูแลระบบ'
+    id: admin.id,
+    name: admin.name,
+    email: admin.email,
+    department_id: admin.department_id || '', 
+    role: 'admin'
   }
   showModal.value = true
 }
 
-/* ===============================
-   EDIT
-================================ */
-const openEdit = (admin) => {
-  isEdit.value = true
-  form.value = { ...admin }
-  showModal.value = true
-}
+const closeModal = () => { showModal.value = false }
 
-/* ===============================
-   CLOSE MODAL
-================================ */
-const closeModal = () => {
-  showModal.value = false
-}
-
-/* ===============================
-   SAVE (POST / PUT)
-================================ */
+// บันทึกข้อมูล (Create / Update)
 const saveAdmin = async () => {
-  if (!form.value.name || !form.value.department || !form.value.email) {
-    Swal.fire('ข้อมูลไม่ครบ', 'กรุณากรอกข้อมูลให้ครบ', 'error')
+  const name = form.value.name?.trim()
+  const email = form.value.email?.trim()
+  const dept_id = form.value.department_id
+
+  if (!name || !email || !dept_id) {
+    Swal.fire('ข้อมูลไม่ครบ', 'กรุณากรอกข้อมูลและเลือกกองให้ครบถ้วน', 'warning')
     return
   }
 
@@ -188,44 +195,39 @@ const saveAdmin = async () => {
   if (!confirm.isConfirmed) return
 
   try {
-    if (isEdit.value) {
-      await fetch(`${ADMIN_API}/${form.value.id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(form.value)
+    const method = isEdit.value ? 'PUT' : 'POST'
+    const url = isEdit.value ? `${ADMIN_API}/${form.value.id}` : ADMIN_API
+
+    const res = await fetch(url, {
+      method: method,
+      headers: getHeaders(),
+      body: JSON.stringify({
+        name: name,
+        email: email,
+        department_id: dept_id
       })
-    } else {
-      await fetch(ADMIN_API, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(form.value)
-      })
-    }
+    })
+
+    const result = await res.json()
+    if (!res.ok) throw new Error(result.message || 'บันทึกไม่สำเร็จ')
 
     showModal.value = false
-    await loadAdmins()
-
-    Swal.fire({
-      icon: 'success',
-      title: 'บันทึกสำเร็จ',
-      timer: 1200,
-      showConfirmButton: false
-    })
+    // โหลดข้อมูลหน้าปัจจุบันใหม่
+    await loadAdmins(currentPage.value)
+    Swal.fire({ icon: 'success', title: 'บันทึกสำเร็จ', timer: 1500, showConfirmButton: false })
   } catch (err) {
-    console.error(err)
-    Swal.fire('ผิดพลาด', 'บันทึกไม่สำเร็จ', 'error')
+    Swal.fire('ผิดพลาด', err.message, 'error')
   }
 }
 
-/* ===============================
-   DELETE
-================================ */
+// ลบข้อมูล
 const removeAdmin = async (id) => {
-  const admin = admins.value.find(a => a.id === id)
-
+  // แก้ไข: ใช้ adminsData แทน admins
+  const admin = adminsData.value.find(a => a.id === id)
+  
   const confirm = await Swal.fire({
     title: 'ยืนยันการลบ',
-    text: `ต้องการลบ ${admin.name} ใช่หรือไม่`,
+    text: `ต้องการลบผู้ดูแล "${admin?.name}" ใช่หรือไม่?`,
     icon: 'warning',
     showCancelButton: true,
     confirmButtonText: 'ลบ',
@@ -235,18 +237,19 @@ const removeAdmin = async (id) => {
   if (!confirm.isConfirmed) return
 
   try {
-    await fetch(`${ADMIN_API}/${id}`, { method: 'DELETE' })
-    await loadAdmins()
+    const res = await fetch(`${ADMIN_API}/${id}`, { method: 'DELETE', headers: getHeaders() })
+    if (!res.ok) throw new Error('ลบไม่สำเร็จ')
+    
+    // เช็คว่าถ้าลบคนสุดท้ายของหน้า ให้ถอยกลับไปหน้าก่อนหน้า
+    if (adminsData.value.length === 1 && currentPage.value > 1) {
+       await loadAdmins(currentPage.value - 1)
+    } else {
+       await loadAdmins(currentPage.value)
+    }
 
-    Swal.fire({
-      icon: 'success',
-      title: 'ลบสำเร็จ',
-      timer: 1200,
-      showConfirmButton: false
-    })
+    Swal.fire({ icon: 'success', title: 'ลบข้อมูลสำเร็จ', timer: 1500, showConfirmButton: false })
   } catch (err) {
-    console.error(err)
-    Swal.fire('ผิดพลาด', 'ลบไม่สำเร็จ', 'error')
+    Swal.fire('ผิดพลาด', err.message, 'error')
   }
 }
 </script>

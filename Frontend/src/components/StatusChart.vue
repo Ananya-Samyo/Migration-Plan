@@ -1,7 +1,5 @@
 <template>
   <div class="charts-container">
-
-    <!-- Pie -->
     <div class="chart-wrapper">
       <h3>📊 สัดส่วนสถานะ GAP</h3>
       <div class="canvas-box">
@@ -9,19 +7,17 @@
       </div>
     </div>
 
-    <!-- Bar -->
     <div class="chart-wrapper">
       <h3>📈 จำนวนงานตามระดับความคืบหน้า</h3>
       <div class="canvas-box">
         <Bar :data="barChartData" :options="barOptions" />
       </div>
     </div>
-
   </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue' // เพิ่ม watch ตรงนี้
 import { Pie, Bar } from 'vue-chartjs'
 import axios from 'axios'
 import {
@@ -46,8 +42,16 @@ ChartJS.register(
 )
 
 /* ===============================
-   API
+   PROPS (รับค่าจาก Dashboard หลัก)
 ================================ */
+const props = defineProps({
+  selectedDate: {
+    type: Object,
+    required: true,
+    default: () => ({ start: '', end: '' })
+  }
+})
+
 const API = import.meta.env.VITE_API_BASE_URL
 
 /* ===============================
@@ -67,13 +71,16 @@ const progressRange = ref({
 })
 
 /* ===============================
-   Fetch Backend
+   Fetch Backend (แก้ไขให้ส่ง Query String)
 ================================ */
 const fetchCharts = async () => {
   try {
+    // สร้าง query จาก props ที่ได้รับมา
+    const query = `?startDate=${props.selectedDate.start}&endDate=${props.selectedDate.end}`
+    
     const [gapRes, progressRes] = await Promise.all([
-      axios.get(`${API}/admin/dashboard/gap-summary`),
-      axios.get(`${API}/admin/dashboard/progress-range`)
+      axios.get(`${API}/api/admin/dashboard/gap-summary${query}`),
+      axios.get(`${API}/api/admin/dashboard/progress-range${query}`)
     ])
 
     gapSummary.value = gapRes.data
@@ -83,10 +90,20 @@ const fetchCharts = async () => {
   }
 }
 
+// โหลดครั้งแรกเมื่อ Component พร้อม
 onMounted(fetchCharts)
 
+// คอยดูว่าถ้า selectedDate ใน Dashboard เปลี่ยน ให้โหลดข้อมูลกราฟใหม่ทันที
+watch(
+  () => props.selectedDate,
+  () => {
+    fetchCharts()
+  },
+  { deep: true }
+)
+
 /* ===============================
-   Pie Chart
+   Pie Chart (Computed จะทำงานอัตโนมัติเมื่อ State เปลี่ยน)
 ================================ */
 const pieChartData = computed(() => ({
   labels: ['ยังไม่ปิด GAP', 'ปิด GAP เสร็จแล้ว', 'ไม่สามารถปิด GAP แต่ยอมรับได้'],
@@ -124,7 +141,7 @@ const barChartData = computed(() => ({
 }))
 
 /* ===============================
-   Options
+   Options (คงเดิม)
 ================================ */
 const pieOptions = {
   responsive: true,

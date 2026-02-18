@@ -5,16 +5,17 @@
         <span class="icon-box">📈</span>
         <h3>จำนวน GAP ที่ปิดได้</h3>
       </div>
-      </div>
+    </div>
 
     <div class="panel-body chart-container">
       <Line v-if="loaded" :data="chartData" :options="chartOptions" />
+      <div v-else class="loading-placeholder">กำลังโหลดข้อมูล...</div>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue' // 1. เพิ่ม watch
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -28,9 +29,6 @@ import {
 } from 'chart.js'
 import { Line } from 'vue-chartjs'
 
-/* ===============================
-   Register Chart.js
-================================ */
 ChartJS.register(
   CategoryScale,
   LinearScale,
@@ -43,8 +41,15 @@ ChartJS.register(
 )
 
 /* ===============================
-   API CONFIG
+   PROPS (เพิ่มใหม่)
 ================================ */
+const props = defineProps({
+  selectedDate: {
+    type: Object,
+    required: true
+  }
+})
+
 const API = import.meta.env.VITE_API_BASE_URL
 
 /* ===============================
@@ -55,7 +60,7 @@ const labels = ref([])
 const values = ref([])
 
 /* ===============================
-   FETCH DATA
+   FETCH DATA (แก้ไขให้ส่งวันที่)
 ================================ */
 const fetchChartData = async () => {
   loaded.value = false
@@ -63,10 +68,10 @@ const fetchChartData = async () => {
     const token = localStorage.getItem('token')
     if (!token) return
 
-    // ✅ 1. แก้ URL ให้มี /api
-    // ✅ 2. ใส่ Header Token
-    // ✅ 3. (Optional) ใส่ mode=day, week, month ได้ (Default คือ day)
-    const res = await fetch(`${API}/api/admin/dashboard/gap-closed-chart?mode=day`, {
+    // ส่ง startDate และ endDate ไปยัง Backend
+    const query = `?mode=day&startDate=${props.selectedDate.start}&endDate=${props.selectedDate.end}`
+    
+    const res = await fetch(`${API}/api/admin/dashboard/gap-closed-chart${query}`, {
       headers: {
         'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json'
@@ -74,28 +79,30 @@ const fetchChartData = async () => {
     })
 
     if (!res.ok) throw new Error('Fetch Error')
-
     const data = await res.json()
 
-    // backend ส่งมา: [{ label: '01/01', total: 5 }, ...]
     labels.value = data.map(i => i.label)
     values.value = data.map(i => i.total)
-
     loaded.value = true
 
   } catch (err) {
     console.error('❌ LineChart API error', err)
-    // Mock Data กรณี Error (จะได้ไม่ดูโล่งตอน Test)
     labels.value = ['จ', 'อ', 'พ', 'พฤ', 'ศ', 'ส', 'อา']
     values.value = [0, 0, 0, 0, 0, 0, 0]
     loaded.value = true
   }
 }
 
+/* ===============================
+   WATCHER (เพิ่มใหม่)
+================================ */
+// เมื่อวันที่จาก Dashboard เปลี่ยน ให้โหลดกราฟเส้นใหม่
+watch(() => props.selectedDate, fetchChartData, { deep: true })
+
 onMounted(fetchChartData)
 
 /* ===============================
-   CHART CONFIG
+   CHART CONFIG (คงเดิม)
 ================================ */
 const chartData = computed(() => ({
   labels: labels.value,
@@ -103,17 +110,16 @@ const chartData = computed(() => ({
     {
       label: 'GAP ที่ปิดได้',
       data: values.value,
-      // 🎨 Modern Gradient Look
-      borderColor: '#6366f1', // สี Indigo Primary
+      borderColor: '#6366f1',
       backgroundColor: (context) => {
         const ctx = context.chart.ctx;
         const gradient = ctx.createLinearGradient(0, 0, 0, 300);
-        gradient.addColorStop(0, 'rgba(99, 102, 241, 0.4)'); // สีเข้มด้านบน
-        gradient.addColorStop(1, 'rgba(99, 102, 241, 0.0)'); // จางหายด้านล่าง
+        gradient.addColorStop(0, 'rgba(99, 102, 241, 0.4)');
+        gradient.addColorStop(1, 'rgba(99, 102, 241, 0.0)');
         return gradient;
       },
       borderWidth: 3,
-      tension: 0.4, // เส้นโค้ง Smooth
+      tension: 0.4,
       pointRadius: 4,
       pointBackgroundColor: '#ffffff',
       pointBorderColor: '#6366f1',
@@ -127,10 +133,6 @@ const chartData = computed(() => ({
 const chartOptions = computed(() => ({
   responsive: true,
   maintainAspectRatio: false,
-  interaction: {
-    mode: 'index',
-    intersect: false
-  },
   plugins: {
     legend: { display: false },
     tooltip: {
@@ -139,9 +141,6 @@ const chartOptions = computed(() => ({
       bodyColor: '#1e293b',
       borderColor: '#e2e8f0',
       borderWidth: 1,
-      padding: 10,
-      cornerRadius: 8,
-      displayColors: false, // ซ่อนสีสี่เหลี่ยมใน tooltip
       callbacks: {
         label: (context) => `✅ ปิดได้: ${context.parsed.y} รายการ`
       }
@@ -150,19 +149,27 @@ const chartOptions = computed(() => ({
   scales: {
     x: {
       grid: { display: false },
-      ticks: { color: '#64748b', font: { family: 'Sarabun' } }
+      ticks: { color: '#64748b' }
     },
     y: {
       beginAtZero: true,
-      grid: { color: '#f1f5f9', borderDash: [5, 5] }, // เส้นประจางๆ
-      ticks: { stepSize: 1, color: '#64748b', font: { family: 'Sarabun' } },
-      border: { display: false } // ซ่อนเส้นแกน Y
+      grid: { color: '#f1f5f9', borderDash: [5, 5] },
+      ticks: { stepSize: 1, color: '#64748b' }
     }
   }
 }))
 </script>
 
 <style scoped>
+
+.loading-placeholder {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100%;
+  color: #64748b;
+}
+
 /* สไตล์ Modern เข้ากับ Dashboard */
 .panel {
   background: #ffffff;

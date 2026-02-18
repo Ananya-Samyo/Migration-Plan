@@ -1,177 +1,111 @@
 import { Router } from 'express'
 import db from '../db.js'
-import { verifyToken, isAdmin } from '../middleware/auth.js' // นำเข้า Middleware
+import { verifyToken, isAdmin } from '../middleware/auth.js'
 
 const router = Router()
 
-// ใช้ Middleware กับทุก Route ในไฟล์นี้ (เนื่องจากเป็นระบบจัดการ Admin ทั้งหมด)
 router.use(verifyToken);
 router.use(isAdmin);
 
-// ================= User List =================
+// ================= 1. GET: รายชื่อ Admin + Pagination =================
 router.get('/users', async (req, res) => {
   try {
+    const page = parseInt(req.query.page) || 1;
+    const limit = 10;
+    const offset = (page - 1) * limit;
+
+    // ดึงข้อมูล 10 รายชื่อ
     const [rows] = await db.query(`
       SELECT
         u.user_id AS id,
         u.user_name AS name,
+        u.department_id,
         d.department_name AS department,
         u.email,
         u.role,
         u.created_at
       FROM users u
-      LEFT JOIN user_profiles up ON u.user_id = up.user_id
-      LEFT JOIN departments d ON up.department_id = d.department_id
+      LEFT JOIN departments d ON u.department_id = d.department_id
       WHERE u.role = 'admin'
       ORDER BY u.created_at DESC
-    `)
+      LIMIT ? OFFSET ?
+    `, [limit, offset]);
 
-    res.json(rows)
+    // นับจำนวนทั้งหมดเพื่อคำนวณหน้า
+    const [[{ total }]] = await db.query(
+      `SELECT COUNT(*) as total FROM users WHERE role = 'admin'`
+    );
+
+    const totalPages = Math.ceil(total / limit);
+
+    res.json({
+      data: rows,
+      currentPage: page,
+      totalPages: totalPages
+    });
   } catch (err) {
-    console.error('GET admin users error:', err)
-    res.status(500).json({ message: 'Server error' })
+    console.error('GET error:', err);
+    res.status(500).json({ message: 'Server error' });
   }
-})
+});
 
-// ================= Create User =================
+// ================= 2. POST: เพิ่มผู้ดูแล (ใช้ ID ตรงๆ) =================
 router.post('/users', async (req, res) => {
-  const { name, email, department } = req.body
-  
-  const conn = await db.getConnection()
-
+  const { name, email, department_id } = req.body;
+  const conn = await db.getConnection();
   try {
-    await conn.beginTransaction()
+    await conn.beginTransaction();
 
-    // 1. เช็ค Email ซ้ำ
-    const [[existing]] = await conn.query(
-        `SELECT user_id FROM users WHERE email = ?`, 
-        [email]
-    )
+    const [[existing]] = await conn.query(`SELECT user_id FROM users WHERE email = ?`, [email]);
     if (existing) {
-        await conn.rollback()
-        return res.status(400).json({ message: 'Email นี้มีผู้ใช้งานแล้ว' })
+      await conn.rollback();
+      return res.status(400).json({ message: 'Email นี้มีผู้ใช้งานแล้ว' });
     }
 
-    // 2. Insert User (บทบาทเป็น admin)
+    // บันทึกลงตาราง users โดยตรง (ตัดขั้นตอนหาชื่อซ้ำออก)
     const [result] = await conn.query(
-      `INSERT INTO users (user_name, email, role)
-       VALUES (?, ?, 'admin')`,
-      [name, email]
-    )
+      `INSERT INTO users (user_name, email, role, department_id) VALUES (?, ?, 'admin', ?)`,
+      [name, email, department_id || null]
+    );
 
-    const userId = result.insertId
-
-    // 3. Find Department & Insert Profile
-    if (department) {
-        const [[dept]] = await conn.query(
-          `SELECT department_id FROM departments WHERE department_name = ?`,
-          [department]
-        )
-
-        if (dept) {
-          await conn.query(
-              `INSERT INTO user_profiles (user_id, department_id)
-               VALUES (?, ?)`,
-              [userId, dept.department_id]
-          )
-        }
-    }
-
-    await conn.commit()
-    res.json({ message: 'created', id: userId })
-
+    await conn.commit();
+    res.json({ message: 'created', id: result.insertId });
   } catch (err) {
-    await conn.rollback()
-    console.error('POST admin user error:', err)
-    res.status(500).json({ message: 'Server error' })
+    await conn.rollback();
+    res.status(500).json({ message: 'Server error' });
   } finally {
-    conn.release()
+    conn.release();
   }
-})
+});
 
-// ================= Update User =================
+// ================= 3. PUT: แก้ไขผู้ดูแล =================
 router.put('/users/:id', async (req, res) => {
-  const { id } = req.params
-  const { name, email, department } = req.body
-
-  const conn = await db.getConnection()
-
+  const { id } = req.params;
+  const { name, email, department_id } = req.body;
   try {
-    await conn.beginTransaction()
-
-    // 1. Update User Info
-    await conn.query(
-      `UPDATE users SET user_name = ?, email = ? WHERE user_id = ?`,
-      [name, email, id]
-    )
-
-    // 2. Update Department (Upsert Logic)
-    if (department) {
-        const [[dept]] = await conn.query(
-            `SELECT department_id FROM departments WHERE department_name = ?`,
-            [department]
-        )
-
-        if (dept) {
-            const [[existingProfile]] = await conn.query(
-                `SELECT user_id FROM user_profiles WHERE user_id = ?`,
-                [id]
-            )
-
-            if (existingProfile) {
-                await conn.query(
-                    `UPDATE user_profiles SET department_id = ? WHERE user_id = ?`,
-                    [dept.department_id, id]
-                )
-            } else {
-                await conn.query(
-                    `INSERT INTO user_profiles (user_id, department_id) VALUES (?, ?)`,
-                    [id, dept.department_id]
-                )
-            }
-        }
-    }
-
-    await conn.commit()
-    res.json({ message: 'updated' })
-
+    // อัปเดตข้อมูลรวมถึง department_id ในคำสั่งเดียว
+    await db.query(
+      `UPDATE users SET user_name = ?, email = ?, department_id = ? WHERE user_id = ?`,
+      [name, email, department_id || null, id]
+    );
+    res.json({ message: 'updated' });
   } catch (err) {
-    await conn.rollback()
-    console.error('PUT admin user error:', err)
-    res.status(500).json({ message: 'Server error' })
-  } finally {
-    conn.release()
+    res.status(500).json({ message: 'Server error' });
   }
-})
+});
 
-// ================= Delete User =================
+// ================= 4. DELETE: ลบผู้ดูแล =================
 router.delete('/users/:id', async (req, res) => {
-  const { id } = req.params
-  
-  // ป้องกัน Admin ลบตัวเอง (Optional)
-  if (parseInt(id) === req.user.user_id) {
+  const { id } = req.params;
+  if (req.user && parseInt(id) === req.user.user_id) {
     return res.status(400).json({ message: 'ไม่สามารถลบบัญชีของตัวเองได้' });
   }
-
-  const conn = await db.getConnection()
-
   try {
-    await conn.beginTransaction()
-
-    // ลบข้อมูลที่เกี่ยวข้องตามลำดับ (Child Table -> Parent Table)
-    await conn.query(`DELETE FROM user_profiles WHERE user_id = ?`, [id])
-    await conn.query(`DELETE FROM users WHERE user_id = ?`, [id])
-
-    await conn.commit()
-    res.json({ message: 'deleted' })
-
+    await db.query(`DELETE FROM users WHERE user_id = ?`, [id]);
+    res.json({ message: 'deleted' });
   } catch (err) {
-    await conn.rollback()
-    console.error('DELETE admin user error:', err)
-    res.status(500).json({ message: 'Server error' })
-  } finally {
-    conn.release()
+    res.status(500).json({ message: 'Server error' });
   }
-})
+});
 
-export default router
+export default router;

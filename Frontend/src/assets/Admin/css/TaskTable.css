@@ -1,71 +1,76 @@
-/* ===============================
-   TASK TABLE
-================================ */
-
-.table-wrapper {
-  background: #ffffff;
-  border-radius: 18px;
-  padding: 20px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.06);
+.table-container {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
 }
 
-/* ---------- Table ---------- */
-.table-wrapper table {
+.table-wrapper {
+  overflow-x: auto;
+  min-height: 205px;
+}
+
+table {
   width: 100%;
   border-collapse: collapse;
 }
 
-.table-wrapper thead th {
-  text-align: left;
-  padding: 12px 14px;
+th {
+  padding: 16px 14px;
   font-size: 14px;
-  font-weight: 600;
-  color: #4c1d95;
-  border-bottom: 2px solid #ede9fe;
-  background: #faf7ff;
+  color: #64748b;
+  border-bottom: 2px solid #f1f5f9;
+  font-weight: 700;
 }
 
-.table-wrapper tbody tr {
+td {
+  vertical-align: middle;
+  padding: 16px 14px;
+  font-size: 14px;
+  color: #1e293b;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+tr {
   cursor: pointer;
   transition: background 0.2s ease;
 }
 
-.table-wrapper tbody tr:hover {
-  background: #f5f3ff;
+tr:hover {
+  background: #f8faff;
 }
 
-.table-wrapper td {
-  padding: 14px;
-  font-size: 14px;
-  color: #374151;
+.title {
+  font-weight: 600;
 }
 
-/* ---------- Title ---------- */
-.table-wrapper td.title {
-  font-weight: 500;
-  color: #1f2937;
-}
-
-/* ---------- Status ---------- */
 .status {
-  display: inline-block;
-  padding: 4px 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  min-width: 220px;
+  padding: 10px 16px;
+
   border-radius: 999px;
-  font-size: 12px;
-  font-weight: 500;
-  white-space: nowrap;
+  font-size: 13px;
+  font-weight: 700;
+
+  line-height: 1.4;       
+  text-align: center;
+
+  white-space: nowrap;    
+  word-break: keep-all;    
 }
 
-/* ---------- Progress ---------- */
 .progress-wrapper {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
 }
 
 .progress-bar {
   flex: 1;
-  height: 8px;
+  height: 10px;
   background: #e5e7eb;
   border-radius: 999px;
   overflow: hidden;
@@ -74,21 +79,47 @@
 .progress-fill {
   height: 100%;
   border-radius: 999px;
-  transition: width 0.4s ease;
+  transition: width 0.3s ease;
 }
 
 .progress-text {
   font-size: 13px;
-  font-weight: 500;
-  color: #4b5563;
-  min-width: 36px;
-  text-align: right;
+  font-weight: 700;
 }
 
-/* ---------- Empty State ---------- */
-.table-wrapper tbody tr td[colspan] {
-  text-align: center;
-  padding: 24px;
-  color: #94a3b8;
-  font-style: italic;
+/* ✅ CSS สำหรับ Pagination */
+.pagination {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 12px;
+  padding-top: 10px;
+}
+
+.page-info {
+  font-size: 14px;
+  color: #64748b;
+  font-weight: 500;
+}
+
+.page-btn {
+  padding: 6px 12px;
+  border: 1px solid #e2e8f0;
+  background: white;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+  color: #334155;
+  transition: all 0.2s;
+}
+
+.page-btn:hover:not(:disabled) {
+  background: #f1f5f9;
+  border-color: #cbd5e1;
+}
+
+.page-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  background: #f8fafc;
 }
