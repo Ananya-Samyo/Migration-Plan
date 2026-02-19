@@ -1,174 +1,185 @@
-/* ================= Base ================= */
-.main-container {
-  max-width: 1280px;
-  margin: 40px auto;
-  padding: 0 16px;
-  font-family: 'Prompt', sans-serif;
-  color: #1e293b;
-  background: #f8fafc;
+/* =========================================
+   1. Import & Reset (ใช้ชุดเดิม)
+   ========================================= */
+@import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600;700&display=swap');
+
+* {
+  box-sizing: border-box;
 }
 
-/* ================= Header ================= */
+body {
+  font-family: 'Sarabun', sans-serif;
+  background-color: #f5f7fa;
+  color: #1f2937;
+  margin: 0;
+  padding: 20px;
+}
+
+/* =========================================
+   2. Layout Containers
+   ========================================= */
+.main-container {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+/* Header แบบหน้าประเมินผล */
 .top-bar {
-  text-align: center;
-  margin: 32px 0 40px;
+  background-color: #ffffff;
+  border-radius: 20px;
+  padding: 20px 30px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
+  margin-bottom: 24px;
 }
 
 .page-title {
-  font-size: 26px;
-  font-weight: 600;
-  color: #4c1d95;
-  margin-bottom: 12px;
+  font-size: 22px;
+  font-weight: 700;
+  color: #1f2937;
+  margin: 0;
+  position: relative;
+  display: inline-block;
+  padding-bottom: 8px;
 }
 
-.top-bar::after {
+/* เส้นขีดเส้นใต้สีเหลืองไล่เฉด (เอกลักษณ์จากหน้าประเมิน) */
+.page-title::after {
   content: '';
-  display: block;
-  width: 100px; /* ปรับให้เส้นสั้นลงหน่อยเพื่อความมินิมอล */
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 120px;
   height: 4px;
-  margin: 8px auto 0;
-  background: linear-gradient(to right, #a78bfa, #4c1d95);
+  background: linear-gradient(90deg, #fbbf24 0%, rgba(251, 191, 36, 0) 100%);
   border-radius: 2px;
 }
 
-/* ================= Filter Bar (ปรับปรุงให้รองรับ Date Group) ================= */
+/* =========================================
+   3. Filter Bar (Modern & Clean)
+   ========================================= */
 .filter-bar {
   background: #ffffff;
-  padding: 24px 26px;
+  padding: 24px;
   border-radius: 18px;
-  margin-bottom: 28px;
-  display: flex; /* เปลี่ยนเป็น Flex เพื่อจัดเรียงง่ายกว่า */
+  margin-bottom: 24px;
+  display: flex;
   flex-wrap: wrap;
-  gap: 18px;
+  gap: 16px;
   align-items: center;
-  box-shadow: 0 10px 30px rgba(76, 29, 149, 0.08), 0 2px 6px rgba(0, 0, 0, 0.04);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.02);
 }
 
 .date-group {
   display: flex;
   align-items: center;
   gap: 10px;
-  background: #f1f5f9;
-  padding: 8px 12px;
-  border-radius: 10px;
-  border: 1px solid #e2e8f0;
+  background: #f8f7ff; /* สีม่วงอ่อนมากแบบหน้าประเมิน */
+  padding: 8px 16px;
+  border-radius: 12px;
+  border: 1px solid #ebe7ff;
 }
 
 .date-group label {
   font-size: 14px;
-  color: #64748b;
-  font-weight: 500;
-  white-space: nowrap;
-}
-
-/* ปรับ Input/Select ให้ขยายเต็มพื้นที่ที่เหลือ */
-.filter-bar select {
-  min-width: 200px;
-  flex: 1;
-}
-
-.filter-bar input[type="text"] {
-  min-width: 250px;
-  flex: 2;
+  font-weight: 600;
+  color: #5b3aa4;
 }
 
 .filter-bar input,
 .filter-bar select {
-  padding: 10px 12px;
+  padding: 10px 14px;
   border-radius: 10px;
-  border: 1px solid #e5e7eb;
+  border: 1px solid #d8cfff;
   font-size: 14px;
-  background: #ffffff;
-  transition: all 0.2s ease;
-}
-
-.date-group input[type="date"] {
-    border: none;
-    background: transparent;
-    padding: 5px;
-    font-family: inherit;
+  color: #3f2a63;
+  transition: all 0.2s;
 }
 
 .filter-bar input:focus,
-.filter-bar select:focus,
-.date-group input:focus {
+.filter-bar select:focus {
   outline: none;
-  border-color: #a78bfa;
-  box-shadow: 0 0 0 3px rgba(167, 139, 250, 0.25);
+  border-color: #7c3aed;
+  box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.1);
 }
 
-/* ================= Table ================= */
+/* =========================================
+   4. Table Design (Modern Card Style)
+   ========================================= */
 .modern-table {
   width: 100%;
   border-collapse: separate;
-  border-spacing: 0 10px;
+  border-spacing: 0 12px; /* เว้นระยะห่างระหว่างแถวให้ดูเป็น Card */
 }
 
 .modern-table thead th {
-  font-size: 13px;
+  padding: 0 20px 8px;
+  font-size: 14px;
   font-weight: 600;
-  color: #64748b;
-  padding: 0 12px 8px;
-  text-align: left; /* จัดชิดซ้ายให้อ่านง่าย */
+  color: #6d28d9;
+  text-align: left;
 }
 
 .modern-table tbody tr {
   background: #ffffff;
-  border-radius: 14px;
-  box-shadow: 0 4px 14px rgba(0,0,0,0.04);
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  transition: all 0.2s ease;
+}
+
+.modern-table tbody td {
+  padding: 18px 20px;
+  font-size: 14px;
+  border-top: 1px solid #f1f5f9;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+/* ทำมุมมนให้แถวตาราง */
+.modern-table tbody td:first-child {
+  border-left: 1px solid #f1f5f9;
+  border-radius: 12px 0 0 12px;
+  font-weight: 600;
+  color: #7c3aed;
+}
+
+.modern-table tbody td:last-child {
+  border-right: 1px solid #f1f5f9;
+  border-radius: 0 12px 12px 0;
 }
 
 .modern-table tbody tr:hover {
   transform: translateY(-2px);
-  box-shadow: 0 8px 22px rgba(76,29,149,0.12);
+  box-shadow: 0 8px 20px rgba(124, 58, 237, 0.08);
 }
 
-.modern-table tbody td {
-  padding: 18px 12px; /* เพิ่ม Padding แนวตั้ง */
-  font-size: 14px;
-  color: #334155;
-  vertical-align: middle;
-}
-
-.modern-table tbody td:first-child {
-  border-top-left-radius: 14px;
-  border-bottom-left-radius: 14px;
-  color: #4c1d95; /* เน้นสีวันที่ */
-  font-weight: 500;
-}
-
-.modern-table tbody td:last-child {
-  border-top-right-radius: 14px;
-  border-bottom-right-radius: 14px;
-  text-align: right;
-}
-
-/* ================= Action Button ================= */
+/* =========================================
+   5. Buttons (ใช้ Pill Style)
+   ========================================= */
 .btn-detail {
-  background: linear-gradient(135deg, #7c3aed, #8b5cf6);
-  color: #ffffff;
-  border: none;
+  background-color: #f3f0ff;
+  color: #6d28d9;
+  border: 1px solid #e9d5ff;
   padding: 8px 18px;
-  border-radius: 999px;
+  border-radius: 50px;
+  font-weight: 600;
   font-size: 13px;
-  font-weight: 500;
   cursor: pointer;
-  box-shadow: 0 4px 6px -1px rgba(124, 58, 237, 0.3);
-  transition: all 0.2s ease;
+  transition: all 0.2s;
 }
 
 .btn-detail:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 10px 15px -3px rgba(124, 58, 237, 0.4);
+  background-color: #7c3aed;
+  color: #ffffff;
 }
 
-/* ================= Modal (ปรับปรุง) ================= */
+/* =========================================
+   6. Modal (ปรับให้เข้าเซต)
+   ========================================= */
 .modal-backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(15, 23, 42, 0.65); /* พื้นหลังเข้มขึ้นนิดนึง */
-  backdrop-filter: blur(4px); /* เพิ่มเบลอ */
+  background: rgba(31, 41, 55, 0.5);
+  backdrop-filter: blur(4px);
   display: flex;
   justify-content: center;
   align-items: center;
@@ -176,166 +187,145 @@
 }
 
 .modal {
-  width: 600px;
-  max-width: 90%;
+  width: 650px;
   background: #ffffff;
   border-radius: 20px;
-  padding: 0; /* ตัด padding ออกแล้วไปใส่ใน header/body แทน */
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
   overflow: hidden;
-  animation: modalFadeIn 0.3s ease-out;
+  box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+  animation: modalSlideUp 0.3s ease-out;
 }
 
-@keyframes modalFadeIn {
-    from { opacity: 0; transform: scale(0.95); }
-    to { opacity: 1; transform: scale(1); }
+@keyframes modalSlideUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 .modal-header {
-    background: #f8fafc;
-    padding: 20px 24px;
-    border-bottom: 1px solid #e2e8f0;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
+  padding: 20px 24px;
+  background: #faf9ff;
+  border-bottom: 1px solid #ece8ff;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
 
-.modal h3 {
+.modal-header h3 {
   margin: 0;
+  color: #5b3aa4;
   font-size: 18px;
-  color: #1e293b;
-  font-weight: 600;
-}
-
-.btn-close-icon {
-    background: transparent;
-    border: none;
-    font-size: 24px;
-    color: #94a3b8;
-    cursor: pointer;
-    line-height: 1;
-}
-.btn-close-icon:hover { color: #ef4444; }
-
-.modal-body {
-    padding: 24px;
 }
 
 .log-info {
-    background: #f0fdf4;
-    border: 1px solid #bbf7d0;
-    padding: 12px 16px;
-    border-radius: 8px;
-    margin-bottom: 20px;
-    color: #166534;
-    font-size: 14px;
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  padding: 14px;
+  border-radius: 12px;
+  margin-bottom: 20px;
+  font-size: 14px;
+  color: #166534;
 }
 
-.log-info p { margin: 4px 0; }
-
-.modal-footer {
-    padding: 16px 24px;
-    background: #f8fafc;
-    border-top: 1px solid #e2e8f0;
-    text-align: right;
-}
-
-/* ================= Detail Table (เพิ่มสี Diff) ================= */
+/* ส่วนแสดงผลค่าที่เปลี่ยน (Diff) */
 .detail-table {
   width: 100%;
   border-collapse: collapse;
 }
 
 .detail-table th {
-  font-size: 12px;
-  text-transform: uppercase;
+  text-align: left;
+  padding: 12px;
+  font-size: 13px;
   color: #64748b;
-  font-weight: 600;
-  padding-bottom: 12px;
-  border-bottom: 2px solid #e2e8f0;
+  border-bottom: 2px solid #f1f5f9;
 }
 
 .detail-table td {
-  padding: 12px 0;
-  font-size: 14px;
+  padding: 14px 12px;
   border-bottom: 1px solid #f1f5f9;
-  vertical-align: top;
 }
 
-/* สีสำหรับค่าเก่า (แดง) และค่าใหม่ (เขียว) */
 .old-val {
-    color: #dc2626;
-    text-decoration: line-through; /* ขีดฆ่าค่าเก่า */
-    background: #fef2f2;
-    padding: 2px 6px;
-    border-radius: 4px;
-    font-size: 13px;
+  color: #dc2626;
+  background: #fef2f2;
+  padding: 4px 8px;
+  border-radius: 6px;
+  text-decoration: line-through;
+  font-size: 13px;
+  display: inline-block;
 }
 
 .new-val {
-    color: #15803d;
-    font-weight: 600;
-    background: #f0fdf4;
-    padding: 2px 6px;
-    border-radius: 4px;
+  color: #15803d;
+  background: #f0fdf4;
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-weight: 600;
+  font-size: 13px;
+  display: inline-block;
 }
 
-/* ================= Close Button (ล่าง) ================= */
+.modal-footer {
+  padding: 20px;
+  text-align: right;
+  background: #faf9ff;
+}
+
 .btn-close {
-  padding: 10px 24px;
-  border: 1px solid #cbd5e1;
-  border-radius: 8px;
   background: #ffffff;
-  color: #334155;
+  border: 1px solid #d1d5db;
+  padding: 8px 20px;
+  border-radius: 10px;
+  cursor: pointer;
+  font-weight: 600;
+  color: #4b5563;
+}
+
+.btn-close:hover {
+  background: #f9fafb;
+}
+
+/* สำหรับลบไอคอนปิด x มุมขวา */
+.btn-close-icon {
+  background: none;
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
+  color: #94a3b8;
+}
+
+.btn-close-icon:hover { color: #ef4444; }
+
+/* ส่วนของช่องค้นหาและปุ่มล้างกรอง */
+.search-group {
+  display: flex;
+  gap: 10px;
+  flex: 2;
+  min-width: 300px;
+}
+
+.btn-clear {
+  background-color: #ffffff;
+  color: #ef4444; 
+  border: 1px solid #fecaca;
+  padding: 8px 16px;
+  border-radius: 10px;
   font-size: 14px;
   font-weight: 500;
   cursor: pointer;
   transition: all 0.2s;
+  white-space: nowrap;
 }
 
-.btn-close:hover {
-  background: #f1f5f9;
-  border-color: #94a3b8;
+.btn-clear:hover {
+  background-color: #fef2f2;
+  border-color: #ef4444;
 }
 
-.old-val { color: #dc2626; background-color: #fef2f2; }
-.new-val { color: #16a34a; background-color: #f0fdf4; }
-.detail-table th, .detail-table td { padding: 10px; border: 1px solid #eee; }
-.detail-table { width: 100%; border-collapse: collapse; margin-top: 15px; }
-.modal-body { max-height: 70vh; overflow-y: auto; }
-
-/* ================= Responsive ================= */
+/* Responsive */
 @media (max-width: 768px) {
-  .filter-bar {
-    flex-direction: column;
-    align-items: stretch;
-  }
-  
-  .date-group {
-      flex-direction: column;
-      align-items: flex-start;
-  }
-
-  .date-group input { width: 100%; }
-
+  .filter-bar { flex-direction: column; align-items: stretch; }
   .modern-table thead { display: none; }
-
-  .modern-table tbody tr {
-    display: block;
-    padding: 16px;
-    margin-bottom: 16px;
-  }
-
-  .modern-table tbody td {
-    display: flex;
-    justify-content: space-between;
-    padding: 8px 0;
-    border: none;
-  }
-
-  .modern-table tbody td::before {
-    content: attr(data-label);
-    font-weight: 600;
-    color: #64748b;
-  }
+  .modern-table tbody tr { display: block; margin-bottom: 15px; border: 1px solid #eee; border-radius: 12px; }
+  .modern-table tbody td { display: flex; justify-content: space-between; padding: 10px 15px; border: none; }
+  .modern-table tbody td::before { content: attr(data-label); font-weight: 700; color: #6d28d9; }
 }

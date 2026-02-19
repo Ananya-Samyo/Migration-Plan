@@ -1,7 +1,9 @@
 <template>
   <div class="main-container">
     <header class="top-bar">
-      <h1 class="page-title">บันทึกการเปลี่ยนแปลงข้อมูล (Change Log)</h1>
+      <div class="left-head">
+        <h1 class="page-title">บันทึกการเปลี่ยนแปลงข้อมูล</h1>
+      </div>
     </header>
 
     <div class="filter-bar">
@@ -19,11 +21,16 @@
         </option>
       </select>
 
-      <input
-        type="text"
-        v-model="filters.keyword"
-        placeholder="ค้นหา scope / แผนงาน / ผู้แก้ไข"
-      />
+      <div class="search-group">
+        <input
+          type="text"
+          v-model="filters.keyword"
+          placeholder="ค้นหา scope / แผนงาน / ผู้แก้ไข..."
+        />
+        <button class="btn-clear" @click="clearFilters" v-if="hasFilters">
+          ล้างการกรอง
+        </button>
+      </div>
     </div>
 
     <table class="modern-table">
@@ -42,11 +49,11 @@
           <td colspan="6" class="text-center">ไม่พบข้อมูลบันทึกการเปลี่ยนแปลง</td>
         </tr>
         <tr v-for="log in logs" :key="log.id">
-          <td>{{ formatThaiDate(log.date) }}</td>
-          <td>{{ log.scope || '-' }}</td>
-          <td>{{ log.project || '-' }}</td>
-          <td>{{ log.owner }}</td>
-          <td>{{ log.department }}</td>
+          <td data-label="วัน-เวลาที่แก้ไข">{{ formatThaiDate(log.date) }}</td>
+          <td data-label="ขอบเขตงาน">{{ log.scope || '-' }}</td>
+          <td data-label="แผนงาน">{{ log.project || '-' }}</td>
+          <td data-label="ผู้แก้ไข">{{ log.owner }}</td>
+          <td data-label="หน่วยงาน">{{ log.department }}</td>
           <td>
             <button class="btn-detail" @click="openDetail(log)">
               ดูรายละเอียด
@@ -73,8 +80,8 @@
             <thead>
               <tr>
                 <th>รายการที่แก้ไข</th>
-                <th class="old-val">ค่าเดิม</th>
-                <th class="new-val">ค่าใหม่</th>
+                <th>ค่าเดิม</th>
+                <th>ค่าใหม่</th>
               </tr>
             </thead>
             <tbody>
@@ -84,9 +91,9 @@
                 </td>
               </tr>
               <tr v-for="(c, i) in selectedLog.changes" :key="i">
-                <td>{{ c.field }}</td>
-                <td class="old-val">{{ c.before || '-' }}</td>
-                <td class="new-val">{{ c.after || '-' }}</td>
+                <td><strong>{{ c.field }}</strong></td>
+                <td><span class="old-val">{{ c.before || '-' }}</span></td>
+                <td><span class="new-val">{{ c.after || '-' }}</span></td>
               </tr>
             </tbody>
           </table>
@@ -101,11 +108,10 @@
 </template>
 
 <script setup>
-import { ref, onMounted, watch } from 'vue'
+import { ref, onMounted, watch, computed } from 'vue'
 import axios from 'axios'
 import '../../assets/Admin/css/Admin_log.css'
 
-// ดึง API Base URL จาก Environment Variable
 const API = import.meta.env.VITE_API_BASE_URL
 
 const logs = ref([])
@@ -120,13 +126,26 @@ const filters = ref({
   keyword: ''
 })
 
-// โหลดรายการ Log
+// เช็คว่ามีการกรองข้อมูลอยู่หรือไม่ (เพื่อซ่อน/แสดงปุ่มล้างกรอง)
+const hasFilters = computed(() => {
+  return filters.value.from || filters.value.to || filters.value.department_id || filters.value.keyword
+})
+
+// ฟังก์ชันล้างค่ากรอง
+const clearFilters = () => {
+  filters.value = {
+    from: '',
+    to: '',
+    department_id: '',
+    keyword: ''
+  }
+}
+
 const loadLogs = async () => {
   try {
     const res = await axios.get(`${API}/admin/change-logs`, {
       params: filters.value
     })
-
     logs.value = res.data.map(r => ({
       id: r.log_id,
       date: r.change_date,
@@ -140,7 +159,6 @@ const loadLogs = async () => {
   }
 }
 
-// โหลดรายชื่อแผนก
 const loadDepartments = async () => {
   try {
     const res = await axios.get(`${API}/admin/departments`)
@@ -150,11 +168,9 @@ const loadDepartments = async () => {
   }
 }
 
-// เปิดดูรายละเอียด
 const openDetail = async (log) => {
   try {
     const res = await axios.get(`${API}/admin/change-logs/${log.id}`)
-
     selectedLog.value = {
       ...log,
       changes: res.data.changes ? res.data.changes.map(d => ({
@@ -163,15 +179,12 @@ const openDetail = async (log) => {
         after: d.after_value
       })) : []
     }
-
     showModal.value = true
   } catch (err) {
     console.error('Error loading detail:', err)
-    alert('ไม่สามารถโหลดรายละเอียดได้')
   }
 }
 
-// จัดรูปแบบวันที่และเวลาไทย
 const formatThaiDate = (date) => {
   if (!date) return ''
   const d = new Date(date)
@@ -189,7 +202,6 @@ onMounted(() => {
   loadLogs()
 })
 
-// โหลดข้อมูลใหม่เมื่อมีการเปลี่ยน filter
 watch(filters, () => {
   loadLogs()
 }, { deep: true })
