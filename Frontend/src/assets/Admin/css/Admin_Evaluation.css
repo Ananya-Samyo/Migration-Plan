@@ -1,93 +1,144 @@
-/* ================= Header Top Bar ================= */
-.top-bar {
-  max-width: 1000px;
-  margin: 0 auto 28px;
-  padding: 18px 24px;
-  background: #ffffff;
-  border-radius: 16px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.06);
+/* =========================================
+   1. Import & Reset
+   ========================================= */
+@import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600;700&display=swap');
+
+* {
+  box-sizing: border-box;
 }
 
-/* ----- Title ----- */
-.title-wrap {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-}
-
-.title-bar {
-  width: 5px;
-  height: 36px;
-  background: #facc15; /* เหลืองทองแบบในรูป */
-  border-radius: 4px;
-}
-
-.top-bar h1 {
-  font-size: 22px;
-  font-weight: 600;
+body {
+  font-family: 'Sarabun', sans-serif;
+  background-color: #f5f7fa;
   color: #1f2937;
   margin: 0;
+  padding: 20px; /* เพิ่ม Padding ให้ body เล็กน้อยเพื่อความสวยงาม */
 }
 
-/* ----- Back Button ----- */
-.btn-back {
+/* =========================================
+   2. Layout Containers
+   ========================================= */
+
+/* กล่อง Header ด้านบนสุด */
+.top-bar {
+  max-width: 1000px;
+  margin: 0 auto 24px;
+  padding: 20px 30px;
+  background-color: #ffffff;
+  border-radius: 20px;
   display: flex;
+  justify-content: space-between;
   align-items: center;
-  gap: 8px;
-  padding: 10px 18px;
-  border-radius: 999px;
-  border: 1px solid #e5e7eb;
-  background: #f5f3ff;
-  color: #6d28d9;
-  font-size: 14px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s ease;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
 }
 
-.btn-back .arrow {
-  font-size: 16px;
-}
-
-.btn-back:hover {
-  background: #ede9fe;
-  transform: translateX(-2px);
-}
-
-
+/* กล่องเนื้อหาหลัก */
 .page {
   max-width: 1000px;
-  margin: 40px auto;
+  margin: 0 auto 40px;
   padding: 32px;
   background: #ffffff;
-  border-radius: 18px;
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.08);
-  font-family: 'Prompt', sans-serif;
+  border-radius: 20px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.05);
 }
 
-h1 {
-  font-size: 26px;
-  color: #3f2a63;
-  margin-bottom: 32px;
-  border-left: none;
-  padding-left: 14px;
-}
-
-.card {
-  background: #f8f7ff;
-  border-radius: 14px;
-  padding: 20px;
-  margin-bottom: 32px;
-  border: 1px solid #ebe7ff;
-}
-
+/* Grid Layout (3 คอลัมน์) */
 .grid-3 {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 20px;
+}
+
+/* =========================================
+   3. Header & Typography
+   ========================================= */
+
+.left-head {
+  display: flex;
+  flex-direction: column;
+}
+
+/* หัวข้อหลัก พร้อมเส้นขีดสีเหลือง */
+.page-title {
+  font-size: 22px;
+  font-weight: 700;
+  color: #1f2937;
+  margin: 0;
+  position: relative;
+  display: inline-block;
+  padding-bottom: 8px;
+}
+
+.page-title::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 80px; /* ปรับความยาวเส้นให้พอดีสวยงาม */
+  height: 4px;
+  background: linear-gradient(90deg, #fbbf24 0%, rgba(251, 191, 36, 0) 100%);
+  border-radius: 2px;
+}
+
+/* หัวข้อรองใน Section */
+.section h2 {
+  font-size: 18px;
+  color: #5b3aa4;
+  margin-bottom: 16px;
+  margin-top: 0;
+}
+
+/* =========================================
+   4. Component: Back Button (Modern Pill)
+   ========================================= */
+.btn-back-modern {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background-color: #f3f0ff;
+  border: 1px solid #e9d5ff;
+  border-radius: 50px;
+  padding: 6px 16px 6px 6px; /* ปรับ Padding ให้สมดุล */
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-decoration: none;
+}
+
+.btn-back-modern:hover {
+  background-color: #ede9fe;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 5px rgba(124, 58, 237, 0.15);
+}
+
+.btn-back-modern .text {
+  color: #6d28d9;
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.icon-circle {
+  width: 32px;
+  height: 32px;
+  background-color: #7c3aed;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #ffffff;
+  flex-shrink: 0;
+}
+
+/* =========================================
+   5. Forms & Inputs
+   ========================================= */
+
+.card {
+  background: #f8f7ff;
+  border-radius: 14px;
+  padding: 24px;
+  margin-bottom: 32px;
+  border: 1px solid #ebe7ff;
 }
 
 .section {
@@ -98,60 +149,182 @@ h1 {
   border: 1px solid #ece8ff;
 }
 
-.section h2 {
-  font-size: 18px;
-  color: #5b3aa4;
-  margin-bottom: 16px;
-}
-
-.sub-section h3 {
-  font-size: 15px;
-  color: #6d28d9;
-  margin-bottom: 8px;
-}
-
 label {
-  font-weight: 500;
+  font-weight: 600;
   display: block;
   margin-top: 16px;
+  margin-bottom: 6px;
   color: #3f2a63;
+  font-size: 14px;
 }
 
 input,
 textarea,
 select {
   width: 100%;
-  margin-top: 6px;
-  padding: 10px 12px;
+  padding: 10px 14px;
   border-radius: 10px;
   border: 1px solid #d8cfff;
   font-size: 14px;
+  font-family: 'Sarabun', sans-serif;
+  background-color: #fff;
+  transition: border-color 0.2s;
+}
+
+input:focus,
+textarea:focus,
+select:focus {
+  outline: none;
+  border-color: #7c3aed;
+  box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.1);
 }
 
 textarea {
-  min-height: 90px;
+  min-height: 100px;
   resize: vertical;
 }
 
-/* ===== Read-only visual ===== */
-.readonly-section {
-  opacity: 0.85;
-}
-
+/* สถานะ Readonly */
 .readonly-section textarea,
-.readonly-section select {
+.readonly-section select,
+input:read-only {
   background: #f1f5f9;
+  color: #64748b;
   cursor: not-allowed;
+  border-color: #e2e8f0;
 }
 
+/* =========================================
+   6. Dynamic Items (Evaluation List)
+   ========================================= */
+
+.header-with-btn {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #ebe7ff;
+}
+
+.evaluation-item-card {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 20px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+  transition: all 0.3s ease;
+}
+
+.evaluation-item-card:hover {
+  border-color: #c4b5fd;
+  box-shadow: 0 4px 12px rgba(124, 58, 237, 0.08);
+}
+
+.item-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.item-header span {
+  font-weight: 600;
+  color: #6d28d9;
+  font-size: 14px;
+  background: #f3f0ff;
+  padding: 4px 12px;
+  border-radius: 20px;
+}
+
+/* =========================================
+   7. Buttons
+   ========================================= */
+
+/* ปุ่มเพิ่มรายการ (+ เพิ่มรายการ) */
+.btn-add-item {
+  background: #ffffff;
+  color: #6d28d9;
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 13px;
+  border: 1px solid #d8cfff;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-add-item:hover {
+  background: #f3f0ff;
+  border-color: #7c3aed;
+}
+
+/* ปุ่มลบรายการ (สีแดง) */
+.btn-remove {
+  background: #fee2e2;
+  color: #ef4444;
+  border: 1px solid #fecaca;
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-weight: 500;
+}
+
+.btn-remove:hover {
+  background: #ef4444;
+  color: white;
+  border-color: #ef4444;
+}
+
+/* ปุ่มบันทึกหลัก (Gradient Purple) */
 .submit {
   width: 100%;
-  padding: 14px;
+  padding: 16px;
   font-size: 16px;
-  font-weight: 500;
-  border-radius: 14px;
+  font-weight: 600;
+  border-radius: 12px;
   border: none;
   cursor: pointer;
   color: white;
-  background: linear-gradient(135deg, #7c3aed, #c4b5fd);
+  background: linear-gradient(135deg, #7c3aed, #6d28d9);
+  box-shadow: 0 4px 12px rgba(109, 40, 217, 0.25);
+  transition: transform 0.2s, box-shadow 0.2s;
+  margin-top: 10px;
+}
+
+.submit:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(109, 40, 217, 0.35);
+}
+
+.submit:active {
+  transform: translateY(0);
+}
+
+/* =========================================
+   8. Responsive Design
+   ========================================= */
+@media (max-width: 768px) {
+  .top-bar {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
+    padding: 20px;
+  }
+  
+  .btn-back-modern {
+    align-self: flex-end;
+  }
+
+  .grid-3 {
+    grid-template-columns: 1fr; /* เรียงเป็นแถวเดียวบนมือถือ */
+  }
+
+  .page {
+    padding: 20px;
+    margin: 0 10px 40px;
+  }
 }

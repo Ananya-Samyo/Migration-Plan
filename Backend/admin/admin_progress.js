@@ -155,7 +155,7 @@ if (files && files.length > 0) {
   for (const file of files) {
     // 1. กำหนด path ของไฟล์ (สมมติว่าใช้ multer เก็บไว้ในโฟลเดอร์ uploads)
     const filePath = `/uploads/${file.filename}`;
-    const fileType = file.mimetype.split('/')[1]; // เช่น pdf, png, jpg
+    const fileType = file.mimetype.split('/')[1];
 
     // 2. บันทึกลงตาราง attachments ใน Database
     await conn.query(`

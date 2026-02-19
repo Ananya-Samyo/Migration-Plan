@@ -42,16 +42,26 @@
 
     <!-- Section 1 -->
     <div class="section">
-      <h2>ผลที่คาดว่าจะได้รับหลังจากทำ Low Level</h2>
+      <div class="header-with-btn">
+        <h2>ผลที่คาดว่าจะได้รับหลังจากทำ Low Level</h2>
+        <button type="button" class="btn-add-item" @click="addItem">+ เพิ่มรายการ</button>
+      </div>
 
-      <label>วัตถุประสงค์ / ผลลัพธ์ที่คาดหวัง</label>
-      <textarea v-model="evaluation.objective" />
+      <div v-for="(item, index) in evaluation.items" :key="index" class="evaluation-item-card">
+        <div class="item-header">
+          <span>รายการที่ {{ index + 1 }}</span>
+          <button v-if="evaluation.items.length > 1" @click="removeItem(index)" class="btn-remove">ลบรายการนี้</button>
+        </div>
 
-      <label>ก่อนปรับปรุงตามแผนงาน</label>
-      <textarea v-model="evaluation.beforeImprove" />
+        <label>วัตถุประสงค์ / ผลลัพธ์ที่คาดหวัง</label>
+        <textarea v-model="item.objective" placeholder="ระบุวัตถุประสงค์..." />
 
-      <label>ผลที่คาดว่าจะได้รับหลังปรับปรุงตามแผน</label>
-      <textarea v-model="evaluation.expectedAfter" />
+        <label>ก่อนปรับปรุงตามแผนงาน</label>
+        <textarea v-model="item.beforeImprove" placeholder="รายละเอียดก่อนปรับปรุง..." />
+
+        <label>ผลที่คาดว่าจะได้รับหลังปรับปรุงตามแผน</label>
+        <textarea v-model="item.expectedAfter" placeholder="รายละเอียดผลที่คาดหวัง..." />
+      </div>
     </div>
 
     <!-- Section 2 -->
@@ -82,8 +92,13 @@
     </div>
 
     <button class="submit" @click="saveEvaluation">
-      บันทึกการประเมินผล
-    </button>
+  <span style="display: flex; align-items: center; justify-content: center; gap: 8px;">
+    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+      <path d="M0 4a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V4Zm2-1a1 1 0 0 0-1 1v.217l7 4.2 7-4.2V4a1 1 0 0 0-1-1H2Zm13 2.383-4.708 2.825L15 11.105V5.383Zm-.034 6.876-5.64-3.471L8 9.583l-1.326-.795-5.64 3.47A1 1 0 0 0 2 13h12a1 1 0 0 0 .966-.741ZM1 11.105l4.708-2.897L1 5.383v5.722Z"/>
+    </svg>
+    บันทึกและส่งอีเมลแจ้งเตือน
+  </span>
+</button>
   </div>
 </template>
 
@@ -102,9 +117,9 @@ const evaluation = ref({
   scopeName: '',
   owner: '',
   projectStatus: '',
-  objective: '',
-  beforeImprove: '',
-  expectedAfter: '',
+  items: [
+    { objective: '', beforeImprove: '', expectedAfter: '' }
+  ],
   evaluation: '',
   actualResult: '',
   problem: '',
@@ -112,27 +127,63 @@ const evaluation = ref({
 })
 
 const originalEvaluation = ref(null)
+
+// ฟังก์ชันสำหรับเพิ่มรายการใหม่
+const addItem = () => {
+  evaluation.value.items.push({
+    objective: '',
+    beforeImprove: '',
+    expectedAfter: ''
+  })
+}
+
+// ฟังก์ชันสำหรับลบรายการ
+const removeItem = (index) => {
+  if (evaluation.value.items.length > 1) {
+    evaluation.value.items.splice(index, 1)
+  }
+}
+
 const hasChanged = () => JSON.stringify(evaluation.value) !== JSON.stringify(originalEvaluation.value)
 const goBack = () => router.back()
 
 onMounted(async () => {
   try {
-    const res = await fetch(`${API}/evaluations/${projectId}`)
-    const data = await res.json()
-    if (!data) return
+    const token = localStorage.getItem('token');
+    const res = await fetch(`${API}/api/admin/evaluations/${projectId}`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    if (res.status === 401 || res.status === 403) {
+      Swal.fire('ปฏิเสธสิทธิ์', 'คุณไม่มีสิทธิ์เข้าถึงหน้านี้ หรือ Token หมดอายุ', 'error');
+      return;
+    }
+
+    const data = await res.json();
+    console.log("Check Data:", data);
+    if (!data) return;
 
     evaluation.value = {
       scopeName: data.scope_name ?? '',
       owner: data.owner ?? '',
       projectStatus: data.project_status ?? '',
-      objective: data.objective ?? '',
-      beforeImprove: data.before_plan ?? '',
-      expectedAfter: data.expected_outcome ?? '',
       evaluation: data.evaluation_status ?? '',
       actualResult: data.actual_outcome ?? '',
       problem: data.problem ?? '',
-      suggestion: data.recommendation ?? ''
-    }
+      suggestion: data.recommendation ?? '',
+      // ถ้า Backend ส่ง items มาให้ใช้ตัวนั้น ถ้าไม่มีให้เอาค่าเดี่ยวมาสร้างเป็น Array
+      items: data.items || [
+        { 
+          objective: data.objective ?? '', 
+          beforeImprove: data.before_plan ?? '', 
+          expectedAfter: data.expected_outcome ?? '' 
+        }
+      ]
+    };
     originalEvaluation.value = JSON.parse(JSON.stringify(evaluation.value))
   } catch (err) {
     console.error('Load failed', err)
@@ -142,14 +193,20 @@ onMounted(async () => {
 const saveEvaluation = async () => {
   let editData = null
 
+  // 1. เช็คการแก้ไข (เหมือนเดิม)
   if (hasChanged()) {
     const result = await Swal.fire({
       title: 'เหตุผลการแก้ไข',
       html: `
-        <textarea id="reason" class="swal2-textarea" placeholder="ระบุเหตุผล"></textarea>
+        <p style="font-size: 14px; color: #666; margin-bottom: 10px;">
+            เมื่อบันทึกแล้ว ระบบจะส่งอีเมลแจ้งเตือนไปยังเจ้าของโครงการโดยอัตโนมัติ
+        </p>
+        <textarea id="reason" class="swal2-textarea" placeholder="ระบุเหตุผลการแก้ไข..."></textarea>
         <input id="files" type="file" class="swal2-file" multiple />
       `,
       showCancelButton: true,
+      confirmButtonText: 'ยืนยันและส่งอีเมล',
+      cancelButtonText: 'ยกเลิก',
       preConfirm: () => {
         const reason = document.getElementById('reason').value
         const files = document.getElementById('files').files
@@ -163,29 +220,74 @@ const saveEvaluation = async () => {
 
     if (!result.isConfirmed) return
     editData = result.value
+  } else {
+    // กรณีไม่มีการแก้ไข แต่กดบันทึก (เช่น เข้ามาประเมินครั้งแรก)
+    const confirm = await Swal.fire({
+        title: 'ยืนยันการบันทึก',
+        text: 'ระบบจะบันทึกผลการประเมินและส่งอีเมลแจ้งเตือนไปยังผู้รับผิดชอบโครงการ',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'ยืนยัน',
+        cancelButtonText: 'ยกเลิก'
+    })
+    if (!confirm.isConfirmed) return
   }
 
-  // ส่งข้อมูลแบบ FormData
+  // 2. เตรียม FormData (เหมือนเดิม)
   const fd = new FormData()
-  Object.entries(evaluation.value).forEach(([k, v]) => fd.append(k, v))
+  fd.append('actualResult', evaluation.value.actualResult)
+  fd.append('suggestion', evaluation.value.suggestion)
+  fd.append('projectStatus', evaluation.value.projectStatus)
+  fd.append('evaluation', evaluation.value.evaluation)
+  fd.append('problem', evaluation.value.problem)
+  fd.append('items', JSON.stringify(evaluation.value.items))
 
   if (editData) {
     fd.append('edit_reason', editData.reason)
-    Array.from(editData.files).forEach(f => fd.append('attachments', f))
+    if(editData.files && editData.files.length > 0) {
+        Array.from(editData.files).forEach(f => fd.append('attachments', f))
+    }
   }
 
+  // 3. เรียก API พร้อม Loading
   try {
-    const res = await fetch(`${API}/evaluations/${projectId}`, {
+    // แสดง Loading ระหว่างรอ Backend ส่งเมล
+    Swal.fire({
+        title: 'กำลังดำเนินการ',
+        text: 'กำลังบันทึกข้อมูลและส่งอีเมลแจ้งเตือน...',
+        allowOutsideClick: false,
+        didOpen: () => {
+            Swal.showLoading()
+        }
+    })
+
+    const token = localStorage.getItem('token');
+    const res = await fetch(`${API}/api/admin/evaluations/${projectId}`, {
       method: 'PUT',
+      headers: {
+        'Authorization': `Bearer ${token}`
+      },
       body: fd
     })
 
+    const responseData = await res.json()
+
     if (res.ok) {
       originalEvaluation.value = JSON.parse(JSON.stringify(evaluation.value))
-      Swal.fire('สำเร็จ', 'บันทึกเรียบร้อย', 'success')
+      
+      // แสดงข้อความสำเร็จ
+      Swal.fire({
+          title: 'สำเร็จ',
+          text: 'บันทึกข้อมูลและส่งอีเมลแจ้งเตือนเรียบร้อยแล้ว',
+          icon: 'success',
+          timer: 2000,
+          showConfirmButton: false
+      })
+    } else {
+      throw new Error(responseData.message || 'ไม่สามารถบันทึกได้')
     }
   } catch (err) {
-    Swal.fire('ข้อผิดพลาด', 'ไม่สามารถบันทึกได้', 'error')
+    Swal.fire('ข้อผิดพลาด', err.message || 'ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ได้', 'error')
   }
 }
 </script>

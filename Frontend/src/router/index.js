@@ -52,7 +52,7 @@ const routes = [
       {
         path: 'evaluation/:id',
         name: 'AdminEvaluation',
-        component: () => import('@/views/Admin/Admin_Evaluation.vue')
+        component: () => import('../views/Admin/Admin_Evaluation.vue')
       },
       {
         path: 'scopeproject',
