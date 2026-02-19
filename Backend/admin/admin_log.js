@@ -4,46 +4,40 @@ import { verifyToken } from '../middleware/auth.js'
 
 const router = Router()
 
-// สร้าง Middleware ย่อยสำหรับเช็คว่าเป็น Admin เท่านั้น
+// Middleware เช็คสิทธิ์ Admin
 const isAdmin = (req, res, next) => {
   if (req.user && req.user.role === 'admin') {
     next();
   } else {
-    res.status(403).json({ message: 'ปฏิเสธการเข้าถึง: สิทธิ์เฉพาะผู้ดูแลระบบเท่านั้น' });
+    return res.status(403).json({ message: 'ปฏิเสธการเข้าถึง: สิทธิ์เฉพาะผู้ดูแลระบบเท่านั้น' });
   }
 };
 
-// ================= Change Logs : List =================
-// 2. ใส่ verifyToken และ isAdmin คั่นไว้
+// ================= 1. Change Logs : List (ส่วนที่หายไปทำให้ขึ้น 404) =================
 router.get('/change-logs', verifyToken, isAdmin, async (req, res) => {
   try {
-    const { date, department_id, keyword } = req.query
-
+    const { from, to, department_id, keyword } = req.query
     let conditions = []
     let params = []
 
-    if (date) {
-      conditions.push('DATE(cl.change_date) = ?')
-      params.push(date)
+    if (from) {
+      conditions.push('DATE(cl.change_date) >= ?')
+      params.push(from)
     }
-
+    if (to) {
+      conditions.push('DATE(cl.change_date) <= ?')
+      params.push(to)
+    }
     if (department_id) {
-      conditions.push('cl.department_id = ?')
-      params.push(department_id)
-    }
-
+  conditions.push('cl.department_id = ?') 
+  params.push(department_id)
+}
     if (keyword) {
-      conditions.push(`(
-        s.scope_name LIKE ?
-        OR pp.project_plan_name LIKE ?
-        OR u.user_name LIKE ?
-      )`)
+      conditions.push(`(s.scope_name LIKE ? OR pp.project_plan_name LIKE ? OR u.user_name LIKE ?)`)
       params.push(`%${keyword}%`, `%${keyword}%`, `%${keyword}%`)
     }
 
-    const where = conditions.length
-      ? 'WHERE ' + conditions.join(' AND ')
-      : ''
+    const where = conditions.length ? 'WHERE ' + conditions.join(' AND ') : ''
 
     const [rows] = await db.query(`
       SELECT
@@ -62,15 +56,14 @@ router.get('/change-logs', verifyToken, isAdmin, async (req, res) => {
       ORDER BY cl.change_date DESC
     `, params)
 
-    res.json(rows)
+    return res.json(rows)
   } catch (err) {
     console.error('Change log list error:', err)
-    res.status(500).json({ message: 'โหลด Change Log ไม่สำเร็จ' })
+    return res.status(500).json({ message: 'โหลด Change Log ไม่สำเร็จ' })
   }
 })
 
-// ================= Change Logs : Detail =================
-// 3. ใส่ verifyToken และ isAdmin ในส่วน Detail ด้วย
+// ================= 2. Change Logs : Detail (เหลือแค่อันเดียวและแก้ Bug แล้ว) =================
 router.get('/change-logs/:id', verifyToken, isAdmin, async (req, res) => {
   try {
     const { id } = req.params
@@ -94,21 +87,29 @@ router.get('/change-logs/:id', verifyToken, isAdmin, async (req, res) => {
     }
 
     const [details] = await db.query(`
-      SELECT
-        field_name,
-        before_value,
-        after_value
+      SELECT field_name, before_value, after_value
       FROM change_log_details
       WHERE log_id = ?
     `, [id])
 
-    res.json({
+    const [attachments] = await db.query(`
+      SELECT file_path, file_type 
+      FROM attachments 
+      WHERE ref_id = ? AND ref_type = 'change_log' AND is_active = 1
+    `, [id]);
+
+    // ✅ ส่งคำตอบครั้งเดียวและจบการทำงาน
+    return res.json({
       ...log,
-      changes: details
-    })
+      changes: details,
+      attachments: attachments 
+    });
+
   } catch (err) {
     console.error('Change log detail error:', err)
-    res.status(500).json({ message: 'โหลดรายละเอียดไม่สำเร็จ' })
+    if (!res.headersSent) {
+      return res.status(500).json({ message: 'โหลดรายละเอียดไม่สำเร็จ' })
+    }
   }
 })
 

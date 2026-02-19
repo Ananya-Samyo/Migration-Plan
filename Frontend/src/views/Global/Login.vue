@@ -62,9 +62,9 @@ async function handleLogin() {
 
     // Redirect ตามเดิม
     if (user.role === 'admin') {
-      router.push('/admin/dashboard') // แนะนำให้ใส่ path ให้เต็ม
+      router.push('/admin') 
     } else {
-      router.push('/user/dashboard')
+      router.push('/user')
     }
 }
 </script>
