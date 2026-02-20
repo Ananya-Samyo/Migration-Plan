@@ -282,7 +282,7 @@ router.get('/projects/:id', verifyToken, isAdmin, async (req, res) => {
       status: project.status_code,
       progress: Number(project.progress_percent),
       gaps: gapRows,
-      details: project.details || '', // ✅ ส่งค่า p.details กลับไปที่ Frontend
+      details: project.details || '', 
       problems: problemRows.map(r => r.problem_detail).join('\n'),
       solutions: solutionRows.map(r => r.solution_detail).join('\n')
     })

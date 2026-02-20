@@ -1,45 +1,57 @@
 <template>
   <div class="main-container">
     <header class="top-bar">
-      <h1 class="page-title">ประวัติการบันทึกงานของฉัน (My Change Logs)</h1>
+      <div class="left-head">
+        <h1 class="page-title">ประวัติการเปลี่ยนแปลง</h1>
+      </div>
     </header>
 
     <div class="filter-bar">
       <div class="date-group">
         <label>ตั้งแต่วันที่:</label>
-        <input type="date" v-model="filters.from" />
+        <input 
+          type="date" 
+          v-model="filters.from" 
+          :max="today" 
+        />
         <label>ถึง:</label>
-        <input type="date" v-model="filters.to" />
+        <input 
+          type="date" 
+          v-model="filters.to" 
+          :max="today"
+          :min="filters.from" 
+        />
       </div>
 
-      <input
-        type="text"
-        v-model="filters.keyword"
-        placeholder="ค้นหาชื่อ Scope หรือ แผนงาน"
-        style="min-width: 300px;"
-      />
+      <div class="search-group">
+        <input type="text" v-model="filters.keyword" placeholder="ค้นหา scope / แผนงาน..." />
+        <button class="btn-clear" @click="clearFilters" v-if="hasFilters">
+          ล้างการกรอง
+        </button>
+      </div>
     </div>
 
     <table class="modern-table">
       <thead>
         <tr>
-          <th style="width: 15%">วัน-เวลา</th>
-          <th style="width: 25%">ขอบเขตงาน (Scope)</th>
-          <th style="width: 30%">แผนงาน (Project)</th>
-          <th style="width: 20%">หน่วยงาน</th>
-          <th style="width: 10%"></th>
+          <th>วัน-เวลาที่แก้ไข</th>
+          <th>ขอบเขตงาน</th>
+          <th>แผนงาน</th>
+          <th>หน่วยงาน</th>
+          <th></th>
         </tr>
       </thead>
       <tbody>
-        <tr v-if="logs.length === 0">
-          <td colspan="5" class="text-center">ไม่พบประวัติการแก้ไขข้อมูล</td>
+        <tr v-if="paginatedLogs.length === 0">
+          <td colspan="5" class="text-center">ไม่พบข้อมูลบันทึกการเปลี่ยนแปลง</td>
         </tr>
-        <tr v-for="log in logs" :key="log.id">
-          <td>{{ formatThaiDate(log.date) }}</td>
-          <td>{{ log.scope || '-' }}</td>
-          <td>{{ log.project || '-' }}</td>
-          <td>{{ log.department || '-' }}</td> <td>
-            <button class="btn-detail" @click="openDetail(log.id)">
+        <tr v-for="log in paginatedLogs" :key="log.id">
+          <td data-label="วัน-เวลาที่แก้ไข">{{ formatThaiDate(log.date) }}</td>
+          <td data-label="ขอบเขตงาน">{{ log.scope || '-' }}</td>
+          <td data-label="แผนงาน">{{ log.project || '-' }}</td>
+          <td data-label="หน่วยงาน">{{ log.department }}</td>
+          <td>
+            <button class="btn-detail" @click="openDetail(log)">
               ดูรายละเอียด
             </button>
           </td>
@@ -47,44 +59,90 @@
       </tbody>
     </table>
 
+    <div class="pagination-container" v-if="totalPages > 1">
+      <button 
+        class="btn-page" 
+        :disabled="currentPage === 1" 
+        @click="changePage(currentPage - 1)"
+      >
+        &lt; ย้อนกลับ
+      </button>
+
+      <div class="page-numbers">
+        <span 
+          v-for="page in totalPages" 
+          :key="page" 
+          :class="['page-number', { active: currentPage === page }]"
+          @click="changePage(page)"
+        >
+          {{ page }}
+        </span>
+      </div>
+
+      <button 
+        class="btn-page" 
+        :disabled="currentPage === totalPages" 
+        @click="changePage(currentPage + 1)"
+      >
+        ถัดไป &gt;
+      </button>
+    </div>
+
     <div v-if="showModal" class="modal-backdrop" @click.self="showModal = false">
       <div class="modal">
         <div class="modal-header">
           <h3>รายละเอียดการเปลี่ยนแปลง</h3>
           <button class="btn-close-icon" @click="showModal = false">×</button>
         </div>
-        
+
         <div class="modal-body">
           <div class="log-info">
-             <p><strong>แผนงาน:</strong> {{ selectedLog.project_plan_name }}</p>
-             <p><strong>เมื่อ:</strong> {{ formatThaiDate(selectedLog.change_date) }}</p>
+            <p><strong>แผนงาน:</strong> {{ selectedLog.project }}</p>
+            <p><strong>เมื่อ:</strong> {{ formatThaiDate(selectedLog.date) }}</p>
           </div>
 
           <table class="detail-table">
             <thead>
               <tr>
                 <th>รายการที่แก้ไข</th>
-                <th class="old-val">ค่าเดิม</th>
-                <th class="new-val">ค่าใหม่</th>
+                <th>ค่าเดิม</th>
+                <th>ค่าใหม่</th>
               </tr>
             </thead>
             <tbody>
               <tr v-if="!selectedLog.changes || selectedLog.changes.length === 0">
-                <td colspan="3" style="text-align:center; padding: 20px; color: #999;">
+                <td colspan="3" class="no-detail-text">
                   ไม่มีรายละเอียดฟิลด์ที่เปลี่ยนแปลง
                 </td>
               </tr>
               <tr v-for="(c, i) in selectedLog.changes" :key="i">
-                <td>{{ c.field_name }}</td>
-                <td class="old-val">{{ c.before_value || '-' }}</td>
-                <td class="new-val">{{ c.after_value || '-' }}</td>
+                <td><strong>{{ c.field }}</strong></td>
+                <td><span class="old-val">{{ c.before || '-' }}</span></td>
+                <td><span class="new-val">{{ c.after || '-' }}</span></td>
               </tr>
             </tbody>
           </table>
+
+          <div class="attachment-section">
+            <h4 class="section-title">หลักฐานที่แนบ</h4>
+            <div v-if="selectedLog.attachments && selectedLog.attachments.length > 0" class="attachment-list">
+              <div v-for="(file, idx) in selectedLog.attachments" :key="idx" class="file-item">
+                <span class="file-icon">📄</span>
+                <a :href="file.file_path" target="_blank" class="file-link">
+                  ดูไฟล์แนบที่ {{ idx + 1 }} ({{ file.file_type }})
+                </a>
+              </div>
+            </div>
+            <div v-else class="no-data-box">
+              ไม่มีหลักฐานที่แนบ
+            </div>
+          </div>
         </div>
 
         <div class="modal-footer">
-          <button class="btn-close" @click="showModal = false">ปิดหน้าต่าง</button>
+          <button class="btn-close" @click="showModal = false">
+            ปิดหน้าต่าง
+          </button>
         </div>
       </div>
     </div>
@@ -92,42 +150,85 @@
 </template>
 
 <script setup>
-import { ref, onMounted, watch } from 'vue'
+import { ref, onMounted, watch, computed } from 'vue'
 import axios from 'axios'
 import '../../assets/Admin/css/Admin_log.css'
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL
+const API = import.meta.env.VITE_API_BASE_URL
+
 const logs = ref([])
 const showModal = ref(false)
-const selectedLog = ref({}) // เก็บ object เต็มๆ จาก API detail
+const selectedLog = ref({ changes: [] })
+
+// Pagination State
+const currentPage = ref(1)
+const itemsPerPage = 10 // ปรับจำนวนแถวต่อหน้าตามต้องการ
 
 const filters = ref({
   from: '',
   to: '',
-  keyword: '' // ไม่ต้องส่ง department_id แล้ว
+  keyword: ''
 })
 
-// ✅ ฟังก์ชันช่วยดึง Token (สำคัญมาก)
+/* --- Auth Header --- */
 const getAuthHeader = () => {
-  const token = localStorage.getItem('token') // หรือ sessionStorage แล้วแต่โปรเจกต์คุณ
-  return { 
-    headers: { Authorization: `Bearer ${token}` } 
+  const token = localStorage.getItem('token')
+  return {
+    headers: { Authorization: `Bearer ${token}` }
   }
 }
 
-// 1. โหลดรายการ Log (User)
+/* --- Computed Logic --- */
+
+const hasFilters = computed(() => {
+  return filters.value.from || filters.value.to || filters.value.keyword
+})
+
+const totalPages = computed(() => {
+  return Math.ceil(logs.value.length / itemsPerPage) || 1
+})
+
+const paginatedLogs = computed(() => {
+  const start = (currentPage.value - 1) * itemsPerPage
+  const end = start + itemsPerPage
+  return logs.value.slice(start, end)
+})
+
+const today = computed(() => {
+  return new Date().toISOString().split('T')[0]
+})
+
+/* --- Functions --- */
+
+const clearFilters = () => {
+  filters.value = { from: '', to: '', keyword: '' }
+}
+
+// Watchers สำหรับป้องกันการเลือกวันที่ผิดเงื่อนไข
+watch(() => filters.value.from, (newVal) => {
+  if (newVal > today.value) filters.value.from = today.value
+  if (filters.value.to && newVal > filters.value.to) filters.value.to = newVal
+})
+
+watch(() => filters.value.to, (newVal) => {
+  if (newVal > today.value) filters.value.to = today.value
+  if (filters.value.from && newVal < filters.value.from) filters.value.to = filters.value.from
+})
+
+const changePage = (page) => {
+  if (page >= 1 && page <= totalPages.value) {
+    currentPage.value = page
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+}
+
 const loadLogs = async () => {
   try {
-    // ยิงไปที่ /users/change-logs แทน /admin
-    const res = await axios.get(`${API_BASE}/users/change-logs`, {
-      params: {
-        date: filters.value.from, // Backend รับค่า date ตัวเดียว (หรือจะแก้ให้รับ range ก็ได้)
-        keyword: filters.value.keyword
-      },
-      ...getAuthHeader() // ✅ แนบ Token
+    // ยิงไปที่ Endpoint ของ User
+    const res = await axios.get(`${API}/api/user/change-logs`, {
+      params: filters.value,
+      ...getAuthHeader()
     })
-
-    // Map ข้อมูลให้ตรงกับตาราง
     logs.value = res.data.map(r => ({
       id: r.log_id,
       date: r.change_date,
@@ -137,40 +238,45 @@ const loadLogs = async () => {
     }))
   } catch (err) {
     console.error('Error loading logs:', err)
-    if(err.response?.status === 401) alert('กรุณาเข้าสู่ระบบใหม่')
   }
 }
 
-// 2. โหลดรายละเอียด (User Detail)
-const openDetail = async (logId) => {
+const openDetail = async (log) => {
   try {
-    const res = await axios.get(`${API_BASE}/user/change-logs/${logId}`, {
-      ...getAuthHeader() // ✅ แนบ Token
-    })
-
-    // Backend ส่งกลับมาเป็น { ...logData, changes: [...] }
-    selectedLog.value = res.data
+    // ยิงไปที่ Endpoint รายละเอียดของ User
+    const res = await axios.get(`${API}/api/user/change-logs/${log.id}`, getAuthHeader())
+    selectedLog.value = {
+      ...log,
+      changes: res.data.changes ? res.data.changes.map(d => ({
+        field: d.field_name,
+        before: d.before_value,
+        after: d.after_value
+      })) : [],
+      attachments: res.data.attachments || []
+    }
     showModal.value = true
   } catch (err) {
     console.error('Error loading detail:', err)
-    alert('ไม่สามารถโหลดรายละเอียดได้')
   }
 }
 
 const formatThaiDate = (date) => {
   if (!date) return ''
-  return new Date(date).toLocaleDateString('th-TH', {
+  const d = new Date(date)
+  return d.toLocaleDateString('th-TH', {
     year: 'numeric', month: 'short', day: 'numeric',
     hour: '2-digit', minute: '2-digit'
   })
 }
+
+/* --- Lifecycle & Watchers --- */
 
 onMounted(() => {
   loadLogs()
 })
 
 watch(filters, () => {
-  // ใส่ Debounce นิดหน่อยก็ได้ถ้าต้องการ
-  setTimeout(() => loadLogs(), 500)
+  currentPage.value = 1
+  loadLogs()
 }, { deep: true })
 </script>

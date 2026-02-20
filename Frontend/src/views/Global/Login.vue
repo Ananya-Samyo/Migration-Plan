@@ -48,23 +48,35 @@ async function handleLogin() {
   loading.value = true
   error.value = ''
 
-  const response = await axios.post('http://localhost:3000/api/login', {
+  try { // 🟢 ต้องเปิด try { ตรงนี้ครับ
+    const response = await axios.post('http://localhost:3000/api/login', {
       email: email.value
     })
 
-    // 1. รับค่า token เพิ่มจาก response (ที่เราจะไปแก้ backend ต่อ)
+    // 1. รับค่า
     const { user, token } = response.data 
     
-    // 2. เก็บ token ลง LocalStorage
+    // 2. เก็บลง LocalStorage
     localStorage.setItem('token', token) 
     localStorage.setItem('role', user.role)
     localStorage.setItem('user_id', user.user_id)
 
-    // Redirect ตามเดิม
+    // 3. Redirect ตาม Role
     if (user.role === 'admin') {
       router.push('/admin') 
-    } else {
+    } else if (user.role === 'coordinator' || user.role === 'user') {
       router.push('/user')
+    } else {
+      error.value = 'สิทธิ์การใช้งานไม่ถูกต้อง'
+      localStorage.clear()
     }
+
+  } catch (err) { // 🟢 คู่กับ catch ตรงนี้
+    console.error('Login error:', err)
+    error.value = 'ไม่สามารถเข้าสู่ระบบได้ กรุณาตรวจสอบอีเมลอีกครั้ง'
+  } finally {
+    // 🟢 finally จะทำงานเสมอไม่ว่าจะสำเร็จหรือ Error (ช่วยปิดสถานะกำลังโหลด)
+    loading.value = false 
+  }
 }
 </script>

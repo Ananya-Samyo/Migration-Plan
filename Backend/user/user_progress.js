@@ -106,14 +106,18 @@ const generateEmailTemplate = (data) => {
             
             <div style="border-bottom: 3px double #1e3a8a; padding-bottom: 15px; margin-bottom: 25px;">
                 <h2 style="color: #1e3a8a; margin: 0; font-size: 22px;">รายงานแจ้งการปรับปรุงข้อมูลแผนงาน</h2>
-                <div style="color: #666; font-size: 14px; margin-top: 5px;">Project Migration Tracking System</div>
+                <div style="color: #666; font-size: 14px; margin-top: 5px;">Project Migration System</div>
             </div>
 
             <table width="100%" style="margin-bottom: 30px; font-size: 14px;">
                 <tr><td width="15%" style="font-weight: bold; padding: 5px 0;">เรียน:</td><td>คณะทำงานและผู้เกี่ยวข้อง</td></tr>
                 <tr><td style="font-weight: bold; padding: 5px 0;">เรื่อง:</td><td>แจ้งผลการแก้ไขข้อมูลแผนงาน: <strong>${projectName}</strong></td></tr>
                 <tr><td style="font-weight: bold; padding: 5px 0;">ขอบเขต:</td><td>${scopeName}</td></tr>
-                 <tr><td style="font-weight: bold; padding: 5px 0;">วันที่:</td><td>${new Date().toLocaleDateString('th-TH')}</td></tr>
+                <tr><td style="font-weight: bold; padding: 5px 0;">วันที่:</td><td>${new Date().toLocaleDateString('th-TH', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+    })}</td></tr>
             </table>
 
             <div style="font-size: 14px; line-height: 1.6;">

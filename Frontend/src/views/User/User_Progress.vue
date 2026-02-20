@@ -243,7 +243,6 @@ onMounted(async () => {
           id: g.id,
           text: g.text,
           weight: g.weight,
-          // ใช้ค่า status_code หรือถ้าไม่มีให้ใช้ default
           status: g.status || 'processing_gap' 
       })),
       
@@ -317,7 +316,6 @@ const saveProject = async () => {
   Swal.fire({ title: 'กำลังบันทึกและส่งอีเมลแจ้งผู้ที่เกี่ยวข้อง...', didOpen: () => Swal.showLoading() })
 
   const fd = new FormData()
-  // ส่ง status ที่เลือก (OPEN/CLOSED) กลับไป Backend (Backend ผมเขียนรองรับไว้แล้ว)
   fd.append('status', project.value.status) 
   fd.append('progress', project.value.progress)
   fd.append('details', project.value.details || '') 

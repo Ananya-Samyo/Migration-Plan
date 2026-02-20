@@ -4,7 +4,7 @@ dotenv.config()
 import nodemailer from 'nodemailer'
 
 console.log('--- CHECK ENV VALUES ---')
-console.log('USER:', process.env.MAIL_USER) // ดูซิว่ามันขึ้น undefined หรือเปล่า
+console.log('USER:', process.env.MAIL_USER) 
 console.log('PASS:', process.env.MAIL_PASS ? 'OK (Has Password)' : 'MISSING!') 
 console.log('------------------------')
 

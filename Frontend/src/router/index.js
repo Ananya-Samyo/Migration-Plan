@@ -27,7 +27,8 @@ const routes = [
   {
     path: '/admin',
     component: AdminLayout,
-    meta: { requiresAuth: true, role: 'admin' }, 
+    // 🟢 แก้จาก role เป็น roles และใส่เป็น Array
+    meta: { requiresAuth: true, roles: ['admin'] }, 
     children: [
       {
         path: '',
@@ -74,12 +75,13 @@ const routes = [
   },
 
   // =====================
-  // User
+  // User & Coordinator
   // =====================
   {
     path: '/user',
     component: UserLayout,
-    meta: { requiresAuth: true, role: 'user' },
+    // 🟢 ให้ทั้ง user และ coordinator เข้าถึงหน้านี้ได้
+    meta: { requiresAuth: true, roles: ['user', 'coordinator'] },
     children: [
       {
         path: '', 
@@ -116,7 +118,7 @@ const router = createRouter({
 })
 
 /* ======================================================
-   🧭 NAVIGATION GUARD (ระบบรักษาความปลอดภัยหน้าบ้าน)
+    🧭 NAVIGATION GUARD (ระบบรักษาความปลอดภัยหน้าบ้าน)
 ====================================================== */
 router.beforeEach((to, from, next) => {
   const token = localStorage.getItem('token')
@@ -128,15 +130,19 @@ router.beforeEach((to, from, next) => {
       return next({ name: 'Login' })
     }
 
-    const requiredRole = to.matched.find(record => record.meta.role)?.meta.role
+    // 🟢 ดึงข้อมูล Array ของสิทธิ์ที่อนุญาต
+    const allowedRoles = to.matched.find(record => record.meta.roles)?.meta.roles
 
-    if (requiredRole && userRole !== requiredRole) {
+    // 🟢 เช็คว่า userRole ปัจจุบัน มีอยู่ใน Array allowedRoles หรือไม่
+    if (allowedRoles && !allowedRoles.includes(userRole)) {
       alert('คุณไม่มีสิทธิ์เข้าถึงหน้านี้')
+      // ถ้าไม่มีสิทธิ์ ให้ดีดกลับไปหน้าของตัวเอง
       return next(userRole === 'admin' ? '/admin' : '/user')
     }
 
     next()
   } else {
+    // ถ้า Login แล้วแต่พยายามจะเข้าหน้า /login ให้ดีดกลับไปหน้า Dashboard ของตัวเอง
     if (to.name === 'Login' && token) {
       return next(userRole === 'admin' ? '/admin' : '/user')
     }
