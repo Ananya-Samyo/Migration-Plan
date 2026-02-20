@@ -308,14 +308,11 @@ const formatThaiDate = (date) => {
   })
 }
 
-/* --- Lifecycle & Watchers --- */
-
 onMounted(() => {
   loadDepartments()
   loadLogs()
 })
 
-// เมื่อ Filter เปลี่ยน ให้กลับไปเริ่มหน้า 1 ใหม่เสมอ
 watch(filters, () => {
   currentPage.value = 1
   loadLogs()

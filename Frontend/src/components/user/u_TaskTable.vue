@@ -88,7 +88,7 @@
 </template>
 
 <script setup>
-import { computed, ref, watch } from 'vue' // ✅ เพิ่ม ref, watch
+import { computed, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 
 /* ===============================
@@ -113,8 +113,8 @@ const goDetail = (scopeId) => {
   }
 
   router.push({
-    name: 'AdminScopeProject',
-    params: { scope_id: scopeId }
+    name: 'UserScopeproject',
+    query: { scope_id: scopeId }
   })
 }
 

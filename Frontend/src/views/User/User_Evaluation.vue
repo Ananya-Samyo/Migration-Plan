@@ -99,12 +99,20 @@ const fetchEvaluation = async () => {
       headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
     })
     const data = res.data
-    scopeName.value = data.scope_name; projectStatus.value = data.project_status || 'processing'
-    objective.value = data.objective || ''; beforeImprove.value = data.before_plan || ''
-    expectedAfter.value = data.expected_outcome || ''; evaluation.value = data.evaluation_status || 'pass'
-    actualResult.value = data.actual_outcome || ''; suggestion.value = data.recommendation || ''
-    problem.value = data.problem_detail || ''
-  } catch (error) { console.error("Fetch error:", error) }
+    scopeName.value = data.scope_name
+    owner.value = data.owner || '-'    
+    projectStatus.value = data.project_status || 'processing'
+    objective.value = data.objective || ''
+    beforeImprove.value = data.before_plan || ''
+    expectedAfter.value = data.expected_outcome || ''
+    actualResult.value = data.actual_outcome || ''
+    suggestion.value = data.recommendation || ''
+    evaluation.value = data.evaluation_status || ''
+    problem.value = data.problem_detail || '' 
+    
+  } catch (error) {
+    console.error("Fetch error:", error)
+  }
 }
 
 const handleSubmit = async () => {
