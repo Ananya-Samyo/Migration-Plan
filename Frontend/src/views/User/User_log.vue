@@ -250,6 +250,7 @@ const loadLogs = async () => {
     
     logs.value = res.data.map(r => ({
       id: r.log_id,
+      user: r.user_id,
       date: r.change_date,
       type: r.change_type, 
       scope: r.scope_name,

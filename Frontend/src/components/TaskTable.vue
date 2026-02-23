@@ -107,14 +107,11 @@ const router = useRouter()
    Navigation
 ================================ */
 const goDetail = (scopeId) => {
-  if (!scopeId) {
-    console.error('❌ scope_id is missing')
-    return
-  }
+  if (!scopeId) return
 
   router.push({
     name: 'AdminScopeProject',
-    params: { scope_id: scopeId }
+    params: { scope_id: scopeId },
   })
 }
 

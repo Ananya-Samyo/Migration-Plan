@@ -236,21 +236,20 @@
     left: 0;
     height: 100vh;
     z-index: 1200;
-    transform: translateX(0); /* ค่า default */
+    width: 250px !important;
+    transform: translateX(0); 
     transition: transform 0.3s ease;
   }
 
-  /* ❌ ซ่อนเมื่อ collapsed = true */
   .sidebar.collapsed {
     transform: translateX(-100%);
   }
 
-  /* main เต็มจอ */
   .main {
     width: 100%;
+    margin-left: 0;
   }
 
-  /* ให้ topbar อยู่เหนือ sidebar */
   .topbar {
     position: relative;
     z-index: 1300;

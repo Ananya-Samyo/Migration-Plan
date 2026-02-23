@@ -49,20 +49,25 @@
           <h3>📈 ผลการวิเคราะห์ช่องว่าง (GAP)</h3>
         </div>
         <div class="card-body">
-          <div class="gap-table-head" style="display: flex; gap: 10px; padding-bottom: 10px; font-weight: bold; color: #666;">
+          <div class="gap-table-head"
+            style="display: flex; gap: 10px; padding-bottom: 10px; font-weight: bold; color: #666;">
             <div style="flex: 5;">GAP</div>
             <div style="flex: 1; text-align: center;">น้ำหนัก</div>
             <div style="flex: 2;">สถานะ</div>
           </div>
-          <div v-for="(gap, index) in project.gaps" :key="index" class="gap-row" style="display: flex; gap: 10px; margin-bottom: 10px; align-items: center;">
+          <div v-for="(gap, index) in project.gaps" :key="index" class="gap-row"
+            style="display: flex; gap: 10px; margin-bottom: 10px; align-items: center;">
             <div style="flex: 5;">
-              <input type="text" v-model="gap.text" readonly class="input-readonly" style="width: 100%; padding: 8px; border: 1px solid #eee; border-radius: 6px; background: #f9fafb;" />
+              <input type="text" v-model="gap.text" readonly class="input-readonly"
+                style="width: 100%; padding: 8px; border: 1px solid #eee; border-radius: 6px; background: #f9fafb;" />
             </div>
             <div style="flex: 1;">
-              <input type="number" v-model.number="gap.weight" readonly class="input-readonly" style="width: 100%; padding: 8px; border: 1px solid #eee; border-radius: 6px; text-align: center; background: #f9fafb;" />
+              <input type="number" v-model.number="gap.weight" readonly class="input-readonly"
+                style="width: 100%; padding: 8px; border: 1px solid #eee; border-radius: 6px; text-align: center; background: #f9fafb;" />
             </div>
             <div style="flex: 2;">
-              <select v-model="gap.status" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 6px;">
+              <select v-model="gap.status"
+                style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 6px;">
                 <option value="processing_gap">กำลังดำเนินการ</option>
                 <option value="complete_gap">ดำเนินการเสร็จสิ้น</option>
                 <option value="acceptable_gap">ไม่สามารถปิด GAP แต่ยอมรับได้</option>
@@ -71,7 +76,7 @@
           </div>
           <div class="gap-footer" style="margin-top: 20px; text-align: right; font-weight: bold;">
             <span>รวมน้ำหนัก </span>
-            <span class="total-weight" :class="{'text-red': totalWeight > 100, 'text-green': totalWeight <= 100}">
+            <span class="total-weight" :class="{ 'text-red': totalWeight > 100, 'text-green': totalWeight <= 100 }">
               {{ totalWeight }}%
             </span>
           </div>
@@ -84,7 +89,7 @@
         </div>
         <div class="card-body">
           <div class="grid-2">
-             <div class="form-group">
+            <div class="form-group">
               <label>สถานะแผนงาน</label>
               <select v-model="project.status">
                 <option value="OPEN">ยังไม่ปิด GAP</option>
@@ -127,12 +132,13 @@
               <label>ปัญหา/อุปสรรค</label>
               <button class="btn-purple-sm" @click="addProblem">+ เพิ่มปัญหา</button>
             </div>
-            
+
             <div v-if="project.problems.length === 0" class="empty-state">
               ยังไม่มีข้อมูลปัญหา
             </div>
 
-            <div v-for="(item, index) in project.problems" :key="'prob-'+index" class="list-row flex-row" style="margin-bottom: 8px;">
+            <div v-for="(item, index) in project.problems" :key="'prob-' + index" class="list-row flex-row"
+              style="margin-bottom: 8px;">
               <input type="text" v-model="item.text" placeholder="ระบุปัญหา..." style="flex: 1;" />
               <button class="btn-text-del" @click="removeProblem(index)">ลบ</button>
             </div>
@@ -141,7 +147,7 @@
           <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;">
 
           <div class="list-section">
-             <div class="list-header flex-between" style="margin-bottom: 10px;">
+            <div class="list-header flex-between" style="margin-bottom: 10px;">
               <label>แนวทางแก้ไข</label>
               <button class="btn-purple-sm" @click="addSolution">+ เพิ่มแนวทาง</button>
             </div>
@@ -150,7 +156,8 @@
               ยังไม่มีข้อมูลแนวทางแก้ไข
             </div>
 
-            <div v-for="(item, index) in project.solutions" :key="'sol-'+index" class="list-row flex-row" style="margin-bottom: 8px;">
+            <div v-for="(item, index) in project.solutions" :key="'sol-' + index" class="list-row flex-row"
+              style="margin-bottom: 8px;">
               <input type="text" v-model="item.text" placeholder="ระบุแนวทางแก้ไข..." style="flex: 1;" />
               <button class="btn-text-del" @click="removeSolution(index)">ลบ</button>
             </div>
@@ -185,12 +192,12 @@ const project = ref({
   name: '',
   startDate: '',
   endDate: '',
-  status: '',     
+  status: '',
   progress: 0,
   gaps: [],
-  details: '',     
-  problems: [], 
-  solutions: [] 
+  details: '',
+  problems: [],
+  solutions: []
 })
 
 const originalProject = ref(null)
@@ -220,34 +227,33 @@ onMounted(async () => {
     })
 
     if (!res.ok) throw new Error('Failed to fetch project')
-    
+
     const data = await res.json()
 
-    // --- เช็คค่าที่ได้จาก Backend ดูว่ามาไหม (กด F12 ดู Console) ---
-    console.log("Data from Backend:", data); 
+    console.log("Data from Backend:", data);
 
     project.value = {
       id: data.id,
       name: data.name,
       scope: data.scope,
-      startDate: data.startDate ? data.startDate.split('T')[0] : '', // ตัดเวลาออกถ้ามี
+      startDate: data.startDate ? data.startDate.split('T')[0] : '',
       endDate: data.endDate ? data.endDate.split('T')[0] : '',
-      
+
       // ✅ แก้ไข 1: ใช้ status_code (OPEN) แทน status (1) เพื่อให้ตรงกับ <option>
-      status: data.status_code || 'OPEN', 
-      
+      status: data.status_code || 'OPEN',
+
       progress: Number(data.progress),
-      
+
       // ✅ แก้ไข 2: Map ข้อมูล Gaps
       gaps: data.gaps.map(g => ({
-          id: g.id,
-          text: g.text,
-          weight: g.weight,
-          status: g.status || 'processing_gap' 
+        id: g.id,
+        text: g.text,
+        weight: g.weight,
+        status: g.status || 'processing_gap'
       })),
-      
+
       // ✅ แก้ไข 3: Map ข้อมูล Detail (Backend ส่งมาเป็น string แล้ว)
-      details: data.details || '', 
+      details: data.details || '',
 
       problems: textToArray(data.problems),
       solutions: textToArray(data.solutions)
@@ -290,10 +296,10 @@ const saveProject = async () => {
   }
 
   let editData = { reason: '', files: [] }
-  
+
   const result = await Swal.fire({
-      title: 'ยืนยันการบันทึก',
-      html: `
+    title: 'ยืนยันการบันทึก',
+    html: `
         <div style="text-align: left">
           <label>ระบุเหตุผล/สิ่งที่ทำเพิ่ม:</label>
           <textarea id="reason" class="swal2-textarea" style="margin-top:5px;" placeholder="เช่น อัปเดตความคืบหน้า..."></textarea>
@@ -301,28 +307,30 @@ const saveProject = async () => {
           <input id="files" type="file" class="swal2-file" multiple />
         </div>
       `,
-      showCancelButton: true,
-      confirmButtonText: 'บันทึก',
-      preConfirm: () => {
-        const reason = document.getElementById('reason').value
-        const files = document.getElementById('files').files
-        return { reason, files }
-      }
+    showCancelButton: true,
+    confirmButtonText: 'บันทึก',
+    preConfirm: () => {
+      const reason = document.getElementById('reason').value
+      const files = document.getElementById('files').files
+      return { reason, files }
+    }
   })
-  
+
   if (!result.isConfirmed) return
   editData = result.value
 
   Swal.fire({ title: 'กำลังบันทึกและส่งอีเมลแจ้งผู้ที่เกี่ยวข้อง...', didOpen: () => Swal.showLoading() })
 
   const fd = new FormData()
-  fd.append('status', project.value.status) 
+  const userId = localStorage.getItem('user_id')
+  if (userId) fd.append('user_id', userId)
+  fd.append('status', project.value.status)
   fd.append('progress', project.value.progress)
-  fd.append('details', project.value.details || '') 
+  fd.append('details', project.value.details || '')
   fd.append('problems', arrayToText(project.value.problems))
   fd.append('solutions', arrayToText(project.value.solutions))
   fd.append('gaps', JSON.stringify(project.value.gaps))
-  
+
   if (editData.reason) fd.append('edit_reason', editData.reason)
   if (editData.files && editData.files.length > 0) {
     Array.from(editData.files).forEach(file => fd.append('attachments', file))
@@ -338,8 +346,8 @@ const saveProject = async () => {
     })
 
     if (!res.ok) {
-       const errJson = await res.json()
-       throw new Error(errJson.message || 'Save failed')
+      const errJson = await res.json()
+      throw new Error(errJson.message || 'Save failed')
     }
 
     originalProject.value = JSON.parse(JSON.stringify(project.value))

@@ -16,13 +16,16 @@
                 <tbody>
                     <template v-if="scopes && scopes.length > 0">
                         <template v-for="(scope, index) in scopes" :key="scope.scope_id || index">
-                            <tr class="scope-row" @click="toggleRow(index)">
+                            <tr :id="'scope-row-' + (scope.scope_id || scope.id)" 
+                                class="scope-row"
+                                :class="{ 'is-expanded': String(expandedRow) === String(scope.scope_id || scope.id) }"
+                                @click="toggleRow(scope.scope_id || scope.id)">
                                 <td>{{ scope.scope_name }}</td>
                                 <td>{{ scope.department_name }}</td>
                                 <td>{{ scope.coordinator }}</td>
                                 <td>
                                     <div class="progress-wrapper">
-                                        <div class="progress-container">
+                                        <div class="progress-container small">
                                             <div class="progress-bar" :class="progressClass(scope.progress_percent)"
                                                 :style="{ width: scope.progress_percent + '%' }"></div>
                                         </div>
@@ -31,7 +34,7 @@
                                 </td>
                             </tr>
 
-                            <tr v-if="expandedRow === index">
+                            <tr v-if="String(expandedRow) === String(scope.scope_id || scope.id)">
                                 <td colspan="4">
                                     <div class="detail-box">
                                         <table class="detail-table">
@@ -46,10 +49,10 @@
                                             </thead>
 
                                             <tbody>
-                                                <tr v-for="plan in scope.plans" :key="plan.id" class="plan-row">
-                                                    <td class="plan-name" @click="goToProjectDetail(plan.id)"
+                                                <tr v-for="plan in scope.plans" :key="plan.id || plan.project_plan_id" class="plan-row">
+                                                    <td class="plan-name" @click="goToProjectDetail(plan.id || plan.project_plan_id)"
                                                         style="cursor: pointer">
-                                                        {{ plan.name }}
+                                                        {{ plan.name || plan.plan_name }}
                                                     </td>
 
                                                     <td>
@@ -60,7 +63,7 @@
                                                         </ul>
                                                     </td>
 
-                                                    <td>{{ plan.action }}</td>
+                                                    <td>{{ plan.action || plan.action_detail }}</td>
 
                                                     <td>
                                                         <div class="progress-wrapper">
@@ -78,12 +81,12 @@
                                                     <td>
                                                         <div class="action-buttons">
                                                             <button class="btn-progress"
-                                                                @click.stop="goToProgress(plan.id)">
+                                                                @click.stop="goToProgress(plan.id || plan.project_plan_id)">
                                                                 ความก้าวหน้า
                                                             </button>
 
                                                             <button class="btn-evaluate"
-                                                                @click.stop="goToEvaluation(plan.id)">
+                                                                @click.stop="goToEvaluation(plan.id || plan.project_plan_id)">
                                                                 การประเมินผล
                                                             </button>
                                                         </div>
@@ -106,20 +109,12 @@
             </table>
         </div>
 
-        <div class="pagination-controls" v-if="totalPages > 1">
-            <button 
-                class="btn-page" 
-                :disabled="currentPage === 1" 
-                @click="changePage(currentPage - 1)">
+        <div class="pagination-controls" v-if="totalPages > 1 && !route.params.scope_id">
+            <button class="btn-page" :disabled="currentPage === 1" @click="changePage(currentPage - 1)">
                 &lt; ย้อนกลับ
             </button>
-
             <span class="page-info">หน้า {{ currentPage }} จาก {{ totalPages }}</span>
-
-            <button 
-                class="btn-page" 
-                :disabled="currentPage === totalPages" 
-                @click="changePage(currentPage + 1)">
+            <button class="btn-page" :disabled="currentPage === totalPages" @click="changePage(currentPage + 1)">
                 ถัดไป &gt;
             </button>
         </div>
@@ -127,7 +122,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, nextTick, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import '../../assets/Admin/css/Admin_Scopeproject.css'
 
@@ -136,23 +131,127 @@ const router = useRouter()
 const route = useRoute()
 
 // State
-const scopes = ref([]) // เก็บ Array ข้อมูลจริง
+const scopes = ref([])
 const expandedRow = ref(null)
-
-// Pagination State
 const currentPage = ref(1)
 const totalPages = ref(1)
 
 /* ===============================
-   TOGGLE SCOPE ROW
+    ฟังก์ชันกางแถวอัตโนมัติ
 ================================ */
-const toggleRow = (index) => {
-    expandedRow.value = expandedRow.value === index ? null : index
+const handleAutoExpand = () => {
+    const targetId = route.params.scope_id
+    if (!targetId || scopes.value.length === 0) return
+
+    console.log("🔍 กำลังพยายามกางแถว ID:", targetId)
+
+    // ค้นหาข้อมูลที่ตรงกัน (รองรับทั้งชื่อฟิลด์ scope_id และ id)
+    const matchedScope = scopes.value.find(s => {
+        const sID = s.scope_id || s.id; 
+        return String(sID) === String(targetId);
+    })
+
+    if (matchedScope) {
+        const finalID = matchedScope.scope_id || matchedScope.id;
+        console.log("✅ พบข้อมูลที่ตรงกัน กำลังกางแถว...");
+
+        // ตั้งค่าให้แถวนั้นกางออก
+        expandedRow.value = finalID; 
+
+        nextTick(() => {
+            setTimeout(() => {
+                const rowElement = document.getElementById(`scope-row-${finalID}`)
+                if (rowElement) {
+                    // เลื่อนหน้าจอไปที่แถวนั้น
+                    rowElement.scrollIntoView({ behavior: 'smooth', block: 'center' })
+                    
+                    // ทำ Highlighting ชั่วคราวเพื่อให้ผู้ใช้สังเกตง่าย
+                    rowElement.style.transition = 'background-color 0.5s'
+                    rowElement.style.backgroundColor = '#fff9db'
+                    setTimeout(() => { rowElement.style.backgroundColor = '' }, 2500)
+                }
+            }, 600) // รอให้ Animation ของการกางตารางเริ่มทำงานก่อนค่อยเลื่อน
+        })
+    } else {
+        console.warn("❌ ไม่พบ ID นี้ในข้อมูลที่โหลดมา")
+    }
+}
+
+const toggleRow = (id) => {
+    // ถ้าคลิกซ้ำแถวเดิมให้ปิด ถ้าคลิกแถวใหม่ให้เปิด
+    expandedRow.value = String(expandedRow.value) === String(id) ? null : id
 }
 
 /* ===============================
-   NAVIGATION functions
+    ฟังก์ชันดึงข้อมูลจาก API
 ================================ */
+const fetchScopes = async (page = 1) => {
+    try {
+        const token = localStorage.getItem('token')
+        if (!token) return router.push('/')
+
+        // ถ้ามี scope_id ใน URL ให้ดึงข้อมูลชุดใหญ่มาเลยเพื่อให้หา ID นั้นเจอแน่นอน
+        const targetScopeId = route.params.scope_id
+        const limit = targetScopeId ? 1000 : 10 
+
+        const res = await fetch(`${API}/api/admin/scopes?page=${page}&limit=${limit}`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        })
+
+        const responseData = await res.json()
+        
+        if (responseData.data) {
+            scopes.value = responseData.data
+            currentPage.value = responseData.meta?.currentPage || 1
+            totalPages.value = responseData.meta?.totalPages || 1
+            
+            console.log(`📦 โหลดข้อมูลสำเร็จ: ${scopes.value.length} รายการ`)
+        }
+
+        // เมื่อข้อมูลลง State แล้ว ให้รอ DOM Update แล้วค่อยสั่งกางแถว
+        await nextTick()
+        handleAutoExpand()
+
+    } catch (err) {
+        console.error('Fetch Error:', err)
+    }
+}
+
+/* ===============================
+    Watcher: ตรวจจับการเปลี่ยนแปลง URL
+================================ */
+watch(
+    () => route.params.scope_id,
+    (newId) => {
+        // กรณีอยู่ที่หน้าเดิมแต่คลิกเลือก Task ใหม่จาก Sidebar หรือ Dashboard
+        if (newId) {
+            expandedRow.value = null
+            fetchScopes(1)
+        }
+    }
+)
+
+const changePage = (newPage) => {
+    if (newPage >= 1 && newPage <= totalPages.value) {
+        expandedRow.value = null
+        fetchScopes(newPage)
+    }
+}
+
+const progressClass = (value) => {
+    const num = Number(value)
+    if (num < 50) return 'danger'
+    if (num < 100) return 'warning'
+    return 'success'
+}
+
+/* ===============================
+    ฟังก์ชันการนำทาง
+================================ */
+const goToProjectDetail = (id) => {
+    router.push(`/admin/project/${id}`)
+}
+
 const goToProgress = (planId) => {
     router.push({ name: 'AdminProgress', params: { id: planId } })
 }
@@ -161,102 +260,10 @@ const goToEvaluation = (planId) => {
     router.push({ name: 'AdminEvaluation', params: { id: planId } })
 }
 
-const progressClass = (value) => {
-    const num = Number(value)
-    if (isNaN(num)) return 'danger'
-    if (num < 50) return 'danger'
-    if (num < 100) return 'warning'
-    return 'success'
-}
-
 /* ===============================
-   FETCH DATA (CORE LOGIC)
+    เริ่มต้นโหลดข้อมูล
 ================================ */
-const fetchScopes = async (page = 1) => {
-    try {
-        const token = localStorage.getItem('token')
-        if (!token) {
-            router.push('/')
-            return
-        }
-
-        // 🔥 เรียก API พร้อมส่ง query param ?page=...
-        const res = await fetch(`${API}/api/admin/scopes?page=${page}&limit=10`, {
-            method: 'GET',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
-            }
-        })
-
-        if (!res.ok) {
-            if (res.status === 401 || res.status === 403) {
-                localStorage.removeItem('token')
-                router.push('/')
-                return
-            }
-            throw new Error(`HTTP error! status: ${res.status}`)
-        }
-
-        const responseData = await res.json()
-
-        // 🔥 แก้ไขจุดที่เป็นปัญหา: แยก data และ meta ออกจากกัน
-        // Backend ส่งมาเป็น: { data: [...], meta: { currentPage: 1, ... } }
-        if (responseData.data && Array.isArray(responseData.data)) {
-            scopes.value = responseData.data // เอาแค่ Array ไปใส่
-            
-            // อัปเดต Pagination
-            if (responseData.meta) {
-                currentPage.value = responseData.meta.currentPage
-                totalPages.value = responseData.meta.totalPages
-            }
-        } else if (Array.isArray(responseData)) {
-            // เผื่อกรณี Backend เก่าส่งมาเป็น Array ล้วน
-            scopes.value = responseData
-        } else {
-            console.error('Format ข้อมูลไม่ถูกต้อง:', responseData)
-            scopes.value = []
-        }
-
-    } catch (err) {
-        console.error('โหลดข้อมูล scopes ไม่สำเร็จ', err)
-        scopes.value = []
-    }
-}
-
-// ฟังก์ชันเปลี่ยนหน้า
-const changePage = (newPage) => {
-    if (newPage >= 1 && newPage <= totalPages.value) {
-        expandedRow.value = null // หุบแถวที่กางอยู่
-        fetchScopes(newPage) // โหลดข้อมูลหน้าใหม่
-    }
-}
-
-/* ===============================
-   ON MOUNTED
-================================ */
-onMounted(async () => {
-    // โหลดหน้า 1 เสมอตอนเข้าครั้งแรก
-    await fetchScopes(1)
-
-    // Logic เดิม: เช็ค Route Param เพื่อกางแถว (Deep Linking)
-    const scopeIdFromRoute = Number(route.params.scope_id)
-    if (scopeIdFromRoute && scopes.value.length > 0) {
-        const index = scopes.value.findIndex(
-            s => Number(s.scope_id) === scopeIdFromRoute // ตรวจสอบ key ให้ตรงกับ DB (scope_id)
-        )
-
-        if (index !== -1) {
-            expandedRow.value = index
-            setTimeout(() => {
-                document
-                    .querySelectorAll('.scope-row')
-                    [index]?.scrollIntoView({
-                        behavior: 'smooth',
-                        block: 'center'
-                    })
-            }, 200)
-        }
-    }
+onMounted(() => {
+    fetchScopes(1)
 })
 </script>

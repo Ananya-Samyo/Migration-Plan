@@ -336,14 +336,12 @@ const saveProject = async () => {
       }
     })
 
-    if (!formValues) return // กดยกเลิก
+    if (!formValues) return 
 
     editReason = formValues.reason
     editFiles = formValues.files
 
     if (!editReason) {
-      // ถ้าบังคับให้ใส่เหตุผล ให้เปิด comment นี้
-      // Swal.fire('แจ้งเตือน', 'กรุณาระบุเหตุผลการแก้ไข', 'warning'); return;
     }
   }
 
@@ -386,8 +384,6 @@ const saveProject = async () => {
       method: 'PUT',
       headers: {
         'Authorization': `Bearer ${token}`
-        // Note: ไม่ต้องใส่ 'Content-Type': 'multipart/form-data' 
-        // เพราะ Browser จะจัดการ Boundary ให้เองเมื่อใช้ FormData
       },
       body: fd
     })

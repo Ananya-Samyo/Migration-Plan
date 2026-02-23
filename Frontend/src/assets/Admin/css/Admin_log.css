@@ -493,6 +493,16 @@ body {
     font-size: 14px;
 }
 
+/* เพิ่มเติมในส่วน UI ELEMENTS */
+.status-tag {
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 500;
+}
+.status-complete { background: var(--success-bg); color: var(--success); }
+.status-processing { background: #eff6ff; color: #1d4ed8; }
+
 /* ==========================================================================
    7. RESPONSIVE DESIGN (UPDATED)
    ========================================================================= */

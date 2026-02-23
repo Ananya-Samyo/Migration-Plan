@@ -145,12 +145,30 @@ router.put('/projects/:id', verifyToken, upload.array('attachments'), async (req
         const [oldSols] = await conn.query(`SELECT solution_detail FROM solutions WHERE project_plan_id = ?`, [id]);
         const beforeSols = oldSols.map(r => r.solution_detail).join('\n');
 
-        // 2. บันทึก Change Log หลัก
+        // 1. ดึง user_id จาก token ที่ verify แล้ว
+        const userIdForLog = req.user.id;
+
+        // 2. บันทึก Change Log หลัก (จุดนี้มีในโค้ดคุณอยู่แล้ว แค่เช็คให้แน่ใจ)
         const [log] = await conn.query(
             `INSERT INTO change_logs (user_id, scope_id, project_plan_id, department_id, change_type, change_date) VALUES (?, ?, ?, ?, 'progress', NOW())`,
-            [req.user.id, before.scope_id, id, before.department_id]
+            [userIdForLog, before.scope_id, id, before.department_id]
         );
         const logId = log.insertId;
+
+        if (gaps) {
+            const gapData = typeof gaps === 'string' ? JSON.parse(gaps) : gaps;
+            const gVals = gapData.map(g => {
+                let gapStatusId = 1;
+                if (g.status === 'complete_gap') gapStatusId = 2;
+                if (g.status === 'acceptable_gap') gapStatusId = 3;
+
+                return [id, g.text, g.weight, gapStatusId];
+            });
+
+            if (gVals.length) {
+                await conn.query(`INSERT INTO operational_details (project_plan_id, detail, weight_percent, status_id) VALUES ?`, [gVals]);
+            }
+        }
 
         // 3. บันทึกรายละเอียดการเปลี่ยนแปลง
         const status_id = (status === 'closed' || status === '2') ? 2 : 1;
@@ -165,13 +183,13 @@ router.put('/projects/:id', verifyToken, upload.array('attachments'), async (req
         for (const c of changes) {
             if (normalize(c.before) !== normalize(c.after)) {
                 await conn.query(`INSERT INTO change_log_details (log_id, field_name, before_value, after_value) VALUES (?, ?, ?, ?)`,
-                [logId, c.field, String(c.before || ''), String(c.after || '')]);
+                    [logId, c.field, String(c.before || ''), String(c.after || '')]);
             }
         }
 
         // 4. Update ตารางหลัก
-        await conn.query(`UPDATE project_plans SET status_id = ?, progress_percent = ?, details = ? WHERE project_plan_id = ?`, 
-        [status_id, progress, details, id]);
+        await conn.query(`UPDATE project_plans SET status_id = ?, progress_percent = ?, details = ? WHERE project_plan_id = ?`,
+            [status_id, progress, details, id]);
 
         // Problems & Solutions
         await conn.query(`DELETE FROM problems WHERE project_plan_id = ?`, [id]);
@@ -190,16 +208,32 @@ router.put('/projects/:id', verifyToken, upload.array('attachments'), async (req
         await conn.query(`DELETE FROM operational_details WHERE project_plan_id = ?`, [id]);
         if (gaps) {
             const gapData = typeof gaps === 'string' ? JSON.parse(gaps) : gaps;
-            const gVals = gapData.map(g => [id, g.text, g.weight, (g.status === 'complete' ? 2 : 1)]);
-            if (gVals.length) await conn.query(`INSERT INTO operational_details (project_plan_id, detail, weight_percent, status_id) VALUES ?`, [gVals]);
+
+            const gVals = gapData.map(g => {
+                let statusIdForGap = 1;
+                if (g.status === 'complete_gap' || g.status === 'complete') {
+                    statusIdForGap = 2;
+                } else if (g.status === 'acceptable_gap') {
+                    statusIdForGap = 3;
+                }
+
+                return [id, g.text, g.weight, statusIdForGap];
+            });
+
+            if (gVals.length) {
+                await conn.query(
+                    `INSERT INTO operational_details (project_plan_id, detail, weight_percent, status_id) VALUES ?`,
+                    [gVals]
+                );
+            }
         }
 
         // 5. จัดการไฟล์แนบ
         if (req.files?.length) {
             for (const file of req.files) {
                 const fPath = `/uploads/${file.filename}`;
-                await conn.query(`INSERT INTO attachments (ref_type, ref_id, file_path, file_type) VALUES ('change_log', ?, ?, ?)`, 
-                [logId, fPath, file.mimetype.split('/')[1]]);
+                await conn.query(`INSERT INTO attachments (ref_type, ref_id, file_path, file_type) VALUES ('change_log', ?, ?, ?)`,
+                    [logId, fPath, file.mimetype.split('/')[1]]);
             }
         }
 
@@ -208,7 +242,7 @@ router.put('/projects/:id', verifyToken, upload.array('attachments'), async (req
         // 6. ส่งอีเมลแจ้งเตือน
         const [recipients] = await conn.query(`
             SELECT email FROM users WHERE user_id IN (SELECT user_id FROM working_groups WHERE scope_id = ?)
-            UNION SELECT email FROM users WHERE user_id = (SELECT coordinator_id FROM scopes WHERE scope_id = ?)`, 
+            UNION SELECT email FROM users WHERE user_id = (SELECT coordinator_id FROM scopes WHERE scope_id = ?)`,
             [before.scope_id, before.scope_id]);
 
         if (recipients.length) {
