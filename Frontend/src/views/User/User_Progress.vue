@@ -229,32 +229,27 @@ onMounted(async () => {
     if (!res.ok) throw new Error('Failed to fetch project')
 
     const data = await res.json()
-
     console.log("Data from Backend:", data);
 
     project.value = {
       id: data.id,
       name: data.name,
       scope: data.scope,
-      startDate: data.startDate ? data.startDate.split('T')[0] : '',
-      endDate: data.endDate ? data.endDate.split('T')[0] : '',
+      
+      startDate: data.start_date ? data.start_date.split('T')[0] : '',
+      endDate: data.end_date ? data.end_date.split('T')[0] : '',
 
-      // ✅ แก้ไข 1: ใช้ status_code (OPEN) แทน status (1) เพื่อให้ตรงกับ <option>
       status: data.status_code || 'OPEN',
-
       progress: Number(data.progress),
 
-      // ✅ แก้ไข 2: Map ข้อมูล Gaps
-      gaps: data.gaps.map(g => ({
+      gaps: data.gaps ? data.gaps.map(g => ({
         id: g.id,
         text: g.text,
         weight: g.weight,
         status: g.status || 'processing_gap'
-      })),
+      })) : [],
 
-      // ✅ แก้ไข 3: Map ข้อมูล Detail (Backend ส่งมาเป็น string แล้ว)
       details: data.details || '',
-
       problems: textToArray(data.problems),
       solutions: textToArray(data.solutions)
     }
@@ -326,6 +321,8 @@ const saveProject = async () => {
   if (userId) fd.append('user_id', userId)
   fd.append('status', project.value.status)
   fd.append('progress', project.value.progress)
+  fd.append('startDate', project.value.startDate)
+  fd.append('endDate', project.value.endDate)
   fd.append('details', project.value.details || '')
   fd.append('problems', arrayToText(project.value.problems))
   fd.append('solutions', arrayToText(project.value.solutions))

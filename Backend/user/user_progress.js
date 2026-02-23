@@ -98,20 +98,37 @@ const generateEmailTemplate = (data) => {
 router.get('/projects/:id', verifyToken, async (req, res) => {
     try {
         const { id } = req.params;
+
         const sqlProject = `
             SELECT p.project_plan_id AS id, p.project_plan_name AS name, p.progress_percent AS progress, 
-                   st.status_code AS status, s.scope_name AS scope, p.details 
+                   st.status_code AS status, s.scope_name AS scope, p.details,
+                   p.start_date, p.end_date  
             FROM project_plans p 
             JOIN scopes s ON p.scope_id = s.scope_id 
-            JOIN status st ON p.status_id = st.status_id WHERE p.project_plan_id = ?`;
+            JOIN status st ON p.status_id = st.status_id 
+            WHERE p.project_plan_id = ?`;
 
         const [rows] = await db.query(sqlProject, [id]);
         if (rows.length === 0) return res.status(404).json({ message: 'Project not found' });
 
         const project = rows[0];
-        const [gapRows] = await db.query(`SELECT operation_id as id, detail as text, weight_percent as weight, st.status_code as status 
-                                          FROM operational_details od LEFT JOIN status st ON od.status_id = st.status_id 
-                                          WHERE od.project_plan_id = ?`, [id]);
+
+        // --- 🚩 ส่วนที่แก้ไข: จัดการ Format วันที่ให้ Frontend อ่านได้ ---
+        // ตรวจสอบว่ามีค่าวันที่ใน scope ไหม ถ้ามีให้ตัดเอาเฉพาะ YYYY-MM-DD
+        project.startDate = project.start_date 
+            ? new Date(project.start_date).toISOString().split('T')[0] 
+            : ""; 
+            
+        project.endDate = project.end_date 
+            ? new Date(project.end_date).toISOString().split('T')[0] 
+            : "";
+        // -------------------------------------------------------
+
+        const [gapRows] = await db.query(`
+            SELECT operation_id as id, detail as text, weight_percent as weight, st.status_code as status 
+            FROM operational_details od 
+            LEFT JOIN status st ON od.status_id = st.status_id 
+            WHERE od.project_plan_id = ?`, [id]);
         project.gaps = gapRows;
 
         const [probs] = await db.query(`SELECT problem_detail FROM problems WHERE project_plan_id = ?`, [id]);
@@ -120,6 +137,7 @@ router.get('/projects/:id', verifyToken, async (req, res) => {
         const [sols] = await db.query(`SELECT solution_detail FROM solutions WHERE project_plan_id = ?`, [id]);
         project.solutions = sols.map(r => r.solution_detail).join('\n');
 
+        // ส่ง Object ที่มี startDate และ endDate (CamelCase) กลับไป
         res.json(project);
     } catch (err) {
         res.status(500).json({ message: 'Server Error', error: err.message });

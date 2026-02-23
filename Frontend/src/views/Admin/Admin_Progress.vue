@@ -336,7 +336,7 @@ const saveProject = async () => {
       }
     })
 
-    if (!formValues) return 
+    if (!formValues) return
 
     editReason = formValues.reason
     editFiles = formValues.files
@@ -358,6 +358,9 @@ const saveProject = async () => {
   fd.append('name', project.value.name)
   fd.append('status', project.value.status)
   fd.append('progress', project.value.progress)
+
+  fd.append('startDate', project.value.startDate)
+  fd.append('endDate', project.value.endDate)
 
   // ส่งข้อมูล Text (Problems / Solutions)
   fd.append('problems', project.value.problems)

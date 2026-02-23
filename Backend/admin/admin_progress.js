@@ -60,7 +60,8 @@ router.put('/projects/:id', verifyToken, isAdmin, upload.array('attachments'), a
   const {
     name, status,
     problems, solutions, edit_reason,
-    details
+    details,
+    startDate, endDate
   } = req.body
 
   // แปลงค่าตัวเลข (FormData ส่งมาเป็น String)
@@ -106,9 +107,23 @@ router.put('/projects/:id', verifyToken, isAdmin, upload.array('attachments'), a
     // 3️⃣ UPDATE Project Plans
     await conn.query(`
   UPDATE project_plans 
-  SET project_plan_name = ?, progress_percent = ?, status_id = ?, details = ?
+  SET 
+    project_plan_name = ?, 
+    progress_percent = ?, 
+    status_id = ?, 
+    details = ?,
+    start_date = ?, 
+    end_date = ?    
   WHERE project_plan_id = ?
-`, [name, parsedProgress, st.status_id, details || '', projectPlanId])
+`, [
+      name,
+      parsedProgress,
+      st.status_id,
+      details || '',
+      startDate || null,
+      endDate || null,
+      projectPlanId
+    ])
 
     // 4️⃣ UPDATE GAP (Operational Details)
     await conn.query(`DELETE FROM operational_details WHERE project_plan_id = ?`, [projectPlanId])
@@ -150,20 +165,20 @@ router.put('/projects/:id', verifyToken, isAdmin, upload.array('attachments'), a
       )
     }
 
-// --- (จุดสำหรับเขียนโค้ดบันทึกไฟล์ req.files) ---
-if (files && files.length > 0) {
-  for (const file of files) {
-    // 1. กำหนด path ของไฟล์ (สมมติว่าใช้ multer เก็บไว้ในโฟลเดอร์ uploads)
-    const filePath = `/uploads/${file.filename}`;
-    const fileType = file.mimetype.split('/')[1];
+    // --- (จุดสำหรับเขียนโค้ดบันทึกไฟล์ req.files) ---
+    if (files && files.length > 0) {
+      for (const file of files) {
+        // 1. กำหนด path ของไฟล์ (สมมติว่าใช้ multer เก็บไว้ในโฟลเดอร์ uploads)
+        const filePath = `/uploads/${file.filename}`;
+        const fileType = file.mimetype.split('/')[1];
 
-    // 2. บันทึกลงตาราง attachments ใน Database
-    await conn.query(`
+        // 2. บันทึกลงตาราง attachments ใน Database
+        await conn.query(`
       INSERT INTO attachments (ref_type, ref_id, file_path, file_type, is_active)
       VALUES (?, ?, ?, ?, 1)
     `, ['project_plan', projectPlanId, filePath, fileType]);
-  }
-}
+      }
+    }
 
     // ดึง department_id ของคนที่แก้ไข
     const [[userRow]] = await conn.query(
@@ -247,10 +262,12 @@ router.get('/projects/:id', verifyToken, isAdmin, async (req, res) => {
         p.scope_id, 
         p.project_plan_name, 
         p.progress_percent, 
+        p.start_date AS plan_start,  
+        p.end_date AS plan_end,      
         p.details,           
         s.scope_name, 
-        s.start_date, 
-        s.end_date, 
+        s.start_date AS scope_start, 
+        s.end_date AS scope_end, 
         st.status_code
       FROM project_plans p
       JOIN scopes s ON p.scope_id = s.scope_id
@@ -259,6 +276,13 @@ router.get('/projects/:id', verifyToken, isAdmin, async (req, res) => {
     `, [id])
 
     if (!project) return res.status(404).json({ message: 'ไม่พบแผนงาน' })
+
+    // ฟังก์ชันช่วยจัดการ format วันที่ให้เป็น YYYY-MM-DD
+    const formatDate = (dateVal) => {
+      if (!dateVal) return '';
+      const d = new Date(dateVal);
+      return d.toISOString().split('T')[0]; 
+    }
 
     // ดึงข้อมูล GAPs
     const [gapRows] = await db.query(`
@@ -277,12 +301,13 @@ router.get('/projects/:id', verifyToken, isAdmin, async (req, res) => {
       id: project.project_plan_id,
       name: project.project_plan_name,
       scope: project.scope_name,
-      startDate: project.start_date,
-      endDate: project.end_date,
+      // 🚩 ส่งวันที่ในรูปแบบที่ input date ต้องการ (YYYY-MM-DD)
+      startDate: formatDate(project.plan_start),
+      endDate: formatDate(project.plan_end),
       status: project.status_code,
       progress: Number(project.progress_percent),
       gaps: gapRows,
-      details: project.details || '', 
+      details: project.details || '',
       problems: problemRows.map(r => r.problem_detail).join('\n'),
       solutions: solutionRows.map(r => r.solution_detail).join('\n')
     })
