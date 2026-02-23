@@ -15,7 +15,7 @@
 
                 <tbody>
                     <template v-for="(scope, index) in scopes" :key="scope.id">
-                        <tr class="scope-row" @click="toggleRow(index)">
+                        <tr class="scope-row" @click="toggleRow(scope.id)">
                             <td>{{ scope.scope_name }}</td>
                             <td>{{ scope.department_name }}</td>
                             <td>{{ scope.coordinator }}</td>
@@ -30,29 +30,32 @@
                             </td>
                         </tr>
 
-                        <tr v-if="expandedRow === index">
+                        <tr v-if="expandedRow === scope.id">
                             <td colspan="4">
                                 <div class="detail-box">
                                     <table class="detail-table">
                                         <thead>
                                             <tr>
                                                 <th>ชื่อแผนงานที่รับผิดชอบ</th>
-                                                <th>GAP Analysis</th>
                                                 <th>รายละเอียดการดำเนินงาน</th>
-                                                <th>ความคืบหน้า</th>
+                                                <th>ผลการวิเคราะห์ช่องว่าง (GAP Analysis)</th>
                                                 <th>การจัดการ</th>
+                                                <th>ปุ่มดำเนินการ</th>
                                             </tr>
                                         </thead>
 
                                         <tbody>
                                             <tr v-for="plan in scope.plans" :key="plan.id" class="plan-row">
                                                 <td class="plan-name">{{ plan.name }}</td>
+
+                                                <td>{{ plan.details }}</td>
+
                                                 <td>
                                                     <ul class="gap-list">
                                                         <li v-for="(gap, i) in plan.gaps" :key="i">{{ gap }}</li>
                                                     </ul>
                                                 </td>
-                                                <td>{{ plan.action }}</td>
+
                                                 <td>
                                                     <div class="progress-wrapper">
                                                         <div class="progress-container small">
@@ -63,12 +66,15 @@
                                                         <span class="progress-text">{{ plan.progress }}%</span>
                                                     </div>
                                                 </td>
+
                                                 <td>
                                                     <div class="action-buttons">
-                                                        <button class="btn-progress" @click.stop="goToProgress(plan.id)">
+                                                        <button class="btn-progress"
+                                                            @click.stop="goToProgress(plan.id)">
                                                             บันทึกความก้าวหน้า
                                                         </button>
-                                                        <button class="btn-evaluate" @click.stop="goToEvaluation(plan.id)">
+                                                        <button class="btn-evaluate"
+                                                            @click.stop="goToEvaluation(plan.id)">
                                                             การประเมินผล
                                                         </button>
                                                     </div>
@@ -89,7 +95,7 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import '../../assets/Admin/css/Admin_Scopeproject.css' 
+import '../../assets/Admin/css/Admin_Scopeproject.css'
 
 const BASE_API = import.meta.env.VITE_API_BASE_URL
 const router = useRouter()
@@ -109,8 +115,12 @@ const goToEvaluation = (planId) => {
     router.push({ name: 'UserEvaluation', params: { id: planId } })
 }
 
-const toggleRow = (index) => {
-    expandedRow.value = expandedRow.value === index ? null : index
+const toggleRow = (id) => {
+    if (expandedRow.value === id) {
+        expandedRow.value = null
+    } else {
+        expandedRow.value = id
+    }
 }
 
 const progressClass = (value) => {
@@ -126,45 +136,46 @@ const progressClass = (value) => {
 ================================ */
 onMounted(async () => {
     try {
-        const token = localStorage.getItem('token'); // ดึงกุญแจ Token
-        
-        // เรียก API ชุดใหม่ที่เราจะสร้างใน Backend (ฝั่ง User)
+        const token = localStorage.getItem('token');
         const res = await fetch(`${BASE_API}/api/user/scopes`, {
             method: 'GET',
             headers: {
-                'Authorization': `Bearer ${token}`, // ส่ง Token ไปยืนยันตัวตน
+                'Authorization': `Bearer ${token}`,
                 'Content-Type': 'application/json'
             }
-        })
+        });
 
-        if (!res.ok) {
-            if (res.status === 401) {
-                alert('เซสชั่นหมดอายุ กรุณาเข้าสู่ระบบใหม่');
-                router.push('/login');
-                return;
-            }
-            throw new Error('โหลดข้อมูลไม่สำเร็จ');
-        }
+        if (!res.ok) throw new Error('โหลดข้อมูลไม่สำเร็จ');
 
-        const data = await res.json()
-        scopes.value = data
+        const data = await res.json();
+        scopes.value = data;
 
-        // จัดการเปิด Row ตาม ID ที่ส่งมาทาง URL (ถ้ามี)
-        const scopeIdFromRoute = Number(route.params.scope_id)
-        if (scopeIdFromRoute) {
-            const index = scopes.value.findIndex(s => Number(s.id) === scopeIdFromRoute)
-            if (index !== -1) {
-                expandedRow.value = index
+        const expandId = Number(route.query.expand);
+
+        if (expandId) {
+            // 1. ค้นหาว่า ID ที่ส่งมาอยู่ในข้อมูลที่โหลดมาหรือไม่
+            const targetScope = scopes.value.find(s => Number(s.id) === expandId);
+
+            if (targetScope) {
+                // 2. สั่งกางแถวนั้น (ใช้ ID แทน Index จะแม่นยำกว่า)
+                expandedRow.value = expandId;
+
+                // 3. รอให้ Vue เรนเดอร์หน้าจอเสร็จ แล้วเลื่อนหน้าจอไปหา
                 setTimeout(() => {
-                    document.querySelectorAll('.scope-row')[index]?.scrollIntoView({
-                        behavior: 'smooth', block: 'center'
-                    })
-                }, 200)
+                    const targetElement = document.getElementById(`scope-${expandId}`);
+                    if (targetElement) {
+                        targetElement.scrollIntoView({
+                            behavior: 'smooth',
+                            block: 'center'
+                        });
+
+                        targetElement.classList.add('highlight-row');
+                    }
+                }, 500);
             }
         }
-
     } catch (err) {
-        console.error('Error fetching scopes:', err)
+        console.error('Error fetching scopes:', err);
     }
-})
+});
 </script>

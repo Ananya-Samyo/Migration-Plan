@@ -106,15 +106,10 @@ const router = useRouter()
 /* ===============================
    Navigation
 ================================ */
-const goDetail = (scopeId) => {
-  if (!scopeId) {
-    console.error('❌ scope_id is missing')
-    return
-  }
-
-  router.push({
-    name: 'UserScopeproject',
-    query: { scope_id: scopeId }
+const goDetail = (id) => {
+  router.push({ 
+    path: '/user/user_scopeproject', 
+    query: { expand: id } 
   })
 }
 

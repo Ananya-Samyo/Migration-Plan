@@ -177,8 +177,6 @@ router.get('/scopes', verifyToken, isAdmin, async (req, res) => {
 
     const scopeIds = scopeIdsResult.map(row => row.scope_id)
 
-    // 4. เอา scope_id ไปดึงรายละเอียดทั้งหมด (JOIN)
-    // ใช้ WHERE s.scope_id IN (?)
     const [rows] = await db.query(`
       SELECT 
         s.scope_id, 
@@ -188,6 +186,7 @@ router.get('/scopes', verifyToken, isAdmin, async (req, res) => {
         pp.project_plan_id,
         pp.project_plan_name,
         pp.progress_percent AS plan_progress,
+        pp.details AS plan_details,
         od.detail AS gap_detail
       FROM scopes s
       LEFT JOIN departments d ON s.department_id = d.department_id
@@ -227,6 +226,7 @@ router.get('/scopes', verifyToken, isAdmin, async (req, res) => {
             id: r.project_plan_id,
             name: r.project_plan_name,
             progress: Number(r.plan_progress || 0),
+            details: r.plan_details || '-',
             action: "-", 
             gaps: []
           }

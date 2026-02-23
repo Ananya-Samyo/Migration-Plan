@@ -16,8 +16,7 @@
                 <tbody>
                     <template v-if="scopes && scopes.length > 0">
                         <template v-for="(scope, index) in scopes" :key="scope.scope_id || index">
-                            <tr :id="'scope-row-' + (scope.scope_id || scope.id)" 
-                                class="scope-row"
+                            <tr :id="'scope-row-' + (scope.scope_id || scope.id)" class="scope-row"
                                 :class="{ 'is-expanded': String(expandedRow) === String(scope.scope_id || scope.id) }"
                                 @click="toggleRow(scope.scope_id || scope.id)">
                                 <td>{{ scope.scope_name }}</td>
@@ -41,19 +40,23 @@
                                             <thead>
                                                 <tr>
                                                     <th>ชื่อแผนงาน</th>
-                                                    <th>ผลการวิเคราะห์ช่องว่าง (GAP Analysis)</th>
                                                     <th>รายละเอียดการดำเนินงาน</th>
+                                                    <th>ผลการวิเคราะห์ช่องว่าง (GAP Analysis)</th>
                                                     <th>ความคืบหน้า</th>
                                                     <th>การจัดการ</th>
                                                 </tr>
                                             </thead>
 
                                             <tbody>
-                                                <tr v-for="plan in scope.plans" :key="plan.id || plan.project_plan_id" class="plan-row">
-                                                    <td class="plan-name" @click="goToProjectDetail(plan.id || plan.project_plan_id)"
+                                                <tr v-for="plan in scope.plans" :key="plan.id || plan.project_plan_id"
+                                                    class="plan-row">
+                                                    <td class="plan-name"
+                                                        @click="goToProjectDetail(plan.id || plan.project_plan_id)"
                                                         style="cursor: pointer">
                                                         {{ plan.name || plan.plan_name }}
                                                     </td>
+
+                                                    <td>{{ plan.details }}</td>
 
                                                     <td>
                                                         <ul class="gap-list">
@@ -62,8 +65,6 @@
                                                             </li>
                                                         </ul>
                                                     </td>
-
-                                                    <td>{{ plan.action || plan.action_detail }}</td>
 
                                                     <td>
                                                         <div class="progress-wrapper">
@@ -147,7 +148,7 @@ const handleAutoExpand = () => {
 
     // ค้นหาข้อมูลที่ตรงกัน (รองรับทั้งชื่อฟิลด์ scope_id และ id)
     const matchedScope = scopes.value.find(s => {
-        const sID = s.scope_id || s.id; 
+        const sID = s.scope_id || s.id;
         return String(sID) === String(targetId);
     })
 
@@ -156,7 +157,7 @@ const handleAutoExpand = () => {
         console.log("✅ พบข้อมูลที่ตรงกัน กำลังกางแถว...");
 
         // ตั้งค่าให้แถวนั้นกางออก
-        expandedRow.value = finalID; 
+        expandedRow.value = finalID;
 
         nextTick(() => {
             setTimeout(() => {
@@ -164,7 +165,7 @@ const handleAutoExpand = () => {
                 if (rowElement) {
                     // เลื่อนหน้าจอไปที่แถวนั้น
                     rowElement.scrollIntoView({ behavior: 'smooth', block: 'center' })
-                    
+
                     // ทำ Highlighting ชั่วคราวเพื่อให้ผู้ใช้สังเกตง่าย
                     rowElement.style.transition = 'background-color 0.5s'
                     rowElement.style.backgroundColor = '#fff9db'
@@ -192,19 +193,19 @@ const fetchScopes = async (page = 1) => {
 
         // ถ้ามี scope_id ใน URL ให้ดึงข้อมูลชุดใหญ่มาเลยเพื่อให้หา ID นั้นเจอแน่นอน
         const targetScopeId = route.params.scope_id
-        const limit = targetScopeId ? 1000 : 10 
+        const limit = targetScopeId ? 1000 : 10
 
         const res = await fetch(`${API}/api/admin/scopes?page=${page}&limit=${limit}`, {
             headers: { 'Authorization': `Bearer ${token}` }
         })
 
         const responseData = await res.json()
-        
+
         if (responseData.data) {
             scopes.value = responseData.data
             currentPage.value = responseData.meta?.currentPage || 1
             totalPages.value = responseData.meta?.totalPages || 1
-            
+
             console.log(`📦 โหลดข้อมูลสำเร็จ: ${scopes.value.length} รายการ`)
         }
 

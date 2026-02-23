@@ -17,6 +17,7 @@ router.get('/scopes', verifyToken, async (req, res) => {
         pp.project_plan_id,
         pp.project_plan_name,
         pp.progress_percent AS plan_progress,
+        pp.details AS plan_details,
         od.detail AS gap_detail
       FROM scopes s
       INNER JOIN working_groups wg ON s.scope_id = wg.scope_id
@@ -46,6 +47,7 @@ router.get('/scopes', verifyToken, async (req, res) => {
             id: r.project_plan_id,
             name: r.project_plan_name,  
             progress: Number(r.plan_progress || 0),
+            details: r.plan_details || '-',
             action: r.gap_detail || '-', 
             gaps: []
           }
