@@ -15,6 +15,7 @@
             <th>ชื่อ</th>
             <th>กอง</th>
             <th>อีเมล</th>
+            <th>เบอร์โทร</th>
             <th>จัดการ</th>
           </tr>
         </thead>
@@ -24,6 +25,7 @@
             <td>{{ admin.name }}</td>
             <td>{{ admin.department || '-' }}</td>
             <td>{{ admin.email }}</td>
+            <td>{{ admin.phone_number || '-' }}</td>
             <td class="actions">
               <button class="btn-edit" @click="openEdit(admin)">แก้ไข</button>
               <button class="btn-delete" @click="removeAdmin(admin.id)">ลบ</button>
@@ -36,19 +38,11 @@
       </table>
 
       <div class="pagination" v-if="totalPages > 1">
-        <button 
-          class="btn-page" 
-          :disabled="currentPage === 1" 
-          @click="loadAdmins(currentPage - 1)"
-        >
+        <button class="btn-page" :disabled="currentPage === 1" @click="loadAdmins(currentPage - 1)">
           ก่อนหน้า
         </button>
         <span class="page-info">หน้า {{ currentPage }} / {{ totalPages }}</span>
-        <button 
-          class="btn-page" 
-          :disabled="currentPage === totalPages" 
-          @click="loadAdmins(currentPage + 1)"
-        >
+        <button class="btn-page" :disabled="currentPage === totalPages" @click="loadAdmins(currentPage + 1)">
           ถัดไป
         </button>
       </div>
@@ -67,11 +61,7 @@
           <label>กอง</label>
           <select v-model="form.department_id">
             <option value="">-- เลือกกอง --</option>
-            <option 
-              v-for="dept in departments" 
-              :key="dept.department_id" 
-              :value="dept.department_id"
-            >
+            <option v-for="dept in departments" :key="dept.department_id" :value="dept.department_id">
               {{ dept.department_name }}
             </option>
           </select>
@@ -80,6 +70,11 @@
         <div class="form-group">
           <label>อีเมล</label>
           <input v-model="form.email" type="email" />
+        </div>
+
+        <div class="form-group">
+          <label>เบอร์โทรศัพท์</label>
+          <input v-model="form.phone_number" type="text" placeholder="กรอกหมายเลขโทรศัพท์" />
         </div>
 
         <div class="modal-actions">
@@ -101,7 +96,7 @@ const ADMIN_API = `${BASE_API}/api/admin/users`
 const DEPT_API = `${BASE_API}/api/departments`
 
 // State Variables
-const adminsData = ref([]) 
+const adminsData = ref([])
 const departments = ref([])
 const showModal = ref(false)
 const isEdit = ref(false)
@@ -114,6 +109,7 @@ const form = ref({
   name: '',
   department_id: '',
   email: '',
+  phone_number: '',
   role: 'admin'
 })
 
@@ -130,8 +126,8 @@ const loadAdmins = async (page = 1) => {
   try {
     const res = await fetch(`${ADMIN_API}?page=${page}`, { headers: getHeaders() })
     const result = await res.json()
-    
-    adminsData.value = result.data || [] 
+
+    adminsData.value = result.data || []
     currentPage.value = result.currentPage || 1
     totalPages.value = result.totalPages || 1
   } catch (err) {
@@ -155,7 +151,7 @@ onMounted(() => {
 
 const openAdd = () => {
   isEdit.value = false
-  form.value = { id: null, name: '', department_id: '', email: '', role: 'admin' }
+  form.value = { id: null, name: '', department_id: '', email: '', phone_number: '', role: 'admin' }
   showModal.value = true
 }
 
@@ -165,7 +161,8 @@ const openEdit = (admin) => {
     id: admin.id,
     name: admin.name,
     email: admin.email,
-    department_id: admin.department_id || '', 
+    phone_number: admin.phone_number || '',
+    department_id: admin.department_id || '',
     role: 'admin'
   }
   showModal.value = true
@@ -204,6 +201,7 @@ const saveAdmin = async () => {
       body: JSON.stringify({
         name: name,
         email: email,
+        phone_number: form.value.phone_number,
         department_id: dept_id
       })
     })
@@ -224,7 +222,7 @@ const saveAdmin = async () => {
 const removeAdmin = async (id) => {
   // แก้ไข: ใช้ adminsData แทน admins
   const admin = adminsData.value.find(a => a.id === id)
-  
+
   const confirm = await Swal.fire({
     title: 'ยืนยันการลบ',
     text: `ต้องการลบผู้ดูแล "${admin?.name}" ใช่หรือไม่?`,
@@ -239,12 +237,12 @@ const removeAdmin = async (id) => {
   try {
     const res = await fetch(`${ADMIN_API}/${id}`, { method: 'DELETE', headers: getHeaders() })
     if (!res.ok) throw new Error('ลบไม่สำเร็จ')
-    
+
     // เช็คว่าถ้าลบคนสุดท้ายของหน้า ให้ถอยกลับไปหน้าก่อนหน้า
     if (adminsData.value.length === 1 && currentPage.value > 1) {
-       await loadAdmins(currentPage.value - 1)
+      await loadAdmins(currentPage.value - 1)
     } else {
-       await loadAdmins(currentPage.value)
+      await loadAdmins(currentPage.value)
     }
 
     Swal.fire({ icon: 'success', title: 'ลบข้อมูลสำเร็จ', timer: 1500, showConfirmButton: false })

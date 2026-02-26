@@ -2,7 +2,7 @@ import { Router } from 'express'
 import db from '../db.js'
 import { sendMail } from '../global/mailer.js'
 import { verifyToken, isAdmin } from '../middleware/auth.js'
-import multer from 'multer' // ✅ 1. Import Multer
+import multer from 'multer'
 
 const router = Router()
 
@@ -47,6 +47,74 @@ const diffHtml = (beforeProject, afterProject, finalStatus) => {
     </table>
   `
 }
+
+router.post('/update-progress', verifyToken, isAdmin, async (req, res) => {
+  const conn = await db.getConnection();
+  try {
+    await conn.beginTransaction();
+
+    const { projectId, startDate, endDate, progress, gaps, issues } = req.body;
+
+    // ตรวจสอบค่าเบื้องต้น
+    if (!projectId || projectId === 'undefined') {
+      throw new Error('ไม่พบ Project ID (ได้รับค่า: ' + projectId + ')');
+    }
+
+    // 1. อัปเดตตาราง project_plans (ใช้ชื่อคอลัมน์จากไฟล์ SQL ของคุณ)
+    await conn.query(`
+      UPDATE project_plans 
+      SET start_date = ?, end_date = ?, progress_percent = ?
+      WHERE project_plan_id = ?
+    `, [startDate || null, endDate || null, progress || 0, projectId]);
+
+    // 2. จัดการ GAPs (ตาราง operational_details)
+    await conn.query(`DELETE FROM operational_details WHERE project_plan_id = ?`, [projectId]);
+    
+    if (gaps && gaps.length > 0) {
+      for (const gap of gaps) {
+        // ตรวจสอบชื่อตัวแปรที่ส่งมาจาก Vue (ต้องเป็น detail ตามโครงสร้าง Admin_2Progress.vue)
+        const gapDetail = gap.detail || gap.text;
+        if (gapDetail) {
+          // ใช้ COALESCE เพื่อกันสถานะเป็น NULL ถ้าหา 'processing_gap' ไม่เจอ ให้ใส่ ID 1 แทน
+          await conn.query(`
+            INSERT INTO operational_details (project_plan_id, detail, weight_percent, status_id)
+            VALUES (?, ?, ?, (SELECT COALESCE((SELECT status_id FROM status WHERE status_code = ? LIMIT 1), 1)))
+          `, [
+            projectId, 
+            gapDetail, 
+            gap.weight || 0, 
+            gap.status || 'processing_gap'
+          ]);
+        }
+      }
+    }
+
+    // 3. จัดการ Issues/Solutions
+    await conn.query(`DELETE FROM problems WHERE project_plan_id = ?`, [projectId]);
+    await conn.query(`DELETE FROM solutions WHERE project_plan_id = ?`, [projectId]);
+
+    if (issues && issues.length > 0) {
+      for (const iss of issues) {
+        if (iss.problem && iss.problem.trim() !== "") {
+          await conn.query(`INSERT INTO problems (project_plan_id, problem_detail) VALUES (?, ?)`, [projectId, iss.problem]);
+          if (iss.solution && iss.solution.trim() !== "") {
+            await conn.query(`INSERT INTO solutions (project_plan_id, solution_detail) VALUES (?, ?)`, [projectId, iss.solution]);
+          }
+        }
+      }
+    }
+
+    await conn.commit();
+    res.json({ success: true, message: 'บันทึก Step 2 สำเร็จ (ID: ' + projectId + ')' });
+
+  } catch (err) {
+    if (conn) await conn.rollback();
+    console.error("❌ Backend Error Log:", err); // พิมพ์ Error ออกมาดูที่หน้าจอคอม (Terminal)
+    res.status(500).json({ success: false, message: "Server Error: " + err.message });
+  } finally {
+    if (conn) conn.release();
+  }
+});
 
 // ================= UPDATE Route =================
 // ✅ 3. เพิ่ม middleware upload.array('attachments') เพื่อรองรับ FormData
@@ -262,8 +330,8 @@ router.get('/projects/:id', verifyToken, isAdmin, async (req, res) => {
         p.scope_id, 
         p.project_plan_name, 
         p.progress_percent, 
-        p.start_date AS plan_start,  
-        p.end_date AS plan_end,      
+        p.start_date,  
+        p.end_date,      
         p.details,           
         s.scope_name, 
         s.start_date AS scope_start, 
@@ -302,8 +370,8 @@ router.get('/projects/:id', verifyToken, isAdmin, async (req, res) => {
       name: project.project_plan_name,
       scope: project.scope_name,
       // 🚩 ส่งวันที่ในรูปแบบที่ input date ต้องการ (YYYY-MM-DD)
-      startDate: formatDate(project.plan_start),
-      endDate: formatDate(project.plan_end),
+      startDate: formatDate(project.start_date),
+      endDate: formatDate(project.end_date),
       status: project.status_code,
       progress: Number(project.progress_percent),
       gaps: gapRows,

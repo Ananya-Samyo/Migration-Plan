@@ -1,0 +1,739 @@
+/* ==========================================================================
+   1. GLOBAL VARIABLES & BASE SETUP
+   ========================================================================== */
+@import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&family=Prompt:wght@300;400;500;600&display=swap');
+
+:root {
+  --primary-purple: #4b2e83;
+  --secondary-purple: #6d28d9;
+  --accent-gold: #d4af37;
+  --bg-light: #f8fafc;
+  --text-main: #1f2937;
+  --text-muted: #6b7280;
+  --white: #ffffff;
+  --border-color: #e5e7eb;
+  --shadow-sm: 0 4px 12px rgba(0, 0, 0, 0.03);
+  --shadow-md: 0 12px 32px rgba(0, 0, 0, 0.06);
+  --radius-lg: 18px;
+  --radius-md: 12px;
+}
+
+body {
+  font-family: 'Sarabun', 'Prompt', sans-serif;
+  background-color: var(--bg-light);
+  color: var(--text-main);
+  margin: 0;
+}
+
+/* ==========================================================================
+   2. LAYOUT STRUCTURE (Main Wrapper & Top Bar)
+   ========================================================================== */
+.main-wrapper {
+  max-width: 1000px;
+  margin: 40px auto;
+  padding: 0 20px;
+}
+
+.top-bar {
+  background: var(--white);
+  border-radius: var(--radius-lg);
+  padding: 24px 32px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  box-shadow: var(--shadow-sm);
+  margin-bottom: 30px;
+}
+
+.page-title {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--primary-purple);
+  border-left: 6px solid var(--accent-gold);
+  padding-left: 16px;
+  margin: 0;
+}
+
+/* ==========================================================================
+   3. SHARED UI COMPONENTS (Cards, Forms, Buttons)
+   ========================================================================== */
+
+/* --- Card System --- */
+.card {
+  background: var(--white);
+  border-radius: var(--radius-lg);
+  padding: 32px;
+  border: 1px solid var(--border-color);
+  box-shadow: var(--shadow-md);
+  margin-bottom: 24px;
+}
+
+/* --- Form Elements --- */
+.field { margin-bottom: 20px; }
+label {
+  display: block;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-main);
+  margin-bottom: 8px;
+}
+
+input[type="text"], input[type="date"], input[type="email"], select, textarea {
+  width: 100%;
+  padding: 12px 16px;
+  border-radius: 10px;
+  border: 1px solid #d1d5db;
+  font-family: 'Sarabun', sans-serif;
+  font-size: 15px;
+  transition: all 0.2s;
+}
+
+input:focus, select:focus, textarea:focus {
+  outline: none;
+  border-color: var(--secondary-purple);
+  box-shadow: 0 0 0 3px rgba(109, 40, 217, 0.1);
+}
+
+.input-readonly {
+  background-color: #f3f4f6 !important;
+  color: var(--text-muted);
+  cursor: not-allowed;
+}
+
+/* --- Buttons --- */
+.btn-primary {
+  background: var(--secondary-purple);
+  color: white;
+  padding: 12px 24px;
+  border-radius: 999px;
+  border: none;
+  font-weight: 600;
+  cursor: pointer;
+  transition: 0.3s;
+}
+
+.btn-primary:hover {
+  background: var(--primary-purple);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(75, 46, 131, 0.2);
+}
+
+.btn-back-modern {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.btn-back-modern .icon-circle {
+  width: 32px;
+  height: 32px;
+  background: #e5e7eb;
+  border-radius: 50%;
+  display: flex;
+  align-items: center; justify-content: center;
+  transition: 0.2s;
+}
+
+.btn-back-modern:hover .icon-circle {
+  background: var(--secondary-purple);
+  color: white;
+}
+
+/* ==========================================================================
+   4. STEPPER HEADER (Navigation Bar)
+   ========================================================================== */
+.stepper-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 30px 60px;
+  background: #ffffff;
+  border-radius: 16px;
+  margin-bottom: 30px;
+  box-shadow: var(--shadow-sm);
+}
+
+.stepper-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  opacity: 0.4;
+  transition: 0.3s;
+}
+
+.stepper-item.active { opacity: 1; }
+
+.step-counter {
+  width: 40px; height: 40px;
+  background: #f3f4f6;
+  color: #6b7280;
+  border-radius: 50%;
+  display: flex;
+  align-items: center; justify-content: center;
+  font-weight: 700;
+}
+
+.active .step-counter {
+  background: var(--primary-purple);
+  color: #ffffff;
+  box-shadow: 0 0 0 4px rgba(75, 46, 131, 0.1);
+}
+
+.stepper-line {
+  flex: 1;
+  height: 3px;
+  background: #e5e7eb;
+  margin: 0 20px;
+  position: relative;
+  top: -15px;
+}
+
+.stepper-line.active { background: var(--accent-gold); }
+
+/* ==========================================================================
+   5. PAGE-SPECIFIC COMPONENTS
+   ========================================================================== */
+
+/* --- Step 1: Project Info --- */
+.project-card {
+  background: #f9fafb;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 24px;
+  margin-bottom: 20px;
+}
+
+.team-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+/* --- Step 2 & 3: Progress & Evaluation --- */
+.evaluation-item-card {
+  background: #ffffff;
+  border: 2px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 24px;
+  margin-bottom: 20px;
+}
+
+.highlight-card {
+  border: 2px solid var(--primary-purple);
+  background: #fefeff;
+}
+
+.item-number {
+  font-weight: bold;
+  color: var(--primary-purple);
+}
+
+/* ==========================================================================
+   6. GRID & UTILITIES
+   ========================================================================== */
+.grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 15px;
+}
+
+.grid-3 {
+  display: grid;
+  grid-template-columns: 1.5fr 1.5fr 1fr; /* Name, Email, Phone */
+  gap: 12px;
+}
+
+.flex-between {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.status-badge {
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.text-green { color: #16a34a; font-weight: bold; }
+.text-red { color: #dc2626; font-weight: bold; }
+
+
+/* =========================================
+   ADMIN STEP 1 - MODERN STYLE REFACTOR
+   ========================================= */
+
+/* 1. จัดการส่วนหัวขั้นตอนให้เด่น (Page Title) */
+.page-title {
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: var(--primary-purple);
+  border-left: 6px solid var(--accent-gold); /* แถบสีทองบ่งบอกสถานะ */
+  padding-left: 15px;
+  margin: 0;
+}
+
+/* 2. การ์ดหลัก (Main Scope Card) */
+.card {
+  background: var(--white);
+  border-radius: var(--radius-lg);
+  padding: 35px;
+  box-shadow: var(--shadow-md);
+  border: 1px solid var(--border-color);
+}
+
+/* 3. การ์ดแผนงานย่อย (Project Card) */
+.project-card {
+  background: #ffffff;
+  border: 1px solid var(--border-color);
+  border-left: 6px solid var(--secondary-purple); /* เน้นขอบซ้ายให้รู้ว่าเป็นกลุ่มข้อมูล */
+  border-radius: var(--radius-md);
+  padding: 25px;
+  margin-top: 25px;
+  margin-bottom: 25px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+  transition: transform 0.2s ease;
+}
+
+.project-card:hover {
+  transform: translateY(-2px); /* เอฟเฟกต์ยกตัวเล็กน้อย */
+}
+
+/* หัวข้อข้างในการ์ดแผนงาน */
+.project-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 2px solid #f0f2f5;
+  padding-bottom: 15px;
+  margin-bottom: 20px;
+}
+
+.project-header h3 {
+  font-size: 1.2rem;
+  font-weight: 700;
+  margin: 0;
+}
+
+/* 4. จัดการ Label และ Input (ฟอร์มกรอกข้อมูล) */
+.field label {
+  display: block;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text-main);
+  margin-bottom: 8px;
+}
+
+input[type="text"], 
+input[type="email"], 
+select, 
+textarea {
+  width: 100%;
+  padding: 12px 16px;
+  border: 1px solid #d1d5db;
+  border-radius: 10px;
+  background-color: #f9fafb; /* พื้นหลังสีเทาอ่อนให้ตัดกับสีการ์ด */
+  font-family: 'Sarabun', sans-serif;
+  transition: all 0.3s ease;
+}
+
+input:focus, select:focus, textarea:focus {
+  background-color: #ffffff;
+  border-color: var(--secondary-purple);
+  box-shadow: 0 0 0 4px rgba(109, 40, 217, 0.1);
+  outline: none;
+}
+
+/* 5. ระบบ Grid (เชื่อมตามคลาสใน Vue) */
+.grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  margin-bottom: 15px;
+}
+
+.grid-3 {
+  display: grid;
+  grid-template-columns: 1.5fr 1.5fr 1fr; /* ชื่อ(กว้าง) อีเมล(กว้าง) เบอร์โทร(พอดี) */
+  gap: 12px;
+}
+
+/* 6. ส่วนคณะทำงาน (Team Members) */
+.team-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  background: #f3f4f6;
+  padding: 12px;
+  border-radius: 12px;
+  margin-bottom: 10px;
+}
+
+/* 7. ปุ่มต่างๆ (Buttons) */
+.btn-primary {
+  background: linear-gradient(135deg, var(--secondary-purple), var(--primary-purple));
+  color: white;
+  padding: 14px 28px;
+  border-radius: 12px;
+  font-weight: 600;
+  border: none;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(109, 40, 217, 0.2);
+}
+
+.btn-primary:hover {
+  filter: brightness(1.1);
+  transform: translateY(-1px);
+}
+
+.add-project, .add-member, .add-gap {
+  background: transparent;
+  color: var(--secondary-purple);
+  border: 2px dashed var(--secondary-purple);
+  padding: 10px;
+  border-radius: 10px;
+  font-weight: 600;
+  cursor: pointer;
+  width: 100%;
+  margin-top: 10px;
+  transition: 0.2s;
+}
+
+.add-project:hover, .add-member:hover, .add-gap:hover {
+  background: rgba(109, 40, 217, 0.05);
+}
+
+.remove-project, .remove-member, .remove-gap {
+  background: #fee2e2;
+  color: #dc2626;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.remove-project:hover { background: #fecaca; }
+
+/* การจัดการตาราง GAP แบบไร้เส้นขอบที่ดูสะอาดตา */
+.gap-row, .issue-row {
+  display: grid;
+  grid-template-columns: 2fr 0.8fr 1.2fr 50px; /* รายละเอียด | น้ำหนัก | สถานะ | ลบ */
+  gap: 12px;
+  align-items: center;
+  background: #f8fafc;
+  padding: 12px;
+  border-radius: 10px;
+  margin-bottom: 10px;
+}
+
+.issue-row {
+  grid-template-columns: 1fr 1fr 50px; 
+}
+
+.total-weight-bar {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  font-weight: 700;
+  padding: 10px;
+  border-top: 2px dashed var(--border-color);
+}
+
+.text-red { color: #ef4444; }
+
+/* การ์ดเน้นพิเศษสำหรับการสรุปผล */
+.highlight-card {
+  border: 2px solid var(--secondary-purple) !important;
+  background: linear-gradient(to bottom right, #ffffff, #f5f3ff);
+}
+
+/* ส่วนแสดงรายการไฟล์แนบ */
+.file-info-text {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-top: 5px;
+}
+
+/* ตัวอย่างสไตล์สำหรับ Popup สรุปข้อมูล */
+.summary-box {
+  text-align: left;
+  max-height: 400px;
+  overflow-y: auto;
+  padding: 15px;
+  background: #f8fafc;
+  border-radius: 8px;
+  font-size: 14px;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .grid-2, .grid-3 {
+    grid-template-columns: 1fr; 
+  }
+}
+
+/* =========================================
+   Step 3: Evaluation Style
+   ========================================= */
+
+.main-container {
+  padding: 20px;
+  max-width: 1100px;
+  margin: 0 auto;
+  animation: fadeIn 0.5s ease;
+}
+
+/* Header & Top Bar */
+.top-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 25px;
+}
+
+.page-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #4b2e83; /* สีม่วงหลัก */
+  margin: 0;
+}
+
+.btn-back-modern {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: white;
+  border: 1px solid #e5e7eb;
+  padding: 8px 16px;
+  border-radius: 50px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  color: #6b7280;
+}
+
+.btn-back-modern:hover {
+  background: #f3f4f6;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+}
+
+.icon-circle {
+  background: #f3e8ff;
+  color: #7c3aed;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+}
+
+/* Card Styling */
+.card {
+  background: #ffffff;
+  border-radius: 16px;
+  padding: 24px;
+  margin-bottom: 20px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+  border: 1px solid #f0f0f0;
+}
+
+.header-card {
+  background: linear-gradient(135deg, #ffffff 0%, #f9f7ff 100%);
+}
+
+.highlight-card {
+  border: 2px solid #4b2e83;
+  background-color: #fefeff;
+}
+
+.card-header {
+  margin-bottom: 20px;
+  border-bottom: 1px solid #f3f4f6;
+  padding-bottom: 15px;
+}
+
+.card-header h3 {
+  margin: 0;
+  font-size: 1.2rem;
+  color: #1f2937;
+}
+
+/* Form Groups & Inputs */
+.form-group {
+  margin-bottom: 15px;
+}
+
+.form-group label {
+  display: block;
+  font-weight: 600;
+  margin-bottom: 8px;
+  font-size: 0.95rem;
+  color: #374151;
+}
+
+input, select, textarea {
+  width: 100%;
+  padding: 12px 15px;
+  border: 1.5px solid #e5e7eb;
+  border-radius: 10px;
+  font-family: inherit;
+  font-size: 1rem;
+  transition: border-color 0.2s;
+  box-sizing: border-box;
+}
+
+input:focus, select:focus, textarea:focus {
+  outline: none;
+  border-color: #6d28d9;
+  box-shadow: 0 0 0 3px rgba(109, 40, 217, 0.1);
+}
+
+.input-readonly {
+  background-color: #f9fafb;
+  color: #6b7280;
+  cursor: not-allowed;
+}
+
+/* Evaluation Items (Repeatable Cards) */
+.evaluation-item-card {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 15px;
+  position: relative;
+}
+
+.item-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+}
+
+.item-number {
+  background: #4b2e83;
+  color: white;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  font-weight: bold;
+}
+
+/* Buttons */
+.btn-purple-sm {
+  background: #7c3aed;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 500;
+}
+
+.btn-text-del {
+  background: none;
+  border: none;
+  color: #ef4444;
+  cursor: pointer;
+  font-size: 0.9rem;
+  text-decoration: underline;
+}
+
+.btn-save-gradient {
+  width: 100%;
+  padding: 16px;
+  background: linear-gradient(90deg, #4b2e83 0%, #6d28d9 100%);
+  color: white;
+  border: none;
+  border-radius: 12px;
+  font-size: 1.1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.btn-save-gradient:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(75, 46, 131, 0.3);
+}
+
+.btn-content {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+
+/* Grid System */
+.grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 15px;
+}
+
+.grid-3 {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 15px;
+}
+
+.flex-between {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+/* Text Colors */
+.text-red {
+  color: #ef4444 !important;
+}
+
+:deep(.modern-swal-popup) {
+  border-radius: 20px !important;
+  padding: 2em !important;
+}
+
+:deep(.modern-confirm-btn) {
+  padding: 10px 30px !important;
+  font-size: 15px !important;
+  font-weight: 500 !important;
+  border-radius: 10px !important;
+  box-shadow: 0 4px 10px rgba(75, 46, 131, 0.2) !important;
+}
+
+:deep(.modern-cancel-btn) {
+  padding: 10px 30px !important;
+  font-size: 15px !important;
+  font-weight: 500 !important;
+  border-radius: 10px !important;
+  color: #64748b !important; /* สีตัวอักษรเทาเข้ม */
+  border: 1px solid #e2e8f0 !important;
+}
+
+:deep(.modern-cancel-btn:hover) {
+  background-color: #f8fafc !important;
+  color: #1e293b !important;
+}
+
+/* Utility */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .grid-2, .grid-3 {
+    grid-template-columns: 1fr;
+  }
+}

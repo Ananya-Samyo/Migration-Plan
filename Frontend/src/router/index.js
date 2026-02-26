@@ -27,8 +27,7 @@ const routes = [
   {
     path: '/admin',
     component: AdminLayout,
-    // 🟢 แก้จาก role เป็น roles และใส่เป็น Array
-    meta: { requiresAuth: true, roles: ['admin'] }, 
+    meta: { requiresAuth: true, roles: ['admin'] },
     children: [
       {
         path: '',
@@ -40,30 +39,40 @@ const routes = [
         name: 'AdminUsers',
         component: () => import('../views/Admin/Admin_List.vue')
       },
+      // 🟢 จุดที่แก้ไข: หน้าสำหรับเพิ่มโปรเจกต์ (Step 1)
+
+      {
+        path: 'adminproject',
+        name: 'AdminProject',
+        component: () => import('../views/Admin/Admin_MainStepper.vue')
+      },
+      // ในไฟล์ router/index.js (ส่วนของ children: [ ... ])
+      {
+        path: 'scopeproject',
+        name: 'AdminScopeProject',
+        component: () => import('../views/Admin/Admin_ScopeProject.vue')
+      },
       {
         path: 'project/add',
         name: 'AdminAddProject',
-        component: () => import('../views/Admin/Admin_Addproject.vue')
+        component: () => import('../components/admin/Admin_1ProjectInfo.vue')
       },
+      // 🟢 จุดที่แก้ไข: หน้าความก้าวหน้า (Step 2)
       {
         path: 'progress/:id',
         name: 'AdminProgress',
-        component: () => import('../views/Admin/Admin_Progress.vue')
+        component: () => import('../components/admin/Admin_2Progress.vue')
       },
+      // 🟢 จุดที่แก้ไข: หน้าการประเมินผล (Step 3)
       {
         path: 'evaluation/:id',
         name: 'AdminEvaluation',
-        component: () => import('../views/Admin/Admin_Evaluation.vue')
-      },
-      {
-        path: 'scopeproject',
-        name: 'AdminScopeproject',
-        component: () => import('../views/Admin/Admin_Scopeproject.vue')
+        component: () => import('../components/admin/Admin_3Evaluation.vue')
       },
       {
         path: 'scope/:scope_id',
-        name: 'AdminScopeProject',
-        component: () => import('@/views/Admin/Admin_ScopeProject.vue'),
+        name: 'AdminScopeProjectDetail',
+        component: () => import('../views/Admin/Admin_ScopeProject.vue'),
         props: true
       },
       {
@@ -80,11 +89,10 @@ const routes = [
   {
     path: '/user',
     component: UserLayout,
-    // 🟢 ให้ทั้ง user และ coordinator เข้าถึงหน้านี้ได้
     meta: { requiresAuth: true, roles: ['user', 'coordinator'] },
     children: [
       {
-        path: '', 
+        path: '',
         name: 'UserDashboard',
         component: () => import('../views/User/User_Dashboard.vue')
       },
@@ -118,31 +126,24 @@ const router = createRouter({
 })
 
 /* ======================================================
-    🧭 NAVIGATION GUARD (ระบบรักษาความปลอดภัยหน้าบ้าน)
+    🧭 NAVIGATION GUARD
 ====================================================== */
 router.beforeEach((to, from, next) => {
   const token = localStorage.getItem('token')
   const userRole = localStorage.getItem('role')
 
   if (to.matched.some(record => record.meta.requiresAuth)) {
-    
     if (!token) {
       return next({ name: 'Login' })
     }
 
-    // 🟢 ดึงข้อมูล Array ของสิทธิ์ที่อนุญาต
     const allowedRoles = to.matched.find(record => record.meta.roles)?.meta.roles
-
-    // 🟢 เช็คว่า userRole ปัจจุบัน มีอยู่ใน Array allowedRoles หรือไม่
     if (allowedRoles && !allowedRoles.includes(userRole)) {
       alert('คุณไม่มีสิทธิ์เข้าถึงหน้านี้')
-      // ถ้าไม่มีสิทธิ์ ให้ดีดกลับไปหน้าของตัวเอง
       return next(userRole === 'admin' ? '/admin' : '/user')
     }
-
     next()
   } else {
-    // ถ้า Login แล้วแต่พยายามจะเข้าหน้า /login ให้ดีดกลับไปหน้า Dashboard ของตัวเอง
     if (to.name === 'Login' && token) {
       return next(userRole === 'admin' ? '/admin' : '/user')
     }

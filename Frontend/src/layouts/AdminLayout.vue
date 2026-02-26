@@ -17,7 +17,7 @@
           <span v-if="!isCollapsed">รายชื่อผู้ดูแล</span>
         </RouterLink>
 
-        <RouterLink to="/admin/project/add" class="nav-link" exact-active-class="active">
+        <RouterLink to="/admin/adminproject" class="nav-link" exact-active-class="active">
           <span class="icon">➕</span>
           <span v-if="!isCollapsed">เพิ่มขอบเขตงาน</span>
         </RouterLink>

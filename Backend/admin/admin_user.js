@@ -22,6 +22,7 @@ router.get('/users', async (req, res) => {
         u.department_id,
         d.department_name AS department,
         u.email,
+        u.phone_number,
         u.role,
         u.created_at
       FROM users u
@@ -51,7 +52,7 @@ router.get('/users', async (req, res) => {
 
 // ================= 2. POST: เพิ่มผู้ดูแล (ใช้ ID ตรงๆ) =================
 router.post('/users', async (req, res) => {
-  const { name, email, department_id } = req.body;
+  const { name, email, department_id, phone_number } = req.body;
   const conn = await db.getConnection();
   try {
     await conn.beginTransaction();
@@ -64,8 +65,8 @@ router.post('/users', async (req, res) => {
 
     // บันทึกลงตาราง users โดยตรง (ตัดขั้นตอนหาชื่อซ้ำออก)
     const [result] = await conn.query(
-      `INSERT INTO users (user_name, email, role, department_id) VALUES (?, ?, 'admin', ?)`,
-      [name, email, department_id || null]
+      `INSERT INTO users (user_name, email, phone_number, role, department_id) VALUES (?, ?, ?, 'admin', ?)`,
+      [name, email, phone_number || null, department_id || null] 
     );
 
     await conn.commit();
@@ -81,12 +82,11 @@ router.post('/users', async (req, res) => {
 // ================= 3. PUT: แก้ไขผู้ดูแล =================
 router.put('/users/:id', async (req, res) => {
   const { id } = req.params;
-  const { name, email, department_id } = req.body;
+  const { name, email, department_id, phone_number } = req.body;
   try {
-    // อัปเดตข้อมูลรวมถึง department_id ในคำสั่งเดียว
     await db.query(
-      `UPDATE users SET user_name = ?, email = ?, department_id = ? WHERE user_id = ?`,
-      [name, email, department_id || null, id]
+      `UPDATE users SET user_name = ?, email = ?, phone_number = ?, department_id = ? WHERE user_id = ?`,
+      [name, email, phone_number || null, department_id || null, id]
     );
     res.json({ message: 'updated' });
   } catch (err) {
