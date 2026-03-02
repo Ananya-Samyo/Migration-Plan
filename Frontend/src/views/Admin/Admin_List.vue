@@ -1,10 +1,20 @@
 <template>
   <div class="page">
     <div class="page-header">
-      <h1>รายชื่อผู้ดูแลระบบ</h1>
-      <button class="btn-primary" @click="openAdd">
-        + เพิ่มผู้ดูแล
-      </button>
+      <h1>จัดการผู้ใช้งาน</h1>
+
+      <div class="header-actions">
+        <span class="filter-label">กรองสิทธิ์:</span>
+        <select v-model="filterRole" @change="loadAdmins(1)" class="filter-select">
+          <option value="">ทั้งหมด</option>
+          <option value="admin">Admin</option>
+          <option value="viewer">Viewer</option>
+        </select>
+
+        <button class="btn-primary" @click="openAdd">
+          + เพิ่มผู้ดูแล
+        </button>
+      </div>
     </div>
 
     <div class="card">
@@ -16,6 +26,7 @@
             <th>กอง</th>
             <th>อีเมล</th>
             <th>เบอร์โทร</th>
+            <th>สิทธิ์</th>
             <th>จัดการ</th>
           </tr>
         </thead>
@@ -26,13 +37,18 @@
             <td>{{ admin.department || '-' }}</td>
             <td>{{ admin.email }}</td>
             <td>{{ admin.phone_number || '-' }}</td>
+            <td>
+              <span :class="['role-badge', admin.role]">
+                {{ admin.role === 'admin' ? 'ผู้ดูแลระบบ' : 'ผู้เข้าชม (Viewer)' }}
+              </span>
+            </td>
             <td class="actions">
               <button class="btn-edit" @click="openEdit(admin)">แก้ไข</button>
               <button class="btn-delete" @click="removeAdmin(admin.id)">ลบ</button>
             </td>
           </tr>
           <tr v-if="adminsData.length === 0">
-            <td colspan="5" class="empty">ไม่มีข้อมูล</td>
+            <td colspan="7" class="empty">ไม่มีข้อมูล</td>
           </tr>
         </tbody>
       </table>
@@ -77,6 +93,14 @@
           <input v-model="form.phone_number" type="text" placeholder="กรอกหมายเลขโทรศัพท์" />
         </div>
 
+        <div class="form-group">
+          <label>สิทธิ์การใช้งาน</label>
+          <select v-model="form.role">
+            <option value="admin">ผู้ดูแลระบบ (Admin)</option>
+            <option value="viewer">ผู้เข้าชม (Viewer)</option>
+          </select>
+        </div>
+
         <div class="modal-actions">
           <button class="btn-secondary" @click="closeModal">ยกเลิก</button>
           <button class="btn-primary" @click="saveAdmin">บันทึก</button>
@@ -103,6 +127,8 @@ const isEdit = ref(false)
 const currentPage = ref(1)
 const totalPages = ref(1)
 
+const filterRole = ref('')
+
 // Form Structure
 const form = ref({
   id: null,
@@ -121,10 +147,14 @@ const getHeaders = () => {
   }
 }
 
-// โหลดรายชื่อผู้ดูแล (รองรับ Pagination)
 const loadAdmins = async (page = 1) => {
   try {
-    const res = await fetch(`${ADMIN_API}?page=${page}`, { headers: getHeaders() })
+    let url = `${ADMIN_API}?page=${page}`
+    if (filterRole.value) {
+      url += `&role=${filterRole.value}`
+    }
+
+    const res = await fetch(url, { headers: getHeaders() })
     const result = await res.json()
 
     adminsData.value = result.data || []
@@ -151,7 +181,14 @@ onMounted(() => {
 
 const openAdd = () => {
   isEdit.value = false
-  form.value = { id: null, name: '', department_id: '', email: '', phone_number: '', role: 'admin' }
+  form.value = {
+    id: null,
+    name: '',
+    department_id: '',
+    email: '',
+    phone_number: '',
+    role: 'admin'
+  }
   showModal.value = true
 }
 
@@ -163,7 +200,7 @@ const openEdit = (admin) => {
     email: admin.email,
     phone_number: admin.phone_number || '',
     department_id: admin.department_id || '',
-    role: 'admin'
+    role: admin.role || 'admin'
   }
   showModal.value = true
 }
@@ -202,7 +239,8 @@ const saveAdmin = async () => {
         name: name,
         email: email,
         phone_number: form.value.phone_number,
-        department_id: dept_id
+        department_id: dept_id,
+        role: form.value.role
       })
     })
 
@@ -238,7 +276,6 @@ const removeAdmin = async (id) => {
     const res = await fetch(`${ADMIN_API}/${id}`, { method: 'DELETE', headers: getHeaders() })
     if (!res.ok) throw new Error('ลบไม่สำเร็จ')
 
-    // เช็คว่าถ้าลบคนสุดท้ายของหน้า ให้ถอยกลับไปหน้าก่อนหน้า
     if (adminsData.value.length === 1 && currentPage.value > 1) {
       await loadAdmins(currentPage.value - 1)
     } else {

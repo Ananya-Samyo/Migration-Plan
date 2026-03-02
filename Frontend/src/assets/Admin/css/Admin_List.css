@@ -337,11 +337,125 @@ tbody td:nth-child(4) {
   color: #555;
 }
 
+/* สไตล์พื้นฐานของ Badge */
+.role-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 12px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 700;
+  text-align: center;
+}
+
+/* สีสำหรับ Admin (โทนม่วง) */
+.role-badge.admin {
+  background-color: #f3e8ff; 
+  color: #6d28d9;          
+  border: 1px solid #ddd6fe;
+}
+
+/* สีสำหรับ Viewer (โทนน้ำเงิน/เทา) */
+.role-badge.viewer {
+  background-color: #e0f2fe;
+  color: #0369a1;         
+  border: 1px solid #bae6fd;
+}
+
+.form-group select {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-family: 'Sarabun', sans-serif;
+  font-size: 14px;
+  outline: none;
+}
+
+.form-group select:focus {
+  border-color: var(--primary);
+}
+
+.header-actions {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.filter-select {
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid #ddd;
+  font-family: 'Sarabun', sans-serif;
+  outline: none;
+  background-color: white;
+  cursor: pointer;
+  transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+.filter-select:focus {
+  border-color: #6d28d9;
+}
+
+/* ===============================
+   FILTER SELECT (REFINED)
+================================ */
+.header-actions {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.6);
+  padding: 8px 16px;
+  border-radius: 20px;
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(216, 180, 254, 0.3);
+}
+
+.filter-select {
+  appearance: none;
+  -webkit-appearance: none;
+  background-color: #ffffff;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' fill='%236d28d9' viewBox='0 0 20 20'%3E%3Cpath d='M5.23 7.21a.75.75 0 011.06.02L10 11.084l3.71-3.853a.75.75 0 111.08 1.04l-4.24 4.4a.75.75 0 01-1.08 0l-4.24-4.4a.75.75 0 01.02-1.06z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  background-size: 16px;
+  
+  padding: 10px 40px 10px 16px;
+  border-radius: 12px;
+  border: 2px solid #e9d5ff;
+  font-family: 'Sarabun', sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  color: #5b21b6;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  min-width: 180px;
+  outline: none;
+}
+
+.filter-select:hover { 
+  box-shadow: 0 4px 12px rgba(109, 40, 217, 0.1);
+  border-color: #eab308;
+}
+
+.filter-select:focus {
+  border-color: #6d28d9;
+  box-shadow: 0 0 0 4px rgba(109, 40, 217, 0.15);
+  background-color: #fff;
+}
+
+.filter-label {
+  font-size: 13px;
+  font-weight: 800;
+  color: #6b21a8;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
 /* ===============================
    RESPONSIVE
 ================================ */
 
-/* Tablet และต่ำกว่า */
 @media (max-width: 1024px) {
   .page {
     padding: 24px;
