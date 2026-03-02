@@ -108,4 +108,42 @@ router.delete('/users/:id', async (req, res) => {
   }
 });
 
+// =====================================================================
+// [GET] API สำหรับเช็คอีเมลและดึงข้อมูลผู้ใช้งาน (สำหรับ Auto-fill หน้า Step 1)
+// Path: /api/users/check-email (หรือปรับให้ตรงกับไฟล์ Router ของคุณ)
+// =====================================================================
+router.get('/check-email', async (req, res) => {
+  const { email } = req.query; 
+
+  // ถ้าไม่มีอีเมลส่งมา ให้ตอบกลับไปว่าไม่เจอ
+  if (!email) {
+    return res.status(400).json({ found: false, message: 'ไม่มีอีเมลส่งมา' });
+  }
+
+  try {
+    // ค้นหาชื่อและเบอร์โทรจากตาราง users
+    const [users] = await db.query(
+      'SELECT user_name, phone_number FROM users WHERE email = ? LIMIT 1',
+      [email]
+    );
+
+    if (users.length > 0) {
+      // 🟢 กรณีที่ 1: เจอข้อมูลคนเก่าในระบบ ส่งข้อมูลกลับไปให้หน้าบ้านเติม
+      res.json({ 
+        found: true, 
+        user: {
+          user_name: users[0].user_name,
+          phone_number: users[0].phone_number
+        } 
+      });
+    } else {
+      // 🔴 กรณีที่ 2: ไม่เจอข้อมูล (เป็นคนใหม่) ให้หน้าบ้านว่างไว้รอ User พิมพ์เอง
+      res.json({ found: false });
+    }
+  } catch (err) {
+    console.error("Check Email Error:", err);
+    res.status(500).json({ found: false, message: 'เกิดข้อผิดพลาดในการค้นหาข้อมูล' });
+  }
+});
+
 export default router;

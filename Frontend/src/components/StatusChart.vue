@@ -114,7 +114,7 @@ const pieChartData = computed(() => ({
         gapSummary.value.closed_gap,
         gapSummary.value.accepted_gap
       ],
-      backgroundColor: ['#6d28d9', '#16a34a', '#dc2626'],
+      backgroundColor: ['#6b7280', '#16a34a', '#dc2626'],
       borderColor: '#fff',
       borderWidth: 2
     }
@@ -134,7 +134,7 @@ const barChartData = computed(() => ({
         progressRange.value.high,
         progressRange.value.done
       ],
-      backgroundColor: ['#6b7280', '#dc2626', '#6d28d9', '#16a34a'],
+      backgroundColor: ['#6C757D', '#FFC107', '#8FD19E', '#28A745'],
       borderRadius: 6
     }
   ]

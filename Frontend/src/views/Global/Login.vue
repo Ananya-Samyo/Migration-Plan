@@ -60,6 +60,7 @@ async function handleLogin() {
     localStorage.setItem('token', token) 
     localStorage.setItem('role', user.role)
     localStorage.setItem('user_id', user.user_id)
+    localStorage.setItem('user_name', user.user_name)
 
     // 3. Redirect ตาม Role
     if (user.role === 'admin') {

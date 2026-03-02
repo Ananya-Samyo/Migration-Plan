@@ -11,49 +11,37 @@
         </thead>
 
         <tbody>
-          <tr
-            v-for="task in paginatedTasks"
-            :key="task.scope_id"
-            @click="goDetail(task.scope_id)"
-          >
+          <tr v-for="task in paginatedTasks" :key="task.scope_id" @click="goDetail(task.scope_id)">
             <td class="title">
               {{ task.title }}
             </td>
 
-            <td>
-              <span
-                class="status"
-                :style="{
-                  backgroundColor: statusColor(task.status).bg,
-                  color: statusColor(task.status).text
-                }"
-              >
+            <td data-label="สถานะ">
+              <span class="status" :style="{
+                backgroundColor: statusColor(task.status).bg,
+                color: statusColor(task.status).text
+              }">
                 {{ statusText(task.status) }}
               </span>
             </td>
 
-            <td>
+            <td data-label="ความคืบหน้า">
               <div class="progress-wrapper">
                 <div class="progress-bar">
-                  <div
-                    v-if="normalizeProgress(task.progress_percent, task.status) > 0"
-                    class="progress-fill"
-                    :style="{
-                      width: progressWidth(task.progress_percent, task.status),
-                      backgroundColor: progressColor(
-                        normalizeProgress(task.progress_percent, task.status)
-                      )
-                    }"
-                  ></div>
+                  <div v-if="normalizeProgress(task.progress_percent, task.status) > 0" class="progress-fill" :style="{
+                    width: progressWidth(task.progress_percent, task.status),
+                    backgroundColor: progressColor(
+                      normalizeProgress(task.progress_percent, task.status)
+                    )
+                  }"></div>
                 </div>
-
                 <span class="progress-text">
                   {{ normalizeProgress(task.progress_percent, task.status) }}%
                 </span>
               </div>
             </td>
           </tr>
-          
+
           <tr v-if="paginatedTasks.length === 0">
             <td colspan="3" style="text-align: center; padding: 20px; color: #999;">
               ไม่มีรายการงานในช่วงนี้
@@ -64,11 +52,7 @@
     </div>
 
     <div class="pagination" v-if="totalPages > 1">
-      <button 
-        class="page-btn" 
-        @click="prevPage" 
-        :disabled="currentPage === 1"
-      >
+      <button class="page-btn" @click="prevPage" :disabled="currentPage === 1">
         &lt; ก่อนหน้า
       </button>
 
@@ -76,11 +60,7 @@
         หน้า {{ currentPage }} จาก {{ totalPages }}
       </span>
 
-      <button 
-        class="page-btn" 
-        @click="nextPage" 
-        :disabled="currentPage === totalPages"
-      >
+      <button class="page-btn" @click="nextPage" :disabled="currentPage === totalPages">
         ถัดไป &gt;
       </button>
     </div>
@@ -88,7 +68,7 @@
 </template>
 
 <script setup>
-import { computed, ref, watch } from 'vue' 
+import { computed, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import '../assets/Admin/css/TaskTable.css'
 /* ===============================

@@ -255,3 +255,51 @@
     z-index: 1300;
   }
 }
+
+.sidebar {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between; /* ดันให้ sidebar-bottom ไปอยู่ล่างสุด */
+  height: 100vh;
+}
+
+.sidebar-bottom {
+  padding-bottom: 20px;
+}
+
+/* ส่วนแสดงข้อมูล User บน Topbar */
+.user-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.user-avatar {
+  font-size: 1.5rem;
+}
+
+.user-details {
+  display: flex;
+  flex-direction: column;
+  text-align: right;
+  line-height: 1.2;
+}
+
+.user-name {
+  font-weight: bold;
+  font-size: 1rem;
+  color: #333;
+}
+
+.user-role {
+  font-size: 0.8rem;
+  color: #777;
+}
+
+.logout-link {
+  color: #dc3545;
+}
+
+.logout-link:hover {
+  background-color: #f8d7da;
+}

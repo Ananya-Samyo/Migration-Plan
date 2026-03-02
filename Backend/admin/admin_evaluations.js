@@ -262,8 +262,6 @@ router.post('/complete-workflow', verifyToken, isAdmin, upload.array('attachment
               </td>
             </tr>
           </table>
-
-          <p>ท่านสามารถเข้าสู่ระบบเพื่อตรวจสอบประวัติการแก้ไขและดาวน์โหลดไฟล์แนบได้ที่เมนูบริหารจัดการโครงการ</p>
           <br/>
           <p>ขอแสดงความนับถือ<br/><b>ระบบบริหารจัดการแผนงาน (Migration Plan)</b></p>
         </div>

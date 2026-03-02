@@ -123,3 +123,95 @@ tr:hover {
   cursor: not-allowed;
   background: #f8fafc;
 }
+
+
+/* ==========================================
+   ✅ RESPONSIVE DESIGN
+   ========================================== */
+
+/* สำหรับหน้าจอ Tablet และ Mobile (ต่ำกว่า 768px) */
+@media (max-width: 768px) {
+  
+  /* 1. ซ่อน Header ของตารางทิ้งไปเลย */
+  thead {
+    display: none;
+  }
+
+  /* 2. เปลี่ยนแต่ละแถว (tr) ให้กลายเป็นการ์ด */
+  tr {
+    display: block;
+    background: #ffffff;
+    border: 1px solid #f1f5f9;
+    border-radius: 12px;
+    margin-bottom: 16px;
+    padding: 12px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+  }
+
+  tr:hover {
+    background: #fdfdfd;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+  }
+
+  /* 3. จัดการแต่ละช่อง (td) */
+  td {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border: none;
+    padding: 8px 4px;
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  /* แยกชื่อหัวข้อ (Title) ให้เด่นชัด */
+  td.title {
+    display: block; /* ให้ชื่อหัวข้ออยู่บรรทัดเดียวเต็มๆ */
+    font-size: 16px;
+    color: #0f172a;
+    border-bottom: 1px solid #f1f5f9;
+    margin-bottom: 8px;
+    padding-bottom: 12px;
+  }
+
+  /* 4. เพิ่ม Label หน้าข้อมูล (เช่น "สถานะ: ...") */
+  td:not(.title)::before {
+    content: attr(data-label); /* ดึงค่าจาก HTML มาแสดง */
+    font-weight: 700;
+    color: #64748b;
+    font-size: 12px;
+    text-transform: uppercase;
+  }
+
+  /* 5. ปรับขนาดความกว้างของ Status และ Progress ให้พอดีมือถือ */
+  .status {
+    min-width: 140px; /* ลดขนาดลงในมือถือ */
+    padding: 6px 12px;
+    font-size: 12px;
+  }
+
+  .progress-wrapper {
+    width: 60%; /* ให้ Progress Bar มีความกว้างพอเหมาะ */
+  }
+
+  /* 6. ปรับหน้าตา Pagination ให้กดง่ายขึ้น */
+  .pagination {
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .page-btn {
+    padding: 10px 16px; /* ขยายปุ่มให้ใหญ่ขึ้นสำหรับนิ้วมือ */
+    flex: 1;
+    text-align: center;
+  }
+
+  .page-info {
+    width: 100%;
+    text-align: center;
+    order: -1; /* เอาตัวเลขหน้าขึ้นไปข้างบนปุ่ม */
+    margin-bottom: 8px;
+  }
+}

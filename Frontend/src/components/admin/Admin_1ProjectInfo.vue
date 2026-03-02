@@ -48,7 +48,7 @@
           <label>ผู้ประสานงาน (หลัก)</label>
           <div class="grid-3">
             <input v-model="project.coordinator.name" type="text" placeholder="ชื่อ-สกุล" />
-            <input v-model="project.coordinator.email" type="email" placeholder="อีเมล" />
+            <input v-model="project.coordinator.email" type="email" placeholder="อีเมล" @blur="checkUserEmail(project.coordinator)" />
             <input v-model="project.coordinator.phone_number" type="text" placeholder="เบอร์โทรศัพท์" />
           </div>
         </div>
@@ -58,7 +58,7 @@
           <div v-for="(member, mIndex) in project.teamMembers" :key="mIndex" class="team-item">
             <div class="grid-3">
               <input v-model="member.name" type="text" :placeholder="`ชื่อคนที่ ${mIndex + 1}`" />
-              <input v-model="member.email" type="email" placeholder="อีเมล" />
+              <input v-model="member.email" type="email" placeholder="อีเมล" @blur="checkUserEmail(member)" />
               <input v-model="member.phone_number" type="text" placeholder="เบอร์โทรศัพท์" />
             </div>
             <button v-if="project.teamMembers.length > 1" @click="removeMember(pIndex, mIndex)">ลบ</button>
@@ -184,4 +184,38 @@ const handleNext = async () => {
     Swal.fire('Error', error.message, 'error');
   }
 }
+
+// ฟังก์ชันสำหรับเช็คอีเมลและดึงข้อมูลมาเติมอัตโนมัติ
+const checkUserEmail = async (personObj) => {
+  // ถ้ายังไม่ได้กรอกอีเมล หรือกรอกไม่เสร็จ ให้ข้ามไปเลย
+  if (!personObj.email) return;
+
+  try {
+    // ยิง API ไปถามหลังบ้าน (เดี๋ยวเราจะไปสร้าง API ตัวนี้กันในขั้นตอนถัดไป)
+    const res = await fetch(`${BASE_API}/api/users/check-email?email=${personObj.email}`, {
+      headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+    });
+
+    if (res.ok) {
+      const userData = await res.json();
+      // ถ้าเจอข้อมูลคนนี้ในระบบ
+      if (userData.found) {
+        personObj.name = userData.user.user_name; // เติมชื่อ
+        personObj.phone_number = userData.user.phone_number || ''; // เติมเบอร์โทร
+        
+        // แจ้งเตือนเล็กๆ มุมขวาบน (ไม่บังคับ แต่ช่วยให้ User รู้สึกดี)
+        Swal.fire({
+          toast: true,
+          position: 'top-end',
+          icon: 'success',
+          title: 'พบข้อมูลในระบบ เติมให้อัตโนมัติ!',
+          showConfirmButton: false,
+          timer: 1500
+        });
+      }
+    }
+  } catch (err) {
+    console.error("เช็คข้อมูลอีเมลไม่สำเร็จ:", err);
+  }
+};
 </script>
