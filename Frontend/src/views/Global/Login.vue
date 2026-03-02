@@ -63,7 +63,7 @@ async function handleLogin() {
     localStorage.setItem('user_name', user.user_name)
 
     // 3. Redirect ตาม Role
-    if (user.role === 'admin') {
+    if (user.role === 'admin' || user.role === 'viewer') {
       router.push('/admin') 
     } else if (user.role === 'coordinator' || user.role === 'user') {
       router.push('/user')

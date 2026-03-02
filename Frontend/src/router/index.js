@@ -27,7 +27,7 @@ const routes = [
   {
     path: '/admin',
     component: AdminLayout,
-    meta: { requiresAuth: true, roles: ['admin'] },
+    meta: { requiresAuth: true, roles: ['admin', 'viewer'] }, 
     children: [
       {
         path: '',
@@ -140,7 +140,9 @@ router.beforeEach((to, from, next) => {
     const allowedRoles = to.matched.find(record => record.meta.roles)?.meta.roles
     if (allowedRoles && !allowedRoles.includes(userRole)) {
       alert('คุณไม่มีสิทธิ์เข้าถึงหน้านี้')
-      return next(userRole === 'admin' ? '/admin' : '/user')
+      
+      const redirectPath = (userRole === 'admin' || userRole === 'viewer') ? '/admin' : '/user'
+      return next(redirectPath)
     }
     next()
   } else {

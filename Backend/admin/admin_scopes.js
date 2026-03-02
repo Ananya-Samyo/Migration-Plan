@@ -1,7 +1,7 @@
 import { Router } from 'express'
 import db from '../db.js' 
 import { sendMail } from '../global/mailer.js'
-import { verifyToken, isAdmin } from '../middleware/auth.js' // นำเข้า Middleware ตรวจสอบสิทธิ์
+import { verifyToken, isAdmin, canViewBasic } from '../middleware/auth.js'
 
 const router = Router()
 
@@ -145,7 +145,7 @@ router.post('/scopes', verifyToken, isAdmin, async (req, res) => {
 })
 
 // ================= Scopes : GET LIST (With Pagination) =================
-router.get('/scopes', verifyToken, isAdmin, async (req, res) => {
+router.get('/scopes', verifyToken, canViewBasic, async (req, res) => {
   try {
     // 1. รับค่า page และ limit จาก Frontend (ถ้าไม่ส่งมา ให้ใช้ค่า Default)
     const page = parseInt(req.query.page) || 1

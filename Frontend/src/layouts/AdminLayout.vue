@@ -4,7 +4,7 @@
       <div class="sidebar-top">
         <nav>
           <h1 class="page-title" v-if="!isCollapsed">
-            ระบบติดตามแผนงาน
+            Migration Plan
           </h1>
 
           <RouterLink to="/admin" class="nav-link" exact-active-class="active">
@@ -12,12 +12,12 @@
             <span v-if="!isCollapsed">แดชบอร์ด</span>
           </RouterLink>
 
-          <RouterLink to="/admin/users" class="nav-link" exact-active-class="active">
+          <RouterLink v-if="rawRole !== 'viewer'" to="/admin/users" class="nav-link" exact-active-class="active">
             <span class="icon admin-icon">🛡️</span>
             <span v-if="!isCollapsed">รายชื่อผู้ดูแล</span>
           </RouterLink>
 
-          <RouterLink to="/admin/adminproject" class="nav-link" exact-active-class="active">
+          <RouterLink v-if="rawRole !== 'viewer'" to="/admin/adminproject" class="nav-link" exact-active-class="active">
             <span class="icon">➕</span>
             <span v-if="!isCollapsed">เพิ่มขอบเขตงาน</span>
           </RouterLink>
@@ -27,7 +27,7 @@
             <span v-if="!isCollapsed">ขอบเขตแผนงาน</span>
           </RouterLink>
 
-          <RouterLink to="/admin/log" class="nav-link" exact-active-class="active">
+          <RouterLink v-if="rawRole !== 'viewer'" to="/admin/log" class="nav-link" exact-active-class="active">
             <span class="icon">🗂️</span>
             <span v-if="!isCollapsed">บันทึกการเปลี่ยนแปลงข้อมูล</span>
           </RouterLink>
@@ -51,7 +51,7 @@
           <div class="user-avatar">👤</div>
           <div class="user-details">
             <div class="user-name">{{ userName }}</div>
-            <div class="user-role">{{ userRole }}</div>
+            <div class="user-role">{{ userRoleDisplay }}</div>
           </div>
         </div>
       </header>
@@ -64,66 +64,66 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue' 
+import { ref, computed, onMounted } from 'vue'
 import './../assets/Admin/css/AdminLayout.css'
 
 const isCollapsed = ref(false)
+const userName = ref('กำลังโหลด...')
+const rawRole = ref('') // ใช้สำหรับเช็คสิทธิ์ (เก็บค่า 'admin', 'viewer' ฯลฯ)
 
-// ตัวแปรสำหรับแสดงผล
-const userName = ref('กำลังโหลด...') 
-const userRole = ref('Admin')
+// ใช้ Computed เพื่อแปลง Role เป็นภาษาไทยสำหรับแสดงผลเท่านั้น
+const userRoleDisplay = computed(() => {
+  return formatRole(rawRole.value)
+})
 
 onMounted(() => {
-  // วิธีที่ 1: เช็คจาก localStorage ก่อน (กรณีตอน Login สั่ง save แยกไว้)
   const storedName = localStorage.getItem('user_name')
   const storedRole = localStorage.getItem('user_role') || localStorage.getItem('role')
 
   if (storedName) {
     userName.value = storedName
-    userRole.value = formatRole(storedRole)
+    rawRole.value = storedRole.toLowerCase()
   } else {
-    // วิธีที่ 2: ถ้าไม่มีใน localStorage ให้ลองถอดรหัสจาก JWT Token
     const token = localStorage.getItem('token')
     if (token) {
       try {
-        // ถอดรหัส Token ส่วน Payload (ข้อมูล User มักจะซ่อนอยู่ในนี้)
         const base64Url = token.split('.')[1]
         const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/')
-        const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
-            return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)
+        const jsonPayload = decodeURIComponent(atob(base64).split('').map(function (c) {
+          return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)
         }).join(''))
 
         const payload = JSON.parse(jsonPayload)
-        
-        // ดึง user_name และ role จาก Token มาแสดง
+
         if (payload.user_name || payload.name) {
           userName.value = payload.user_name || payload.name
         }
         if (payload.role) {
-          userRole.value = formatRole(payload.role)
+          rawRole.value = payload.role.toLowerCase()
         }
       } catch (e) {
         console.error('อ่านข้อมูลจาก Token ไม่สำเร็จ', e)
-        userName.value = 'ผู้ดูแลระบบ' // ค่า Default
+        userName.value = 'ผู้ดูแลระบบ'
+        rawRole.value = 'admin'
       }
     }
   }
 })
 
-// ปีปัจจุบัน (พ.ศ.)
 const currentYear = computed(() => new Date().getFullYear())
 
 const toggleSidebar = () => {
   isCollapsed.value = !isCollapsed.value
 }
 
-// ฟังก์ชันปรับคำแสดงผล Role ให้สวยงาม
+// ฟังก์ชันสำหรับแปลงชื่อ Role เพื่อความสวยงามบน UI
 const formatRole = (role) => {
-  if (!role) return 'Administrator'
-  const lowerRole = role.toLowerCase()
-  if (lowerRole === 'admin') return 'ผู้ดูแลระบบ'
-  if (lowerRole === 'coordinator') return 'ผู้ประสานงาน'
-  if (lowerRole === 'user') return 'ผู้ใช้งานทั่วไป'
+  if (!role) return 'ไม่ระบุตัวตน'
+  const r = role.toLowerCase()
+  if (r === 'admin') return 'ผู้ดูแลระบบ'
+  if (r === 'coordinator') return 'ผู้ประสานงาน'
+  if (r === 'user') return 'ผู้ใช้งานทั่วไป'
+  if (r === 'viewer') return 'ผู้เข้าชม'
   return role
 }
 </script>

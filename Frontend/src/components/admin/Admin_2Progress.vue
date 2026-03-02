@@ -80,6 +80,8 @@
 <script setup>
 import { ref, computed, watch } from 'vue'
 import Swal from 'sweetalert2'
+import '../../assets/Admin/css/Admin_UnifiedStyle.css'
+import '../../assets/Admin/css/Admin_Progress.css'
 
 const props = defineProps(['modelValue', 'projectId'])
 const emit = defineEmits(['next', 'back', 'update:modelValue'])

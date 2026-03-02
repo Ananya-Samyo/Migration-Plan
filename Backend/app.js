@@ -4,8 +4,8 @@ dotenv.config()
 import express from 'express'
 import cors from 'cors'
 
-// ✅ Import Middlewares
-import { verifyToken, isAdmin } from './middleware/auth.js'
+// ✅ 1. Import Middlewares ตัวใหม่เข้ามาให้ครบ
+import { verifyToken, isAdmin, canViewBasic, canAccessLog } from './middleware/auth.js'
 
 // ✅ Import Admin Routes 
 import adminDashboardRoutes from './admin/admin_dashboard.js' 
@@ -45,17 +45,23 @@ app.use('/api', login)
 // 2. Global Routes 
 app.use('/api/departments', verifyToken, departmentRoutes)
 
-// 3. User API Group 
-app.use('/api/user', verifyToken, userDashboardRouter)
-app.use('/api/user', verifyToken, userEvaluationRouter)
-app.use('/api/user', verifyToken, userProgresRouter)
-app.use('/api/user', verifyToken, userLogRouter)
-app.use('/api/user', verifyToken, userScopesRouter)
+// 3. User API Group (สิทธิ์สำหรับ User / Coordinator)
+// 🟢 Dashboard และ Scopes (ทุกคนเข้าได้ รวมถึง Viewer)
+app.use('/api/user', verifyToken, canViewBasic, userDashboardRouter)
+app.use('/api/user', verifyToken, canViewBasic, userScopesRouter)
 
-// 4. Admin API Group 
-app.use('/api/admin', verifyToken, isAdmin, adminDashboardRoutes)
+// 🟡 Log และข้อมูลอื่นๆ (Admin, User, Coordinator เข้าได้ | Viewer ห้ามเข้า)
+app.use('/api/user', verifyToken, canAccessLog, userLogRouter)
+app.use('/api/user', verifyToken, canAccessLog, userEvaluationRouter)
+app.use('/api/user', verifyToken, canAccessLog, userProgresRouter)
+
+// 4. Admin API Group (สิทธิ์สำหรับฝั่ง Admin Layout)
+// 🟢 Dashboard และ Scopes (Admin และ Viewer เข้าได้ผ่านไฟล์ AdminLayout)
+app.use('/api/admin', verifyToken, canViewBasic, adminDashboardRoutes)
+app.use('/api/admin', verifyToken, canViewBasic, adminScopeRoutes)
+
+// 🔴 ส่วนที่เหลือ (Admin เท่านั้น | Viewer, User, Coordinator ห้ามเข้า)
 app.use('/api/admin', verifyToken, isAdmin, adminUserRoutes)
-app.use('/api/admin', verifyToken, isAdmin, adminScopeRoutes)
 app.use('/api/admin', verifyToken, isAdmin, adminProgressRoutes)
 app.use('/api/admin', verifyToken, isAdmin, adminEvaluationRoutes)
 app.use('/api/admin', verifyToken, isAdmin, adminLogRoutes)
