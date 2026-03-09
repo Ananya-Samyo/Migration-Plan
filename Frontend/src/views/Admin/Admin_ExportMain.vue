@@ -3,7 +3,8 @@
     <header class="stepper-header">
       <div class="stepper-wrapper">
         <div v-for="(step, i) in steps" :key="i" class="step"
-          :class="{ active: currentStep === i + 1, completed: currentStep > i + 1 }" @click="currentStep = i + 1"
+          :class="{ active: currentStep === i + 1, completed: currentStep > i + 1 }" 
+          @click="currentStep = i + 1"
           style="cursor: pointer;">
           <span class="step-num">{{ i + 1 }}</span>
           <span class="step-text">{{ step }}</span>
@@ -11,52 +12,53 @@
       </div>
     </header>
 
-    <div class="main-content">
-      <section class="full-panel">
-        <div v-if="currentStep === 1" class="step-content">
-          <ProjectSummary :tasks="tasks" @update-tasks="syncTasks" />
-        </div>
+    <main class="main-content-full">
+      <div v-if="currentStep === 1" class="step-content">
+        <ProjectSummary :tasks="tasks" @update-tasks="syncTasks" />
+      </div>
 
-        <div v-else-if="currentStep === 2" class="step-content">
-          <GapAnalysis :selectedTasks="selectedTasks" @update-gaps="syncGaps" />
-        </div>
+      <div v-else-if="currentStep === 2" class="step-content">
+        <GapAnalysis :selectedTasks="selectedTasks" @update-gaps="syncGaps" />
+      </div>
 
-        <div v-else class="step-content">
-          <div class="header-section">
-            <h2 class="step-title">{{ currentStep }}. {{ steps[currentStep - 1] }}</h2>
-          </div>
-          <div class="placeholder-box modern-card">
-            <div class="empty-content">
-              <span>🛠️</span>
-              <p>ส่วนนี้สำหรับจัดการเนื้อหา: <strong>{{ steps[currentStep - 1] }}</strong></p>
-              <small>ระบบกำลังเตรียมพื้นที่สำหรับกรอกข้อมูลในขั้นตอนนี้</small>
+      <div v-else class="step-content">
+        <div class="header-section">
+          <h2 class="step-title">{{ currentStep }}. {{ steps[currentStep - 1] }}</h2>
+        </div>
+        <div class="placeholder-box-full">
+          <span>🛠️ กำลังพัฒนาเนื้อหา: {{ steps[currentStep - 1] }}</span>
+        </div>
+      </div>
+    </main>
+
+    <footer class="action-footer-fixed">
+      <div class="footer-left">
+        <button class="btn-back" @click="currentStep--" :disabled="currentStep === 1">ก่อนหน้า</button>
+      </div>
+      <div class="footer-right">
+        <button class="btn-preview" @click="showPreview = true">👁️ ดูตัวอย่างรายงาน</button>
+        <button class="btn-export" @click="exportToPDF">📥 ดาวน์โหลด PDF (วาระที่ {{ currentStep }})</button>
+        <button class="btn-next" @click="currentStep++" v-if="currentStep < 5">วาระถัดไป</button>
+        <button v-else class="btn-export-primary" @click="handleExportAll">🚀 ดาวน์โหลดฉบับเต็ม</button>
+      </div>
+    </footer>
+
+    <Transition name="fade">
+      <div v-if="showPreview" class="preview-full-overlay">
+        <div class="preview-full-container">
+          <div class="preview-header">
+            <h3>📑 ตัวอย่างรายงาน: {{ steps[currentStep - 1] }}</h3>
+            <div class="header-actions">
+               <button class="btn-export-modal" @click="exportToPDF">📥 ดาวน์โหลดชุดนี้</button>
+               <button class="close-full-btn" @click="showPreview = false">✖ ปิดหน้าต่าง</button>
             </div>
           </div>
-        </div>
-
-        <div class="action-footer">
-          <button class="btn-back" @click="currentStep--" :disabled="currentStep === 1">ก่อนหน้า</button>
-          
-          <button class="btn-preview" @click="showPreview = true">👁️ ดูตัวอย่างรายงาน</button>
-          
-          <button class="btn-export" @click="exportToPDF">📥 ดาวน์โหลดรายงาน (เฉพาะวาระที่ {{ currentStep }})</button>
-          <button class="btn-next" @click="currentStep++" v-if="currentStep < 5">วาระถัดไป</button>
-          <button v-else class="btn-export-primary" @click="handleExportAll">🚀 ดาวน์โหลดรายงานฉบับเต็ม</button>
-        </div>
-      </section>
-
-      <div v-if="showPreview" class="preview-modal-overlay" @click.self="showPreview = false">
-        <div class="preview-modal-content">
-          <div class="modal-header">
-            <h3>📑 ตัวอย่างรายงาน - {{ steps[currentStep - 1] }}</h3>
-            <button class="close-btn" @click="showPreview = false">✖</button>
-          </div>
-          <div class="modal-body">
+          <div class="preview-body-content">
             <ExportPreview :selectedTasks="selectedTasks" :gapGroups="gapGroups" :currentStep="currentStep" />
           </div>
         </div>
       </div>
-    </div>
+    </Transition>
   </div>
 </template>
 
