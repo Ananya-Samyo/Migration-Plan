@@ -2,7 +2,7 @@
   <div class="main-container">
     <header class="top-bar">
       <div class="left-head">
-        <h1 class="page-title">3. การประเมินผลประโยชน์ (Step 3)</h1>
+        <h1 class="page-title">การประเมินผลประโยชน์</h1>
       </div>
 
       <button class="btn-back-modern" @click="$emit('back')">
@@ -140,8 +140,8 @@ const validateFiles = (files) => {
 }
 
 onMounted(() => {
-  console.log("Project ID ใน Step 3:", props.projectId);
-  console.log("ข้อมูล Step 1 ใน Step 3:", props.masterData?.step1);
+  console.log("Project ID ใน การประเมินผลประโยชน์:", props.projectId);
+  console.log("ข้อมูลแผนงาน ใน การประเมินผลประโยชน์:", props.masterData?.step1);
 });
 
 // ฟังก์ชันสำหรับกำหนดสไตล์ร่วมกันของ Swal

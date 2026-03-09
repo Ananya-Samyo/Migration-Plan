@@ -10,7 +10,7 @@ const getDateParams = (query) => {
   const { startDate, endDate } = query
   const start = startDate && startDate !== '' ? startDate : null
   const end = endDate && endDate !== '' ? endDate : null
-  return [start, start, end] // ใช้รูปแบบ [null_check, start, end]
+  return [start, start, end] 
 }
 
 // 1. ดึงภาพรวมความคืบหน้า (Overall Progress) - แก้ไขเพิ่ม WHERE

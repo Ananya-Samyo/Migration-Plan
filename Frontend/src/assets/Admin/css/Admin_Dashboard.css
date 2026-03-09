@@ -92,7 +92,7 @@
    Date Mode Dropdown
 ========================================= */
 .date-dropdown {
-  position: relative; 
+  position: relative;
   background: var(--bg-panel);
   border: 1px solid var(--border);
   box-shadow: var(--shadow-sm);
@@ -129,7 +129,7 @@
 
 .dropdown-menu {
   position: absolute;
-  top: calc(100% + 8px); 
+  top: calc(100% + 8px);
   left: 0;
   width: 100%;
 
@@ -263,7 +263,7 @@
 ========================================= */
 .content-layout {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 2fr); 
+  grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
   gap: 24px;
   align-items: start;
   width: 100%;
@@ -281,14 +281,14 @@
   box-shadow: var(--shadow-sm);
   display: flex;
   flex-direction: column;
-  min-width: 0; 
-  width: 100%; 
+  min-width: 0;
+  width: 100%;
   overflow: hidden;
 }
 
 .scrollable {
   width: 100%;
-  overflow-x: auto; 
+  overflow-x: auto;
   -webkit-overflow-scrolling: touch;
 }
 
@@ -391,7 +391,8 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 0 12px; /* ลด padding เล็กน้อยเพื่อให้กะทัดรัด */
+  padding: 0 12px;
+  /* ลด padding เล็กน้อยเพื่อให้กะทัดรัด */
 }
 
 .date-label {
@@ -425,12 +426,251 @@
   transform: translateY(-1px);
 }
 
+.pdf-export-container {
+  position: fixed;
+  top: -10000px;
+  left: -10000px;
+  width: 1123px;
+  height: 794px;
+  background: white;
+  padding: 40px;
+  box-sizing: border-box;
+}
+
+.pdf-export-container {
+  position: fixed;
+  top: -10000px;
+  left: -10000px;
+  width: 1123px;
+  height: 794px;
+  background: white;
+  padding: 50px;
+  box-sizing: border-box;
+  font-family: 'Sarabun', 'Prompt', sans-serif;
+  color: #333333;
+}
+
+.pdf-header {
+  text-align: center;
+  border-bottom: 2px solid #4f46e5;
+  padding-bottom: 20px;
+  margin-bottom: 30px;
+}
+
+.pdf-header h1 {
+  color: #1e3a8a;
+  font-size: 32px;
+  margin: 0;
+}
+
+.pdf-header p {
+  color: #64748b;
+  font-size: 18px;
+  margin-top: 10px;
+}
+
+.pdf-content {
+  display: flex;
+  gap: 30px;
+}
+
+.summary-box {
+  flex: 1;
+  background-color: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 25px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+}
+
+.chart-box {
+  flex: 2;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 25px;
+}
+
+.summary-box h3,
+.chart-box h3 {
+  color: #0f172a;
+  border-left: 4px solid #4f46e5;
+  padding-left: 10px;
+  margin-top: 0;
+}
+
+.text-success {
+  color: #16a34a;
+  font-weight: bold;
+}
+
+/* =========================================
+   DTG Formal Report Style (A4 Landscape)
+========================================= */
+.pdf-export-container {
+  position: fixed;
+  top: -10000px;
+  left: -10000px;
+  width: 1123px;
+  height: 794px;
+  background: white;
+  /* รายงานทางการควรเป็นพื้นขาว */
+  padding: 40px 50px;
+  box-sizing: border-box;
+  font-family: 'Sarabun', 'Prompt', sans-serif;
+  /* แนะนำให้ใช้ Sarabun สำหรับรายงานราชการ/ทางการ */
+  color: #000;
+}
+
+/* 1. มุมขวาบน */
+.dtg-date-right {
+  position: absolute;
+  top: 40px;
+  right: 50px;
+  font-size: 14px;
+  color: #555;
+}
+
+/* 2. หัวเรื่อง (จัดชิดซ้าย หรือปรับเป็น center ได้ตามต้องการ) */
+.dtg-header {
+  margin-bottom: 25px;
+}
+
+.dtg-header h2 {
+  font-size: 26px;
+  margin: 0 0 10px 0;
+  font-weight: bold;
+}
+
+.dtg-header .agenda,
+.dtg-header .topic {
+  font-size: 18px;
+  margin: 0 0 5px 0;
+  font-weight: bold;
+}
+
+/* 3. Layout ซ้าย-ขวา */
+.dtg-content {
+  display: flex;
+  gap: 30px;
+  height: 520px;
+  /* จำกัดความสูงไม่ให้ล้นหน้า A4 */
+}
+
+.dtg-col-left,
+.dtg-col-right {
+  flex: 1;
+}
+
+.section-title {
+  font-size: 16px;
+  font-weight: bold;
+  margin-bottom: 10px;
+  text-decoration: underline;
+}
+
+/* 4. ตาราง */
+.dtg-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.dtg-table th,
+.dtg-table td {
+  border: 1px solid #ccc;
+  padding: 8px 10px;
+  vertical-align: middle;
+}
+
+.dtg-table th {
+  background-color: #f3f4f6;
+  font-weight: bold;
+}
+
+/* 5. Progress Bar ในตาราง */
+.progress-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.progress-bar {
+  flex: 1;
+  height: 12px;
+  background-color: #e5e7eb;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  background-color: #4f46e5;
+  /* สีหลอดความคืบหน้า */
+}
+
+.progress-text {
+  font-size: 12px;
+  width: 35px;
+  text-align: right;
+}
+
+/* 6. จุดสีสถานะ (Dot Indicators) */
+.status-dot {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  margin-right: 8px;
+  vertical-align: middle;
+}
+
+.status-dot.green {
+  background-color: #16a34a;
+}
+
+.status-dot.yellow {
+  background-color: #eab308;
+}
+
+.status-dot.red {
+  background-color: #ef4444;
+}
+
+.dtg-legend {
+  margin-top: 20px;
+  padding-top: 15px;
+  border-top: 1px solid #ddd;
+}
+
+.dtg-footer-container {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.legend-title {
+  font-weight: bold;
+  margin-bottom: 8px;
+  font-size: 14px;
+}
+
+.legend-items {
+  display: flex;
+  gap: 30px;
+  font-size: 14px;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+}
+
 /* Responsive สำหรับมือถือ */
 @media (max-width: 640px) {
   .date-picker-manual {
     width: 100%;
     justify-content: space-between;
   }
+
   .date-input {
     flex: 1;
     text-align: right;

@@ -27,7 +27,7 @@ const routes = [
   {
     path: '/admin',
     component: AdminLayout,
-    meta: { requiresAuth: true, roles: ['admin', 'viewer'] }, 
+    meta: { requiresAuth: true, roles: ['admin', 'viewer'] },
     children: [
       {
         path: '',
@@ -79,6 +79,11 @@ const routes = [
         path: 'log',
         name: 'AdminLog',
         component: () => import('../views/Admin/Admin_log.vue')
+      },
+      {
+        path: 'export',
+        name: 'AdminExport',
+        component: () => import('../views/Admin/Admin_ExportMain.vue')
       }
     ]
   },
@@ -140,7 +145,7 @@ router.beforeEach((to, from, next) => {
     const allowedRoles = to.matched.find(record => record.meta.roles)?.meta.roles
     if (allowedRoles && !allowedRoles.includes(userRole)) {
       alert('คุณไม่มีสิทธิ์เข้าถึงหน้านี้')
-      
+
       const redirectPath = (userRole === 'admin' || userRole === 'viewer') ? '/admin' : '/user'
       return next(redirectPath)
     }

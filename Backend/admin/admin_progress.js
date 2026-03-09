@@ -60,22 +60,28 @@ router.post('/update-progress', verifyToken, isAdmin, async (req, res) => {
       throw new Error('ไม่พบ Project ID (ได้รับค่า: ' + projectId + ')');
     }
 
-    // 1. อัปเดตตาราง project_plans (ใช้ชื่อคอลัมน์จากไฟล์ SQL ของคุณ)
+    // 1. อัปเดตตาราง project_plans (ระดับแผนงานย่อย)
     await conn.query(`
       UPDATE project_plans 
       SET start_date = ?, end_date = ?, progress_percent = ?
       WHERE project_plan_id = ?
     `, [startDate || null, endDate || null, progress || 0, projectId]);
 
-    // 2. จัดการ GAPs (ตาราง operational_details)
+    // 🌟 2. อัปเดตตาราง scopes (ระดับขอบเขตงานหลัก) 
+    // เพื่อให้ข้อมูลวันที่ไปแสดงผลในหน้าสรุปขอบเขตงาน (ช่องปีที่ทำ)
+    await conn.query(`
+      UPDATE scopes 
+      SET start_date = ?, end_date = ?
+      WHERE scope_id = (SELECT scope_id FROM project_plans WHERE project_plan_id = ? LIMIT 1)
+    `, [startDate || null, endDate || null, projectId]);
+
+    // 3. จัดการ GAPs (ตาราง operational_details)
     await conn.query(`DELETE FROM operational_details WHERE project_plan_id = ?`, [projectId]);
     
     if (gaps && gaps.length > 0) {
       for (const gap of gaps) {
-        // ตรวจสอบชื่อตัวแปรที่ส่งมาจาก Vue (ต้องเป็น detail ตามโครงสร้าง Admin_2Progress.vue)
         const gapDetail = gap.detail || gap.text;
         if (gapDetail) {
-          // ใช้ COALESCE เพื่อกันสถานะเป็น NULL ถ้าหา 'processing_gap' ไม่เจอ ให้ใส่ ID 1 แทน
           await conn.query(`
             INSERT INTO operational_details (project_plan_id, detail, weight_percent, status_id)
             VALUES (?, ?, ?, (SELECT COALESCE((SELECT status_id FROM status WHERE status_code = ? LIMIT 1), 1)))
@@ -89,7 +95,7 @@ router.post('/update-progress', verifyToken, isAdmin, async (req, res) => {
       }
     }
 
-    // 3. จัดการ Issues/Solutions
+    // 4. จัดการ Issues/Solutions
     await conn.query(`DELETE FROM problems WHERE project_plan_id = ?`, [projectId]);
     await conn.query(`DELETE FROM solutions WHERE project_plan_id = ?`, [projectId]);
 
@@ -105,11 +111,11 @@ router.post('/update-progress', verifyToken, isAdmin, async (req, res) => {
     }
 
     await conn.commit();
-    res.json({ success: true, message: 'บันทึก Step 2 สำเร็จ (ID: ' + projectId + ')' });
+    res.json({ success: true, message: 'บันทึกข้อมูลสำเร็จ ทั้งในระดับแผนงานและขอบเขตงาน' });
 
   } catch (err) {
     if (conn) await conn.rollback();
-    console.error("❌ Backend Error Log:", err); // พิมพ์ Error ออกมาดูที่หน้าจอคอม (Terminal)
+    console.error("❌ Backend Error Log:", err);
     res.status(500).json({ success: false, message: "Server Error: " + err.message });
   } finally {
     if (conn) conn.release();

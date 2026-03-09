@@ -134,7 +134,7 @@ const barChartData = computed(() => ({
         progressRange.value.high,
         progressRange.value.done
       ],
-      backgroundColor: ['#6C757D', '#FFC107', '#8FD19E', '#28A745'],
+      backgroundColor: ['#6C757D', '#FFC107', '#3B82F6', '#28A745'],
       borderRadius: 6
     }
   ]

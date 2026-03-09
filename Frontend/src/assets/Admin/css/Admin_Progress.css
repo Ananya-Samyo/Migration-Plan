@@ -421,6 +421,20 @@ input:focus, select:focus, textarea:focus {
   color: #94A3B8;
 }
 
+.btn-next-viewer {
+  background-color: #6c757d; /* สีเทา */
+  color: white;
+  border: none;
+  padding: 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: bold;
+  transition: background 0.3s;
+}
+.btn-next-viewer:hover {
+  background-color: #5a6268;
+}
+
 /* ===============================
    SweetAlert : Edit Reason Modal
 ================================ */

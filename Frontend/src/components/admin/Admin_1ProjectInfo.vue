@@ -2,13 +2,12 @@
   <div class="main-wrapper">
     <header class="top-bar">
       <div class="left-head">
-        <h1 class="page-title">1. ข้อมูลแผนงาน (Step 1)</h1>
+        <h1 class="page-title">ข้อมูลแผนงาน</h1>
       </div>
       <button class="btn-back-modern" @click="$emit('back')">
         <div class="icon-circle">
           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
-            <path fill-rule="evenodd"
-              d="M15 8a.5.5 0 0 0-.5-.5H2.707l3.147-3.146a.5.5 0 1 0-.708-.708l-4 4a.5.5 0 0 0 0 .708l4 4a.5.5 0 0 0 .708-.708L2.707 8.5H14.5A.5.5 0 0 0 15 8z" />
+            <path fill-rule="evenodd" d="M15 8a.5.5 0 0 0-.5-.5H2.707l3.147-3.146a.5.5 0 1 0-.708-.708l-4 4a.5.5 0 0 0 0 .708l4 4a.5.5 0 0 0 .708-.708L2.707 8.5H14.5A.5.5 0 0 0 15 8z" />
           </svg>
         </div>
         <span class="text">ย้อนกลับ</span>
@@ -24,8 +23,9 @@
       <div v-for="(project, pIndex) in form.projects" :key="pIndex" class="project-card">
         <div class="project-header">
           <h3 style="color: var(--primary-purple);">แผนงานที่ {{ pIndex + 1 }}</h3>
-          <button v-if="form.projects.length > 1" class="remove-project"
-            @click="removeProject(pIndex)">ลบแผนงาน</button>
+          <button v-if="form.projects.length > 1" class="remove-project" @click="removeProject(pIndex)">
+            ลบแผนงาน
+          </button>
         </div>
 
         <div class="grid-2">
@@ -54,24 +54,25 @@
         </div>
 
         <div class="field">
-          <label>คณะทำงาน</label>
-          <div v-for="(member, mIndex) in project.teamMembers" :key="mIndex" class="team-item">
-            <div class="grid-3">
-              <input v-model="member.name" type="text" :placeholder="`ชื่อคนที่ ${mIndex + 1}`" />
-              <input v-model="member.email" type="email" placeholder="อีเมล" @blur="checkUserEmail(member)" />
-              <input v-model="member.phone_number" type="text" placeholder="เบอร์โทรศัพท์" />
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+            <label style="margin-bottom: 0;">คณะทำงาน</label>
+            <button type="button" class="btn-add-small" @click="addMember(pIndex)" style="padding: 5px 12px; background: #6366f1; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 13px;">
+              + เพิ่มรายชื่อคณะทำงาน
+            </button>
+          </div>
+          
+          <div v-for="(member, mIndex) in project.teamMembers" :key="mIndex" class="team-item" style="margin-bottom: 10px;">
+            <div style="display: flex; gap: 10px; align-items: center;">
+              <div class="grid-3" style="flex: 1;">
+                <input v-model="member.name" type="text" :placeholder="`ชื่อ-สกุลคนที่ ${mIndex + 1}`" />
+                <input v-model="member.email" type="email" placeholder="อีเมล" @blur="checkUserEmail(member)" />
+                <input v-model="member.phone_number" type="text" placeholder="เบอร์โทรศัพท์" />
+              </div>
+              <button v-if="project.teamMembers.length > 1" @click="removeMember(pIndex, mIndex)" style="background: #ef4444; color: white; border: none; border-radius: 4px; width: 35px; height: 35px; cursor: pointer;">
+                ✕
+              </button>
             </div>
-            <button v-if="project.teamMembers.length > 1" @click="removeMember(pIndex, mIndex)">ลบ</button>
           </div>
-        </div>
-
-        <div class="field">
-          <label>ผลการวิเคราะห์ช่องว่าง (GAP)</label>
-          <div v-for="(gap, gIndex) in project.gaps" :key="gIndex" class="gap-item" style="margin-bottom: 10px;">
-            <textarea v-model="gap.detail" placeholder="กรอกรายละเอียด GAP"></textarea>
-            <button v-if="project.gaps.length > 1" class="remove-gap" @click="removeGap(pIndex, gIndex)">ลบ</button>
-          </div>
-          <button class="add-gap" @click="addGap(pIndex)">+ เพิ่มรายการ GAP</button>
         </div>
       </div>
 
@@ -96,7 +97,7 @@ const DEPT_API = `${BASE_API}/api/departments`
 
 const departments = ref([])
 
-// ใช้ข้อมูลจาก props ถ้ามี (เพื่อให้ย้อนกลับมาแล้วข้อมูลยังอยู่)
+// โครงสร้างข้อมูล Form
 const form = ref(props.modelValue && props.modelValue.projects ? props.modelValue : {
   scopeName: '',
   projects: [
@@ -111,14 +112,13 @@ const form = ref(props.modelValue && props.modelValue.projects ? props.modelValu
   ]
 })
 
-// คอยส่งข้อมูลกลับไปที่ MasterStepper ตลอดเวลาที่มีการเปลี่ยนแปลง
+// Sync ข้อมูลกับ MasterStepper
 watch(form, (newVal) => {
   emit('update:modelValue', newVal)
 }, { deep: true })
 
 onMounted(async () => {
   const token = localStorage.getItem('token');
-
   if (!token) {
     Swal.fire('Session Expired', 'กรุณาเข้าสู่ระบบใหม่', 'error');
     return;
@@ -130,14 +130,13 @@ onMounted(async () => {
     });
     if (res.ok) {
       departments.value = await res.json();
-    } else if (res.status === 403) {
-      console.error("403 Forbidden: ตรวจสอบว่า User นี้เป็น Admin หรือไม่");
     }
   } catch (err) {
     console.error(err);
   }
 });
 
+// --- ฟังก์ชันจัดการแผนงาน ---
 const addProject = () => {
   form.value.projects.push({
     projectName: '',
@@ -150,11 +149,21 @@ const addProject = () => {
 }
 
 const removeProject = (index) => form.value.projects.splice(index, 1)
-const addMember = (pIndex) => {form.value.projects[pIndex].teamMembers.push({name: '',email: '',phone_number: ''})}
-const removeMember = (pIndex, mIndex) => form.value.projects[pIndex].teamMembers.splice(mIndex, 1)
-const addGap = (pIndex) => form.value.projects[pIndex].gaps.push({ detail: '' })
-const removeGap = (pIndex, gIndex) => form.value.projects[pIndex].gaps.splice(gIndex, 1)
 
+// --- ฟังก์ชันจัดการคณะทำงาน ---
+const addMember = (pIndex) => {
+  form.value.projects[pIndex].teamMembers.push({ 
+    name: '', 
+    email: '', 
+    phone_number: '' 
+  })
+}
+
+const removeMember = (pIndex, mIndex) => {
+  form.value.projects[pIndex].teamMembers.splice(mIndex, 1)
+}
+
+// --- บันทึกข้อมูล ---
 const handleNext = async () => {
   if (!form.value.scopeName) {
     return Swal.fire('ข้อมูลไม่ครบ', 'กรุณากรอกชื่อขอบเขตงาน', 'warning')
@@ -185,25 +194,21 @@ const handleNext = async () => {
   }
 }
 
-// ฟังก์ชันสำหรับเช็คอีเมลและดึงข้อมูลมาเติมอัตโนมัติ
+// --- ดึงข้อมูลจาก Email ---
 const checkUserEmail = async (personObj) => {
-  // ถ้ายังไม่ได้กรอกอีเมล หรือกรอกไม่เสร็จ ให้ข้ามไปเลย
   if (!personObj.email) return;
 
   try {
-    // ยิง API ไปถามหลังบ้าน (เดี๋ยวเราจะไปสร้าง API ตัวนี้กันในขั้นตอนถัดไป)
     const res = await fetch(`${BASE_API}/api/users/check-email?email=${personObj.email}`, {
       headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
     });
 
     if (res.ok) {
       const userData = await res.json();
-      // ถ้าเจอข้อมูลคนนี้ในระบบ
       if (userData.found) {
-        personObj.name = userData.user.user_name; // เติมชื่อ
-        personObj.phone_number = userData.user.phone_number || ''; // เติมเบอร์โทร
+        personObj.name = userData.user.user_name;
+        personObj.phone_number = userData.user.phone_number || '';
         
-        // แจ้งเตือนเล็กๆ มุมขวาบน (ไม่บังคับ แต่ช่วยให้ User รู้สึกดี)
         Swal.fire({
           toast: true,
           position: 'top-end',

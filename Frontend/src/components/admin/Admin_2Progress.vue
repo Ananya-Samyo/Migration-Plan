@@ -2,7 +2,7 @@
   <div class="main-wrapper">
     <header class="top-bar">
       <div class="left-head">
-        <h1 class="page-title">2. ความก้าวหน้าและ GAP (Step 2)</h1>
+        <h1 class="page-title">การรายงานความก้าวหน้าโครงการ</h1>
       </div>
       <button class="btn-back-modern" @click="$emit('back')">
         <div class="icon-circle"> ❮ </div>
@@ -34,25 +34,25 @@
             น้ำหนักรวม: {{ totalWeight }}%
           </span>
         </div>
-        
+
         <div v-for="(gap, index) in form.gaps" :key="index" class="gap-row">
           <input v-model="gap.detail" placeholder="รายละเอียด GAP" />
-          <input type="number" v-model.number="gap.weight" placeholder="%" />
+          <input type="number" v-model.number="gap.weight" :disabled="isViewer" placeholder="%" />
           <select v-model="gap.status">
             <option value="processing_gap">กำลังดำเนินการ</option>
             <option value="complete_gap">เสร็จสิ้น</option>
             <option value="acceptable_gap">ยอมรับได้</option>
           </select>
-          <button class="remove-member" @click="removeGap(index)">✕</button>
+          <button v-if="!isViewer" class="remove-member" @click="removeGap(index)">✕</button>
         </div>
-        <button class="add-member" @click="addGap">+ เพิ่มรายการ GAP</button>
+        <button v-if="!isViewer" class="add-member" @click="addGap">+ เพิ่มรายการ GAP</button>
       </div>
 
       <div class="project-card">
         <div class="project-header">
           <h3>📝 ปัญหาและแนวทางแก้ไข</h3>
         </div>
-        
+
         <div v-for="(item, index) in form.issues" :key="index" class="issue-row">
           <textarea v-model="item.problem" placeholder="ปัญหา / อุปสรรค" rows="2"></textarea>
           <textarea v-model="item.solution" placeholder="แนวทางแก้ไข" rows="2"></textarea>
@@ -64,13 +64,16 @@
       <div class="project-card">
         <div class="field">
           <label>ความคืบหน้าภาพรวม ({{ form.progress }}%)</label>
-          <input type="range" v-model="form.progress" min="0" max="100" style="width: 100%; accent-color: var(--primary-purple);" />
+          <input type="range" v-model="form.progress" min="0" max="100"
+            style="width: 100%; accent-color: var(--primary-purple);" />
         </div>
       </div>
 
       <div style="display: flex; gap: 15px; margin-top: 20px;">
-        <button class="btn-primary" style="flex: 1;" @click="handleNext">
-          ยืนยันและไปขั้นตอนประเมินผล ➔
+        <button :class="isViewer ? 'btn-next-viewer' : 'btn-primary'" style="flex: 1;"
+          @click="isViewer ? $emit('next') : handleNext()">
+          <span v-if="isViewer">ดูขั้นตอนประเมินผลต่อไป ➔</span>
+          <span v-else>ยืนยันและไปขั้นตอนประเมินผล ➔</span>
         </button>
       </div>
     </div>
@@ -82,6 +85,9 @@ import { ref, computed, watch } from 'vue'
 import Swal from 'sweetalert2'
 import '../../assets/Admin/css/Admin_UnifiedStyle.css'
 import '../../assets/Admin/css/Admin_Progress.css'
+
+const rawRole = localStorage.getItem('role') || '';
+const isViewer = rawRole.toLowerCase() === 'viewer';
 
 const props = defineProps(['modelValue', 'projectId'])
 const emit = defineEmits(['next', 'back', 'update:modelValue'])
@@ -122,9 +128,9 @@ const handleNext = async () => {
   try {
     const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/admin/update-progress`, {
       method: 'POST',
-      headers: { 
+      headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${localStorage.getItem('token')}` 
+        'Authorization': `Bearer ${localStorage.getItem('token')}`
       },
       body: JSON.stringify({
         projectId: props.projectId,

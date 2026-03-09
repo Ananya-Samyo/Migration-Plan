@@ -27,10 +27,16 @@
             <span v-if="!isCollapsed">ขอบเขตแผนงาน</span>
           </RouterLink>
 
+          <RouterLink to="/admin/export" class="nav-link" exact-active-class="active">
+            <span class="icon">📥</span>
+            <span v-if="!isCollapsed">นำออกข้อมูล</span>
+          </RouterLink>
+
           <RouterLink v-if="rawRole !== 'viewer'" to="/admin/log" class="nav-link" exact-active-class="active">
             <span class="icon">🗂️</span>
             <span v-if="!isCollapsed">บันทึกการเปลี่ยนแปลงข้อมูล</span>
           </RouterLink>
+
         </nav>
       </div>
 
