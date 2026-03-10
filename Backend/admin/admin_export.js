@@ -111,4 +111,42 @@ router.get('/gap-analysis', async (req, res) => {
   }
 });
 
+router.get('/evaluations', async (req, res) => {
+  try {
+    const { scopeIds } = req.query;
+
+    // ถ้าไม่มีการเลือก scope อะไรมาเลย ให้ส่งอาร์เรย์ว่างกลับไป
+    if (!scopeIds) {
+      return res.json([]);
+    }
+
+    // แปลง string "1,2,3" เป็น array ตัวเลข
+    const idsArray = scopeIds.split(',').map(Number);
+
+    // คำสั่ง SQL ดึงข้อมูล
+    const sql = `
+        SELECT 
+            s.scope_id,
+            s.scope_name, 
+            pe.actual_outcome, 
+            pe.recommendation, 
+            pe.project_status, 
+            pe.evaluation_status
+        FROM scopes s
+        LEFT JOIN plan_evaluations pe ON s.scope_id = pe.scope_id
+        WHERE s.scope_id IN (?)
+    `;
+
+    // 🌟 ใช้ await db.query แบบเดียวกับ API ตัวบนๆ ของคุณ
+    const [rows] = await db.query(sql, [idsArray]);
+    
+    // ส่งข้อมูลกลับไปให้ Vue
+    res.json(rows);
+
+  } catch (error) {
+    console.error("Error fetching evaluations:", error);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+});
+
 export default router;
