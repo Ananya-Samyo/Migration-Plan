@@ -84,7 +84,7 @@
                                         </td>
                                         <td class="text-center">
                                             <span class="status-chip-preview" :class="gap.status === 'closed' ? 'status-closed' : 'status-pending'">
-                                                {{ gap.status === 'closed' ? 'ปิด GAP แล้ว' : 'กำลังดำเนินการ' }}
+                                                {{ gap.status === 'closed' ? 'ดำเนินการเสร็จสิ้น' : 'กำลังดำเนินการ' }}
                                             </span>
                                         </td>
                                     </tr>
@@ -132,14 +132,12 @@ const thaiDate = computed(() => {
     })
 })
 
-// ปรับให้ตรงกับหน้า Selection (สีเขียว, น้ำเงิน, แดง)
-// แก้ไขในไฟล์ 1_ExportPreview.vue
 const getStatusClass = (status) => {
     if (!status) return ''
     const s = status.toLowerCase()
 
     // กลุ่มสีเขียว
-    if (s.includes('ปิดแล้ว') || s.includes('ผ่าน') || s.includes('เสร็จสิ้น')) {
+    if (s.includes('ดำเนินการเสร็จสิ้น') || s.includes('ผ่าน') || s.includes('เสร็จสิ้น')) {
         return 'status-closed'
     }
 
@@ -149,7 +147,7 @@ const getStatusClass = (status) => {
     }
 
     // กลุ่มสีแดง (เพิ่ม 'ยอมรับได้' เข้าไปที่นี่)
-    if (s.includes('ยังไม่ปิด') || s.includes('รอ') || s.includes('ล่าช้า') || s.includes('ยอมรับได้')) {
+    if (s.includes('ไม่สามารถปิด GAP แต่ยอมรับได้') || s.includes('ผ่าน') || s.includes('เสร็จสิ้น') || s.includes('ไม่สามารถปิด GAP แต่ยอมรับได้')) {
         return 'status-open'
     }
 

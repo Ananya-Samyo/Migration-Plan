@@ -1,37 +1,37 @@
 import { Router } from 'express'
 import db from '../db.js'
-import { verifyToken } from '../middleware/auth.js' 
+import { verifyToken } from '../middleware/auth.js'
 
 const router = Router()
 
 router.get('/project-summary', async (req, res) => {
-    try {
-        const sql = `
-            SELECT 
-                pp.project_plan_id AS id,
-                pp.project_plan_name AS title,
-                COALESCE(YEAR(s.start_date) + 543, '-') AS year,
-                pp.progress_percent AS progress,
-                st.status_label AS statusText
-            FROM project_plans pp
-            LEFT JOIN scopes s ON pp.scope_id = s.scope_id
-            LEFT JOIN status st ON pp.status_id = st.status_id
-            WHERE pp.project_plan_name IS NOT NULL
-            ORDER BY year DESC, pp.project_plan_id ASC
-        `;
-        // ✅ ใช้ db.query หรือ db.execute (ตามที่คุณ config ไว้)
-        const [rows] = await db.query(sql); 
-        res.status(200).json(rows);
-    } catch (error) {
-        console.error('Database Error:', error);
-        res.status(500).json({ message: 'Internal Server Error' });
-    }
+  try {
+    const sql = `
+    SELECT 
+        pp.project_plan_id AS id,
+        s.scope_name AS title,  
+        COALESCE(YEAR(s.start_date) + 543, '-') AS year,
+        pp.progress_percent AS progress,
+        st.status_label AS statusText
+    FROM project_plans pp
+    LEFT JOIN scopes s ON pp.scope_id = s.scope_id
+    LEFT JOIN status st ON pp.status_id = st.status_id
+    WHERE s.scope_name IS NOT NULL 
+    ORDER BY year DESC, pp.project_plan_id ASC
+`;
+    // ✅ ใช้ db.query หรือ db.execute (ตามที่คุณ config ไว้)
+    const [rows] = await db.query(sql);
+    res.status(200).json(rows);
+  } catch (error) {
+    console.error('Database Error:', error);
+    res.status(500).json({ message: 'Internal Server Error' });
+  }
 });
 
 // ดึงข้อมูล GAP แยกตามกลุ่ม Scope (รับค่า scopeIds ที่เลือกจากหน้า 1)
 router.get('/gap-analysis', async (req, res) => {
   try {
-    const { scopeIds } = req.query; 
+    const { scopeIds } = req.query;
 
     // ถ้าไม่มีการเลือก scope อะไรมาเลย ให้ส่งอาร์เรย์ว่างกลับไป
     if (!scopeIds) {

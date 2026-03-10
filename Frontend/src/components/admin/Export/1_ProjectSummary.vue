@@ -21,9 +21,9 @@
         <div class="select-wrapper">
           <select v-model="filters.status" class="modern-input">
             <option value="">สถานะทั้งหมด</option>
-            <option value="ยังไม่ปิด">ยังไม่ปิด</option>
+            <option value="ไม่สามารถปิด GAP แต่ยอมรับได้">ไม่สามารถปิด GAP แต่ยอมรับได้</option>
             <option value="กำลังดำเนินการ">กำลังดำเนินการ</option>
-            <option value="ปิดแล้ว">ปิดแล้ว</option>
+            <option value="ดำเนินการเสร็จสิ้น">ดำเนินการเสร็จสิ้น</option>
           </select>
         </div>
       </div>
@@ -164,7 +164,7 @@ const toggleAllOnPage = (e) => {
 
 const getStatusClass = (status) => {
   if (!status) return ''
-  if (status.includes('ปิดแล้ว') || status.includes('เสร็จสิ้น')) return 'status-closed'
+  if (status.includes('ดำเนินการเสร็จสิ้น') || status.includes('เสร็จสิ้น')) return 'status-closed'
   if (status.includes('กำลัง') || status.includes('ดำเนินการ')) return 'status-pending'
   return 'status-open'
 }
