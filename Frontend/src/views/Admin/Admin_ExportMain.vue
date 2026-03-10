@@ -31,10 +31,11 @@
       </div>
     </main>
 
-    <footer class="action-footer-fixed">
+    <footer class="action-footer">
       <div class="footer-left">
-        <button class="btn-back" @click="currentStep--" :disabled="currentStep === 1">ก่อนหน้า</button>
+        <button v-if="currentStep > 1" class="btn-back" @click="currentStep--">ก่อนหน้า</button>
       </div>
+      
       <div class="footer-right">
         <button class="btn-preview" @click="showPreview = true">👁️ ดูตัวอย่างรายงาน</button>
         <button class="btn-export" @click="exportToPDF">📥 ดาวน์โหลด PDF (วาระที่ {{ currentStep }})</button>

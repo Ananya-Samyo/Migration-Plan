@@ -136,21 +136,27 @@ const getStatusClass = (status) => {
     if (!status) return ''
     const s = status.toLowerCase()
 
-    // กลุ่มสีเขียว
-    if (s.includes('ดำเนินการเสร็จสิ้น') || s.includes('ผ่าน') || s.includes('เสร็จสิ้น')) {
+    // 1. กลุ่มเสร็จสิ้นแบบมีเงื่อนไข (ปิดงานแบบไม่ 100% / ยอมรับได้)
+    if (s.includes('ยอมรับได้')) {
+        return 'status-accepted' 
+    }
+
+    // 2. กลุ่มเสร็จสิ้นสมบูรณ์ 100% (สีเขียว)
+    if (s.includes('เสร็จสิ้น') || s.includes('ผ่าน')) {
         return 'status-closed'
     }
 
-    // กลุ่มสีน้ำเงิน
+    // 3. กลุ่มกำลังดำเนินการ (สีน้ำเงิน)
     if (s.includes('กำลัง') || s.includes('ดำเนินการ')) {
         return 'status-pending'
     }
 
-    // กลุ่มสีแดง (เพิ่ม 'ยอมรับได้' เข้าไปที่นี่)
-    if (s.includes('ไม่สามารถปิด GAP แต่ยอมรับได้') || s.includes('ผ่าน') || s.includes('เสร็จสิ้น') || s.includes('ไม่สามารถปิด GAP แต่ยอมรับได้')) {
+    // 4. กลุ่มยังไม่เริ่ม หรือมีปัญหา (สีแดง)
+    if (s.includes('ยังไม่') || s.includes('ล่าช้า') || s.includes('ไม่ผ่าน')) {
         return 'status-open'
     }
 
-    return ''
+    return 'status-open' // ค่าเริ่มต้นถ้าไม่ตรงกับอะไรเลย
 }
+
 </script>
