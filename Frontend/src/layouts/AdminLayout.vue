@@ -2,10 +2,12 @@
   <div class="layout">
     <aside class="sidebar" :class="{ collapsed: isCollapsed }">
       <div class="sidebar-top">
+
+        <h1 class="page-title" v-if="!isCollapsed">
+          Migration Plan
+        </h1>
+        
         <nav>
-          <h1 class="page-title" v-if="!isCollapsed">
-            Migration Plan
-          </h1>
 
           <RouterLink to="/admin" class="nav-link" exact-active-class="active">
             <span class="icon">📊</span>
