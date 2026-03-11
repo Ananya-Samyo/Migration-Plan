@@ -187,7 +187,7 @@ body, html {
 .table-container {
   border: 1px solid var(--border-color);
   border-radius: 12px;
-  overflow: hidden;
+  /* overflow: hidden; ลบออกเพราะเป็นตัวทำ PDF แหว่ง */
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
 }
 
@@ -215,6 +215,12 @@ body, html {
 
 .modern-table tr:hover td { background-color: #f8fafc; }
 .is-selected td { background-color: #f5f3ff !important; }
+
+/* เคลียร์เส้นขอบซ้ำซ้อน */
+.modern-table th, .modern-table td {
+  border-left: none;
+  border-right: none;
+}
 
 .modern-checkbox {
   width: 20px;
@@ -255,7 +261,6 @@ body, html {
 /* =========================================
    Fixed Footer & Buttons
 ========================================= */
-
 button {
   cursor: pointer;
   border: none;
@@ -340,7 +345,7 @@ button {
 .placeholder-box-full { background: #f8fafc; padding: 50px; text-align: center; border-radius: 12px; border: 2px dashed #cbd5e1; color: #64748b; font-size: 1.2rem; font-weight: bold; }
 
 /* =========================================
-   Inline Footer & Buttons (จัดกึ่งกลางสวยงาม)
+   Inline Footer & Buttons 
 ========================================= */
 .action-footer {
   background: var(--white);
@@ -363,7 +368,7 @@ button {
 }
 
 /* =========================================
-   Modern Pagination (แถบแบ่งหน้าด้านล่างตาราง)
+   Modern Pagination 
 ========================================= */
 .modern-pagination {
   display: flex;
@@ -374,20 +379,9 @@ button {
   border-top: 1px solid var(--border-color);
 }
 
-.pagination-info {
-  font-size: 0.95rem;
-  color: var(--text-muted);
-}
-
-.pagination-info strong {
-  color: var(--primary-purple);
-}
-
-.pagination-nav {
-  display: flex;
-  align-items: center;
-  gap: 15px;
-}
+.pagination-info { font-size: 0.95rem; color: var(--text-muted); }
+.pagination-info strong { color: var(--primary-purple); }
+.pagination-nav { display: flex; align-items: center; gap: 15px; }
 
 .page-indicator {
   font-size: 0.9rem;
@@ -416,11 +410,7 @@ button {
   color: var(--primary-purple);
 }
 
-.nav-btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-  background: #f1f5f9;
-}
+.nav-btn:disabled { opacity: 0.5; cursor: not-allowed; background: #f1f5f9; }
 
 /* =========================================
    Print Optimizations (html2pdf)
@@ -457,29 +447,15 @@ button {
 }
 
 /* =========================================
-   Page Break Management (จัดการการตัดหน้า PDF)
+   Page Break Management 
 ========================================= */
-.avoid-break {
-    page-break-inside: avoid !important;
-    break-inside: avoid !important;
-}
-
-.modern-preview-table {
-    page-break-inside: auto;
-}
-
-.modern-preview-table tr {
-    page-break-inside: avoid !important;
-    break-inside: avoid !important;
-    page-break-after: auto;
-}
-
-.modern-preview-table thead {
-    display: table-header-group; 
-}
+.avoid-break { page-break-inside: avoid !important; break-inside: avoid !important; }
+.modern-preview-table { page-break-inside: auto; }
+.modern-preview-table tr { page-break-inside: avoid !important; break-inside: avoid !important; page-break-after: auto; }
+.modern-preview-table thead { display: table-header-group; }
 
 /* =========================================
-   Summary Dashboard & Charts (สำหรับวาระที่ 2)
+   Summary Dashboard & Charts 
 ========================================= */
 .summary-dashboard {
     background: #f8fafc;
@@ -489,271 +465,158 @@ button {
     margin-bottom: 30px;
 }
 
-.stat-cards {
-    display: flex;
-    gap: 15px;
-    margin-bottom: 20px;
-}
+.stat-cards { display: flex; gap: 15px; margin-bottom: 20px; }
 
 .stat-card {
-    flex: 1;
-    background: #ffffff;
-    border: 1px solid #e2e8f0;
-    padding: 15px;
-    border-radius: 8px;
-    text-align: center;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+    flex: 1; background: #ffffff; border: 1px solid #e2e8f0; padding: 15px;
+    border-radius: 8px; text-align: center; box-shadow: 0 2px 4px rgba(0,0,0,0.02);
 }
 
-.stat-label {
-    display: block;
-    font-size: 0.85rem;
-    color: #64748b;
-    font-weight: 700;
-    margin-bottom: 8px;
-}
-
-.stat-value {
-    display: block;
-    font-size: 1.8rem;
-    font-weight: 800;
-    color: #1e293b;
-}
+.stat-label { display: block; font-size: 0.85rem; color: #64748b; font-weight: 700; margin-bottom: 8px; }
+.stat-value { display: block; font-size: 1.8rem; font-weight: 800; color: #1e293b; }
 
 .text-success { color: #16a34a; }
 .text-warning { color: #d97706; }
 .text-purple { color: var(--primary-purple); }
 
 .chart-container {
-    background: #ffffff;
-    padding: 15px 20px;
-    border-radius: 8px;
-    border: 1px solid #e2e8f0;
+    background: #ffffff; padding: 15px 20px; border-radius: 8px; border: 1px solid #e2e8f0;
 }
 
-.chart-title {
-    margin: 0 0 15px 0;
-    font-size: 0.95rem;
-    font-weight: 700;
-    color: #334155;
-}
+.chart-title { margin: 0 0 15px 0; font-size: 0.95rem; font-weight: 700; color: #334155; }
 
-/* กราฟแท่งแนวนอน (Export ลง PDF ได้ 100%) */
+/* กราฟแท่งแนวนอน */
 .stacked-bar-chart {
-    width: 100%;
-    height: 30px;
-    background: #e2e8f0;
-    border-radius: 15px;
-    display: flex;
-    overflow: hidden;
-    margin-bottom: 12px;
-    box-shadow: inset 0 2px 4px rgba(0,0,0,0.05);
+    width: 100%; height: 30px; background: #e2e8f0; border-radius: 15px;
+    display: flex; overflow: hidden; margin-bottom: 12px; box-shadow: inset 0 2px 4px rgba(0,0,0,0.05);
 }
 
 .bar-segment {
-    height: 100%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: white;
-    font-size: 0.8rem;
-    font-weight: bold;
-    transition: width 0.5s ease;
-    -webkit-print-color-adjust: exact !important; 
-    print-color-adjust: exact !important;
+    height: 100%; display: flex; align-items: center; justify-content: center; color: white;
+    font-size: 0.8rem; font-weight: bold; transition: width 0.5s ease;
+    -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important;
 }
 
 .bar-segment.closed { background: #16a34a !important; }
 .bar-segment.pending { background: #f59e0b !important; }
 
-.chart-legend {
-    display: flex;
-    gap: 20px;
-    justify-content: center;
-    font-size: 0.85rem;
-    color: #475569;
-    font-weight: 600;
-}
+.chart-legend { display: flex; gap: 20px; justify-content: center; font-size: 0.85rem; color: #475569; font-weight: 600; }
+.legend-item { display: flex; align-items: center; gap: 6px; font-size: 14px; color: #475569; }
 
-.legend-item { display: flex; align-items: center; gap: 6px; }
-.dot { width: 12px; height: 12px; border-radius: 50%; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-.dot.closed { background: #16a34a !important; }
-.dot.pending { background: #f59e0b !important; }
-
-/* เคลียร์เส้นขอบซ้ำซ้อนในตารางที่อยู่ใน Card */
-.modern-table th, .modern-table td {
-  border-left: none;
-  border-right: none;
+.dot {
+    display: inline-block; width: 12px; height: 12px; border-radius: 50%;
+    margin-right: 8px; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important;
 }
-
-.modern-table th, .modern-table td {
-  border-left: none;
-  border-right: none;
-}
+.dot.closed, .dot.green { background-color: #22c55e !important; }
+.dot.pending, .dot.yellow { background-color: #eab308 !important; }
+.dot.red { background-color: #ef4444 !important; }
 
 .donut-chart {
-    width: 100%;
-    height: 100%;
-    border-radius: 50%;
+    width: 100%; height: 100%; border-radius: 50%;
     -webkit-mask: radial-gradient(circle, transparent 55%, black 56%);
     mask: radial-gradient(circle, transparent 55%, black 56%);
 }
 
-.dot {
-    display: inline-block;
-    width: 12px;
-    height: 12px;
-    border-radius: 50%;
-    margin-right: 8px;
-}
-.dot.green { background-color: #22c55e; }
-.dot.yellow { background-color: #eab308; }
-.dot.red { background-color: #ef4444; }
-.legend-item { font-size: 14px; color: #475569; display: flex; align-items: center; }
-
 /* 🌟 สไตล์กล่องสถานะ (Pill) */
 .status-pill {
-    display: inline-block;
-    padding: 6px 14px;
-    border-radius: 20px;
-    font-size: 12px;
-    font-weight: 600;
-    text-align: center;
-    min-width: 90px;
+    display: inline-block; padding: 6px 14px; border-radius: 20px;
+    font-size: 12px; font-weight: 600; text-align: center; min-width: 90px;
 }
 .status-pill.green { background-color: #dcfce7; color: #166534; border: 1px solid #bbf7d0; }
 .status-pill.yellow { background-color: #fef9c3; color: #854d0e; border: 1px solid #fef08a; }
 .status-pill.red { background-color: #fee2e2; color: #991b1b; border: 1px solid #fecaca; }
 
-.benefit-table th, .benefit-table td {
-  font-size: 13px;
-}
+/* =========================================
+   Benefit Table & Inputs (คลีนโค้ดซ้ำซ้อนแล้ว)
+========================================= */
+.benefit-table th, .benefit-table td { font-size: 13px; }
+
 .benefit-input {
-  width: 100%;
-  padding: 6px;
-  border: 1px solid #cbd5e1;
-  border-radius: 4px;
-  box-sizing: border-box;
-}
-.benefit-textarea {
-  width: 100%;
-  padding: 6px;
-  border: 1px solid #cbd5e1;
-  border-radius: 4px;
-  margin-top: 5px;
-  font-size: 12px;
-  resize: vertical;
-  min-height: 40px;
-  box-sizing: border-box;
-}
-.check-label {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  cursor: pointer;
-  font-size: 12px;
-  color: #475569;
+  width: 100%; padding: 6px; border: 1px solid #cbd5e1;
+  border-radius: 4px; box-sizing: border-box;
 }
 
-.benefit-table th, .benefit-table td {
-  font-size: 13px;
-}
-.benefit-input {
-  width: 100%;
-  padding: 6px;
-  border: 1px solid #cbd5e1;
-  border-radius: 4px;
-  box-sizing: border-box;
-}
-.benefit-textarea {
-  width: 100%;
-  padding: 6px;
-  border: 1px solid #cbd5e1;
-  border-radius: 4px;
-  margin-top: 5px;
-  font-size: 12px;
-  resize: vertical;
-  min-height: 40px;
-  box-sizing: border-box;
-}
-.check-label {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  cursor: pointer;
-  font-size: 12px;
-  color: #475569;
-}
-
-.benefit-table th, .benefit-table td {
-  font-size: 13px;
-}
-.benefit-input {
-  width: 100%;
-  padding: 6px;
-  border: 1px solid #cbd5e1;
-  border-radius: 4px;
-  box-sizing: border-box;
-}
 .benefit-input[type="number"]::-webkit-inner-spin-button, 
 .benefit-input[type="number"]::-webkit-outer-spin-button { 
-  -webkit-appearance: none; 
-  margin: 0; 
-}
-.benefit-textarea {
-  width: 100%;
-  padding: 6px;
-  border: 1px solid #cbd5e1;
-  border-radius: 4px;
-  margin-top: 5px;
-  font-size: 12px;
-  resize: vertical;
-  min-height: 40px;
-  box-sizing: border-box;
-}
-.check-label {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  cursor: pointer;
-  font-size: 12px;
-  color: #475569;
+  -webkit-appearance: none; margin: 0; 
 }
 
+.benefit-textarea {
+  width: 100%; padding: 6px; border: 1px solid #cbd5e1;
+  border-radius: 4px; margin-top: 5px; font-size: 12px;
+  resize: vertical; min-height: 40px; box-sizing: border-box;
+}
+
+.check-label {
+  display: flex; align-items: center; gap: 5px;
+  cursor: pointer; font-size: 12px; color: #475569;
+}
+
+/* =========================================
+   Loading Overlay
+========================================= */
 .loading-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100vh;
-  background-color: rgba(15, 23, 42, 0.85);
-  backdrop-filter: blur(4px);
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  z-index: 99999;
+  position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+  background-color: rgba(15, 23, 42, 0.85); backdrop-filter: blur(4px);
+  display: flex; flex-direction: column; justify-content: center;
+  align-items: center; z-index: 99999;
 }
 
 .spinner {
-  width: 50px;
-  height: 50px;
-  border: 5px solid rgba(255, 255, 255, 0.2);
-  border-top-color: #3b82f6;
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
+  width: 50px; height: 50px; border: 5px solid rgba(255, 255, 255, 0.2);
+  border-top-color: #3b82f6; border-radius: 50%; animation: spin 1s linear infinite;
 }
 
-@keyframes spin {
-  to { transform: rotate(360deg); }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.fade-enter-active, .fade-leave-active { transition: opacity 0.3s ease; }
+.fade-enter-from, .fade-leave-to { opacity: 0; }
+
+/* =========================================
+   PDF Export Hidden Wrapper Fixes
+========================================= */
+.pdf-hidden-wrapper {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 1122px; 
+  background: white;
+  z-index: -9999; 
+  pointer-events: none;
 }
 
-.fade-enter-active,
-.fade-leave-active {
-  transition: opacity 0.3s ease;
+.pdf-hidden-wrapper,
+.pdf-hidden-wrapper * {
+  overflow: visible !important;
 }
 
-.fade-enter-from,
-.fade-leave-to {
-  opacity: 0;
+.pdf-hidden-wrapper th,
+.pdf-hidden-wrapper td {
+  position: static !important; 
+  background-color: transparent !important;
+  z-index: auto !important;
+}
+
+.pdf-hidden-wrapper table {
+  table-layout: fixed !important;
+  border-collapse: collapse !important;
+  width: 100% !important;
+}
+
+/* แก้ไอคอนติ๊กถูกลอย */
+.pdf-hidden-wrapper svg,
+.pdf-hidden-wrapper img,
+.pdf-hidden-wrapper .check-icon,
+.pdf-hidden-wrapper .icon { 
+  position: static !important;
+  transform: none !important;
+  display: inline-block !important;
+  vertical-align: middle !important;
+}
+
+.pdf-hidden-wrapper td > div,
+.pdf-hidden-wrapper td > span {
+  display: flex !important;
+  justify-content: center !important;
+  align-items: center !important;
 }

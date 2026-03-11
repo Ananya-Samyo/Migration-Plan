@@ -45,9 +45,11 @@
 
       <div class="footer-right">
         <button class="btn-preview" @click="showPreview = true">👁️ ดูตัวอย่างรายงาน</button>
-        <button class="btn-export" @click="exportToPDF">📥 ดาวน์โหลด PDF (วาระที่ {{ currentStep }})</button>
+        <button class="btn-export" @click="exportToPDF" :disabled="isDownloading">
+          <span v-if="!isDownloading">📥 ดาวน์โหลด PDF (วาระที่ {{ currentStep }})</span>
+          <span v-else>⏳ กำลังเตรียมไฟล์...</span>
+        </button>
         <button class="btn-next" @click="currentStep++" v-if="currentStep < 5">วาระถัดไป</button>
-        <button v-else class="btn-export-primary" @click="handleExportAll">🚀 ดาวน์โหลดฉบับเต็ม</button>
       </div>
     </footer>
 
@@ -57,7 +59,10 @@
           <div class="preview-header">
             <h3>📑 ตัวอย่างรายงาน: {{ steps[currentStep - 1] }}</h3>
             <div class="header-actions">
-              <button class="btn-export-modal" @click="exportToPDF">📥 ดาวน์โหลดชุดนี้</button>
+              <button class="btn-export-modal" @click="exportToPDF" :disabled="isDownloading">
+                <span v-if="!isDownloading">📥 ดาวน์โหลดชุดนี้</span>
+                <span v-else>⏳ กำลังโหลด...</span>
+              </button>
               <button class="close-full-btn" @click="showPreview = false">✖ ปิดหน้าต่าง</button>
             </div>
           </div>
@@ -69,7 +74,7 @@
       </div>
     </Transition>
 
-    <div id="hidden-export-wrapper" style="position: absolute; left: -9999px; top: -9999px; width: 1122px; background: white; z-index: -1;">
+    <div id="hidden-export-wrapper" class="pdf-hidden-wrapper">
       <ExportPreview 
         :selected-tasks="selectedTasks" 
         :gap-groups="gapGroups" 
@@ -80,9 +85,7 @@
       />
     </div>
 
-  </div>
-
-  <Transition name="fade">
+    <Transition name="fade">
       <div v-if="isDownloading" class="loading-overlay">
         <div class="spinner"></div>
         <h3 style="color: white; margin-top: 15px;">กำลังสร้างไฟล์ PDF...</h3>
@@ -90,6 +93,7 @@
       </div>
     </Transition>
 
+  </div>
 </template>
 
 <script setup>
@@ -98,7 +102,6 @@ import axios from 'axios';
 import html2pdf from 'html2pdf.js'
 import '@/assets/Admin/css/Admin_Export.css'
 
-// 🌟 Import หน้าต่างๆ
 import ProjectSummary from '../../components/admin/Export/1_ProjectSummary.vue'
 import ExportPreview from '../../components/admin/Export/1_ExportPreview.vue'
 import GapAnalysis from '../../components/admin/Export/2_GapAnalysis.vue'
@@ -112,24 +115,19 @@ const isDownloading = ref(false);
 const currentStep = ref(1)
 const steps = ['การสรุปขอบเขตงาน', 'ผลการปิด GAP', 'ภาพรวมการประเมิน', 'ประเด็น/ปัญหา', 'ประโยชน์']
 
-// ข้อมูลวาระ 1
 const tasks = ref([]);
 const selectedTasks = computed(() => tasks.value.filter(t => t.selected));
 const syncTasks = (updatedTasks) => { tasks.value = updatedTasks }
 
-// ข้อมูลวาระ 2
 const gapGroups = ref([]);
 const syncGaps = (updatedGaps) => { gapGroups.value = updatedGaps }
 
-// ข้อมูลวาระ 3
 const selectedEvals = ref([]);
 const syncEvaluations = (updatedData) => { selectedEvals.value = updatedData }
 
-// ข้อมูลวาระ 4
 const selectedProblems = ref([]);
 const syncProblems = (updatedData) => { selectedProblems.value = updatedData }
 
-// ข้อมูลวาระ 5
 const selectedBenefits = ref([]);
 const syncBenefits = (updatedData) => { selectedBenefits.value = updatedData }
 
@@ -142,7 +140,7 @@ onMounted(async () => {
   }
 })
 
-// 🌟 ฟังก์ชันดาวน์โหลด PDF 
+// 🌟 ฟังก์ชันดาวน์โหลด PDF (ปรับแต่ง html2canvas ให้เสถียรขึ้น)
 const exportToPDF = async () => {
   let element;
 
@@ -159,14 +157,15 @@ const exportToPDF = async () => {
 
   isDownloading.value = true;
   
-  await new Promise(resolve => setTimeout(resolve, 150));
+  // 🌟 หน่วงเวลาให้ Vue วาดหน้าจอและโหลด CSS ให้เสร็จก่อนแคปภาพ (สำคัญมากสำหรับตารางซับซ้อน)
+  await new Promise(resolve => setTimeout(resolve, 300)); 
 
   const options = {
     margin: 0,
     filename: `รายงาน_${steps[currentStep.value - 1]}.pdf`,
-    image: { type: 'png' },
+    image: { type: 'jpeg', quality: 0.98 }, // เปลี่ยนเป็น jpeg ช่วยลดปัญหาภาพแหว่ง
     html2canvas: { 
-      scale: 3, 
+      scale: 2, // 🌟 ลด scale ลงเหลือ 2 ป้องกันไอคอน/ตารางเพี้ยนตอนขยาย
       useCORS: true, 
       logging: false, 
       backgroundColor: '#ffffff',
@@ -182,10 +181,6 @@ const exportToPDF = async () => {
   } finally {
     isDownloading.value = false;
   }
-}
-
-const handleExportAll = () => {
-  console.log("ดาวน์โหลดฉบับเต็ม (ยังไม่ได้เชื่อมต่อ)");
 }
 
 watch(currentStep, (newStep) => {
