@@ -24,12 +24,16 @@
         <EvaluationOverview :selectedTasks="selectedTasks" @update-evaluations="syncEvaluations" />
       </div>
 
+      <div v-else-if="currentStep === 4" class="step-content">
+        <ProblemOverview :selectedTasks="selectedTasks" @update-problems="syncProblems" />
+      </div>
+
+      <div v-else-if="currentStep === 5" class="step-content">
+        <BenefitOverview :selectedTasks="selectedTasks" @update-benefits="syncBenefits" />
+      </div>
       <div v-else class="step-content">
         <div class="header-section">
           <h2 class="step-title">{{ currentStep }}. {{ steps[currentStep - 1] }}</h2>
-        </div>
-        <div class="placeholder-box-full">
-          <span>🛠️ กำลังพัฒนาเนื้อหา: {{ steps[currentStep - 1] }}</span>
         </div>
       </div>
     </main>
@@ -59,7 +63,7 @@
           </div>
           <div class="preview-body-content">
             <ExportPreview :selected-tasks="selectedTasks" :gap-groups="gapGroups" :selected-evaluations="selectedEvals"
-              :current-step="currentStep" />
+              :selected-problems="selectedProblems" :selected-benefits="selectedBenefits" :current-step="currentStep" />
           </div>
         </div>
       </div>
@@ -78,6 +82,8 @@ import ProjectSummary from '../../components/admin/Export/1_ProjectSummary.vue'
 import ExportPreview from '../../components/admin/Export/1_ExportPreview.vue'
 import GapAnalysis from '../../components/admin/Export/2_GapAnalysis.vue'
 import EvaluationOverview from '../../components/admin/Export/3_EvaluationOverview.vue'
+import ProblemOverview from '../../components/admin/Export/4_ProblemOverview.vue';
+import BenefitOverview from '../../components/admin/Export/5_BenefitOverview.vue'
 
 const showPreview = ref(false)
 
@@ -96,6 +102,12 @@ const syncGaps = (updatedGaps) => { gapGroups.value = updatedGaps }
 // 🌟 ข้อมูลวาระ 2
 const selectedEvals = ref([]);
 const syncEvaluations = (updatedData) => { selectedEvals.value = updatedData }
+
+const selectedProblems = ref([]);
+const syncProblems = (updatedData) => { selectedProblems.value = updatedData }
+
+const selectedBenefits = ref([]);
+const syncBenefits = (updatedData) => { selectedBenefits.value = updatedData }
 
 onMounted(async () => {
   try {

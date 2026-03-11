@@ -149,4 +149,40 @@ router.get('/evaluations', async (req, res) => {
   }
 });
 
+router.get('/problems', async (req, res) => {
+  try {
+    const { scopeIds } = req.query;
+
+    // ถ้าไม่มีการเลือก scope มาเลย ให้ส่งอาร์เรย์ว่างกลับไป
+    if (!scopeIds) {
+      return res.json([]);
+    }
+
+    const idsArray = scopeIds.split(',').map(Number);
+
+    // JOIN 3 ตาราง: scopes -> project_plans -> problems
+    const sql = `
+        SELECT 
+            s.scope_id,
+            s.scope_name,
+            p.project_plan_id,
+            p.project_plan_name,
+            pr.problem_id,
+            pr.problem_detail
+        FROM scopes s
+        JOIN project_plans p ON s.scope_id = p.scope_id
+        JOIN problems pr ON p.project_plan_id = pr.project_plan_id
+        WHERE s.scope_id IN (?)
+    `;
+
+    const [rows] = await db.query(sql, [idsArray]);
+    
+    res.json(rows);
+
+  } catch (error) {
+    console.error("Error fetching problems:", error);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+});
+
 export default router;
