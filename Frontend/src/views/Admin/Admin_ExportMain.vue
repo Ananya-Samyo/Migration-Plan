@@ -81,6 +81,15 @@
     </div>
 
   </div>
+
+  <Transition name="fade">
+      <div v-if="isDownloading" class="loading-overlay">
+        <div class="spinner"></div>
+        <h3 style="color: white; margin-top: 15px;">กำลังสร้างไฟล์ PDF...</h3>
+        <p style="color: #cbd5e1; font-size: 14px;">กรุณารอสักครู่ ระบบกำลังจัดหน้ากระดาษ</p>
+      </div>
+    </Transition>
+
 </template>
 
 <script setup>
@@ -98,6 +107,7 @@ import ProblemOverview from '../../components/admin/Export/4_ProblemOverview.vue
 import BenefitOverview from '../../components/admin/Export/5_BenefitOverview.vue'
 
 const showPreview = ref(false)
+const isDownloading = ref(false);
 
 const currentStep = ref(1)
 const steps = ['การสรุปขอบเขตงาน', 'ผลการปิด GAP', 'ภาพรวมการประเมิน', 'ประเด็น/ปัญหา', 'ประโยชน์']
@@ -132,16 +142,13 @@ onMounted(async () => {
   }
 })
 
-// 🌟 ฟังก์ชันดาวน์โหลด PDF ที่อัปเดตใหม่
-const exportToPDF = () => {
+// 🌟 ฟังก์ชันดาวน์โหลด PDF 
+const exportToPDF = async () => {
   let element;
 
-  // เช็คว่าหน้าต่างพรีวิว (Modal) เปิดอยู่หรือไม่
   if (showPreview.value) {
-    // 1. ถ้าหน้าพรีวิวเปิดอยู่ ให้ดึงข้อมูลจากหน้าพรีวิวที่แสดงบนหน้าจอ
     element = document.querySelector('.preview-full-container .sheet');
   } else {
-    // 2. ถ้าหน้าพรีวิวปิดอยู่ (กดจากปุ่มหลัก) ให้ดึงข้อมูลจากตัวที่ซ่อนไว้หลังฉาก
     element = document.querySelector('#hidden-export-wrapper .sheet');
   }
 
@@ -149,6 +156,10 @@ const exportToPDF = () => {
     console.error("ไม่พบเอกสารสำหรับดาวน์โหลด");
     return;
   }
+
+  isDownloading.value = true;
+  
+  await new Promise(resolve => setTimeout(resolve, 150));
 
   const options = {
     margin: 0,
@@ -159,16 +170,21 @@ const exportToPDF = () => {
       useCORS: true, 
       logging: false, 
       backgroundColor: '#ffffff',
-      windowWidth: 1122 // ตั้งให้กว้างพอดีกับ A4 แนวนอน ลดปัญหาตารางเบี้ยวตอนที่ดึงแบบหลังฉาก
+      windowWidth: 1122
     },
     jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape', compress: false }
   };
 
-  html2pdf().set(options).from(element).save();
+  try {
+    await html2pdf().set(options).from(element).save();
+  } catch (error) {
+    console.error("เกิดข้อผิดพลาดในการสร้าง PDF:", error);
+  } finally {
+    isDownloading.value = false;
+  }
 }
 
 const handleExportAll = () => {
-  // อันนี้เป็นฟังก์ชันสำหรับปุ่ม "ดาวน์โหลดฉบับเต็ม" ในอนาคต
   console.log("ดาวน์โหลดฉบับเต็ม (ยังไม่ได้เชื่อมต่อ)");
 }
 
