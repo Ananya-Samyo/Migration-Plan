@@ -131,7 +131,6 @@ const API = import.meta.env.VITE_API_BASE_URL
 const router = useRouter()
 const route = useRoute()
 
-// State
 const scopes = ref([])
 const expandedRow = ref(null)
 const currentPage = ref(1)
@@ -146,7 +145,6 @@ const handleAutoExpand = () => {
 
     console.log("🔍 กำลังพยายามกางแถว ID:", targetId)
 
-    // ค้นหาข้อมูลที่ตรงกัน (รองรับทั้งชื่อฟิลด์ scope_id และ id)
     const matchedScope = scopes.value.find(s => {
         const sID = s.scope_id || s.id;
         return String(sID) === String(targetId);
@@ -156,22 +154,19 @@ const handleAutoExpand = () => {
         const finalID = matchedScope.scope_id || matchedScope.id;
         console.log("✅ พบข้อมูลที่ตรงกัน กำลังกางแถว...");
 
-        // ตั้งค่าให้แถวนั้นกางออก
         expandedRow.value = finalID;
 
         nextTick(() => {
             setTimeout(() => {
                 const rowElement = document.getElementById(`scope-row-${finalID}`)
                 if (rowElement) {
-                    // เลื่อนหน้าจอไปที่แถวนั้น
                     rowElement.scrollIntoView({ behavior: 'smooth', block: 'center' })
 
-                    // ทำ Highlighting ชั่วคราวเพื่อให้ผู้ใช้สังเกตง่าย
                     rowElement.style.transition = 'background-color 0.5s'
                     rowElement.style.backgroundColor = '#fff9db'
                     setTimeout(() => { rowElement.style.backgroundColor = '' }, 2500)
                 }
-            }, 600) // รอให้ Animation ของการกางตารางเริ่มทำงานก่อนค่อยเลื่อน
+            }, 600) 
         })
     } else {
         console.warn("❌ ไม่พบ ID นี้ในข้อมูลที่โหลดมา")
@@ -179,7 +174,6 @@ const handleAutoExpand = () => {
 }
 
 const toggleRow = (id) => {
-    // ถ้าคลิกซ้ำแถวเดิมให้ปิด ถ้าคลิกแถวใหม่ให้เปิด
     expandedRow.value = String(expandedRow.value) === String(id) ? null : id
 }
 
@@ -191,7 +185,6 @@ const fetchScopes = async (page = 1) => {
         const token = localStorage.getItem('token')
         if (!token) return router.push('/')
 
-        // ถ้ามี scope_id ใน URL ให้ดึงข้อมูลชุดใหญ่มาเลยเพื่อให้หา ID นั้นเจอแน่นอน
         const targetScopeId = route.query.scope_id
         const limit = targetScopeId ? 1000 : 10
 
@@ -208,8 +201,6 @@ const fetchScopes = async (page = 1) => {
 
             console.log(`📦 โหลดข้อมูลสำเร็จ: ${scopes.value.length} รายการ`)
         }
-
-        // เมื่อข้อมูลลง State แล้ว ให้รอ DOM Update แล้วค่อยสั่งกางแถว
         await nextTick()
         handleAutoExpand()
 
@@ -224,7 +215,6 @@ const fetchScopes = async (page = 1) => {
 watch(
     () => route.query.scope_id,
     (newId) => {
-        // กรณีอยู่ที่หน้าเดิมแต่คลิกเลือก Task ใหม่จาก Sidebar หรือ Dashboard
         if (newId) {
             expandedRow.value = null
             fetchScopes(1)
