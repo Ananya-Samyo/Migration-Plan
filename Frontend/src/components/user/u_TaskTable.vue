@@ -11,49 +11,37 @@
         </thead>
 
         <tbody>
-          <tr
-            v-for="task in paginatedTasks"
-            :key="task.scope_id"
-            @click="goDetail(task.scope_id)"
-          >
+          <tr v-for="task in paginatedTasks" :key="task.scope_id" @click="goDetail(task.scope_id)">
             <td class="title">
               {{ task.title }}
             </td>
 
-            <td>
-              <span
-                class="status"
-                :style="{
-                  backgroundColor: statusColor(task.status).bg,
-                  color: statusColor(task.status).text
-                }"
-              >
+            <td data-label="สถานะ">
+              <span class="status" :style="{
+                backgroundColor: statusColor(task.status).bg,
+                color: statusColor(task.status).text
+              }">
                 {{ statusText(task.status) }}
               </span>
             </td>
 
-            <td>
+            <td data-label="ความคืบหน้า">
               <div class="progress-wrapper">
                 <div class="progress-bar">
-                  <div
-                    v-if="normalizeProgress(task.progress_percent, task.status) > 0"
-                    class="progress-fill"
-                    :style="{
-                      width: progressWidth(task.progress_percent, task.status),
-                      backgroundColor: progressColor(
-                        normalizeProgress(task.progress_percent, task.status)
-                      )
-                    }"
-                  ></div>
+                  <div v-if="normalizeProgress(task.progress_percent, task.status) > 0" class="progress-fill" :style="{
+                    width: progressWidth(task.progress_percent, task.status),
+                    backgroundColor: progressColor(
+                      normalizeProgress(task.progress_percent, task.status)
+                    )
+                  }"></div>
                 </div>
-
                 <span class="progress-text">
                   {{ normalizeProgress(task.progress_percent, task.status) }}%
                 </span>
               </div>
             </td>
           </tr>
-          
+
           <tr v-if="paginatedTasks.length === 0">
             <td colspan="3" style="text-align: center; padding: 20px; color: #999;">
               ไม่มีรายการงานในช่วงนี้
@@ -64,11 +52,7 @@
     </div>
 
     <div class="pagination" v-if="totalPages > 1">
-      <button 
-        class="page-btn" 
-        @click="prevPage" 
-        :disabled="currentPage === 1"
-      >
+      <button class="page-btn" @click="prevPage" :disabled="currentPage === 1">
         &lt; ก่อนหน้า
       </button>
 
@@ -76,11 +60,7 @@
         หน้า {{ currentPage }} จาก {{ totalPages }}
       </span>
 
-      <button 
-        class="page-btn" 
-        @click="nextPage" 
-        :disabled="currentPage === totalPages"
-      >
+      <button class="page-btn" @click="nextPage" :disabled="currentPage === totalPages">
         ถัดไป &gt;
       </button>
     </div>
@@ -90,7 +70,7 @@
 <script setup>
 import { computed, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
-
+import '../../assets/Admin/css/TaskTable.css'
 /* ===============================
    PROPS
 ================================ */
@@ -106,10 +86,12 @@ const router = useRouter()
 /* ===============================
    Navigation
 ================================ */
-const goDetail = (id) => {
-  router.push({ 
-    path: '/user/user_scopeproject', 
-    query: { expand: id } 
+const goDetail = (scopeId) => {
+  if (!scopeId) return
+
+  router.push({
+    path: '/user/user_scopeproject',
+    query: { scope_id: scopeId },
   })
 }
 
@@ -251,131 +233,3 @@ const progressColor = (value) => {
   return '#16a34a'
 }
 </script>
-
-<style scoped>
-.table-container {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.table-wrapper {
-  overflow-x: auto;
-  min-height: 205px;
-}
-
-table {
-  width: 100%;
-  border-collapse: collapse;
-}
-
-th {
-  padding: 16px 14px;
-  font-size: 14px;
-  color: #64748b;
-  border-bottom: 2px solid #f1f5f9;
-  font-weight: 700;
-}
-
-td {
-  vertical-align: middle;
-  padding: 16px 14px;
-  font-size: 14px;
-  color: #1e293b;
-  border-bottom: 1px solid #f1f5f9;
-}
-
-tr {
-  cursor: pointer;
-  transition: background 0.2s ease;
-}
-
-tr:hover {
-  background: #f8faff;
-}
-
-.title {
-  font-weight: 600;
-}
-
-.status {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-
-  min-width: 220px;
-  padding: 10px 16px;
-
-  border-radius: 999px;
-  font-size: 13px;
-  font-weight: 700;
-
-  line-height: 1.4;       
-  text-align: center;
-
-  white-space: nowrap;    
-  word-break: keep-all;    
-}
-
-.progress-wrapper {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.progress-bar {
-  flex: 1;
-  height: 10px;
-  background: #e5e7eb;
-  border-radius: 999px;
-  overflow: hidden;
-}
-
-.progress-fill {
-  height: 100%;
-  border-radius: 999px;
-  transition: width 0.3s ease;
-}
-
-.progress-text {
-  font-size: 13px;
-  font-weight: 700;
-}
-
-/* ✅ CSS สำหรับ Pagination */
-.pagination {
-  display: flex;
-  justify-content: flex-end;
-  align-items: center;
-  gap: 12px;
-  padding-top: 10px;
-}
-
-.page-info {
-  font-size: 14px;
-  color: #64748b;
-  font-weight: 500;
-}
-
-.page-btn {
-  padding: 6px 12px;
-  border: 1px solid #e2e8f0;
-  background: white;
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 13px;
-  color: #334155;
-  transition: all 0.2s;
-}
-
-.page-btn:hover:not(:disabled) {
-  background: #f1f5f9;
-  border-color: #cbd5e1;
-}
-
-.page-btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-  background: #f8fafc;
-}
-</style>

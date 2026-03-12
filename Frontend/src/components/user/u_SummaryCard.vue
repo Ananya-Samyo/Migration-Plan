@@ -23,19 +23,19 @@ const theme = {
   },
   // สีม่วง -> สำหรับ "ยังไม่ปิด GAP"
   primary: {
-    border: '#6d28d9', 
+    border: '#6d28d9',
     bg: '#ede9fe',
     defaultIcon: '📌'
   },
   // สีเขียว -> สำหรับ "ปิด GAP เสร็จแล้ว"
   success: {
-    border: '#15803d', 
+    border: '#15803d',
     bg: '#dcfce7',
     defaultIcon: '✅'
   },
   // สีแดง -> สำหรับ "ไม่สามารถปิด GAP แต่ยอมรับได้"
   danger: {
-    border: '#b91c1c', 
+    border: '#b91c1c',
     bg: '#fee2e2',
     defaultIcon: '⚠️'
   }
@@ -51,15 +51,12 @@ const displayIcon = computed(() => {
 </script>
 
 <template>
-  <div
-  class="card"
-  :style="{
+  <div class="card" :style="{
     borderLeft: '5px solid ' + activeTheme.border,
     background: activeTheme.bg
-  }"
->
+  }">
     <div class="icon">{{ displayIcon }}</div>
-    <div class="content">
+    <div class="card-content">
       <h4 :style="{ color: activeTheme.border }">{{ title }}</h4>
       <h1>{{ value }}</h1>
     </div>
@@ -70,10 +67,10 @@ const displayIcon = computed(() => {
 .card {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 16px;
   margin-bottom: 5px;
-  padding: 16px;
-  min-height: 110px;
+  padding: 24px;
+  min-height: 140px;
   border-radius: 14px;
   background-color: #fff;
   box-shadow: 0 3px 5px rgba(0, 0, 0, 0.05);
@@ -85,26 +82,25 @@ const displayIcon = computed(() => {
 }
 
 .icon {
-  font-size: 24px;
-  width: 40px;
-  height: 40px;
+  font-size: 32px;
+  width: 50px;
+  height: 50px;
   display: flex;
   align-items: center;
   justify-content: center;
-  background-color: rgba(255, 255, 255, 0.6);
   border-radius: 10px;
 }
 
-.content h4 {
+.card-content h4 {
   margin: 0;
-  font-size: 13px;
+  font-size: 15px;
   font-weight: 700;
   opacity: 0.9;
 }
 
-.content h1 {
+.card-content h1 {
   margin: 2px 0 0;
-  font-size: 22px;
+  font-size: 28px;
   font-weight: 800;
   color: #1e293b;
 }

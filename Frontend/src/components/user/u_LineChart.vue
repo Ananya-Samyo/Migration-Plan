@@ -1,24 +1,21 @@
 <template>
   <div class="panel chart-area">
     <div class="panel-header">
-      <h3>📈 จำนวน GAP ที่ปิดได้ {{ hasFilter ? '(ตามช่วงเวลา)' : '(ทั้งหมด)' }}</h3>
+      <div class="header-left">
+        <span class="icon-box">📈</span>
+        <h3>จำนวน GAP ที่ปิดได้</h3>
+      </div>
     </div>
 
-    <div class="panel-body chart-body">
-      <div v-if="isLoading" class="loading-state">กำลังโหลด...</div>
-      
-      <div v-else-if="labels.length === 0" class="loading-state">
-        ไม่มีข้อมูลในช่วงเวลานี้
-      </div>
-      
-      <Line v-else :data="chartData" :options="chartOptions" />
+    <div class="panel-body chart-container">
+      <Line v-if="loaded" :data="chartData" :options="chartOptions" />
+      <div v-else class="loading-placeholder">กำลังโหลดข้อมูล...</div>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, computed, watch } from 'vue'
-import axios from 'axios'
+import { ref, computed, onMounted, watch } from 'vue' 
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -32,87 +29,102 @@ import {
 } from 'chart.js'
 import { Line } from 'vue-chartjs'
 
-ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend, Filler)
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  Title,
+  Tooltip,
+  Legend,
+  Filler
+)
+
+/* ===============================
+   PROPS (เพิ่มใหม่)
+================================ */
+const props = defineProps({
+  selectedDate: {
+    type: Object,
+    required: true
+  }
+})
 
 const API = import.meta.env.VITE_API_BASE_URL
 
 /* ===============================
-   1. ปรับ Props: ไม่บังคับ (Required: false)
+   STATE
 ================================ */
-const props = defineProps({
-  startDate: { type: String, default: '' },
-  endDate:   { type: String, default: '' }
-})
-
-/* ===============================
-   State
-================================ */
+const loaded = ref(false)
 const labels = ref([])
 const values = ref([])
-const isLoading = ref(false)
-
-// Computed เช็คว่ากำลังกรองอยู่ไหม (เพื่อเปลี่ยนหัวข้อ)
-const hasFilter = computed(() => props.startDate && props.endDate)
 
 /* ===============================
-   Fetch Function (หัวใจหลัก)
+   FETCH DATA (แก้ไขให้ส่งวันที่)
 ================================ */
 const fetchChartData = async () => {
-  // ⚠️ ลบเงื่อนไข return ออก เพื่อให้โหลด All Time ได้
-  // if (!props.startDate || !props.endDate) return 
-  
-  isLoading.value = true
+  loaded.value = false
   try {
-    const userId = localStorage.getItem('user_id')
-    if (!userId) return
+    const token = localStorage.getItem('token')
+    if (!token) return
 
-    // เตรียม Params พื้นฐาน
-    const params = {
-      user_id: userId,
-      mode: 'day'
-    }
+    // ส่ง startDate และ endDate ไปยัง Backend
+    const query = `?mode=day&startDate=${props.selectedDate.start}&endDate=${props.selectedDate.end}`
+    
+    const res = await fetch(`${API}/api/user/user-dashboard/gap-closed-chart${query}`, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      }
+    })
 
-    // ✅ Logic: ถ้ามีวันที่ส่งมา ค่อยเติมใส่ params
-    // ถ้าไม่มี (เป็นค่าว่าง) Backend จะดึงข้อมูลทั้งหมดให้เอง (ตาม Code Backend ที่เราแก้ไป)
-    if (props.startDate && props.endDate) {
-      params.startDate = props.startDate
-      params.endDate = props.endDate
-    }
-
-    const { data } = await axios.get(`${API}/api/user/user-dashboard/gap-closed-chart`, { params })
+    if (!res.ok) throw new Error('Fetch Error')
+    const data = await res.json()
 
     labels.value = data.map(i => i.label)
     values.value = data.map(i => i.total)
+    loaded.value = true
 
   } catch (err) {
-    console.error('❌ Chart Error:', err)
-  } finally {
-    isLoading.value = false
+    console.error('❌ LineChart API error', err)
+    labels.value = ['จ', 'อ', 'พ', 'พฤ', 'ศ', 'ส', 'อา']
+    values.value = [0, 0, 0, 0, 0, 0, 0]
+    loaded.value = true
   }
 }
 
 /* ===============================
-   2. Watcher
+   WATCHER (เพิ่มใหม่)
 ================================ */
-// ทำงานทันทีที่โหลด และทำงานเมื่อ Props เปลี่ยน
-watch(() => [props.startDate, props.endDate], fetchChartData, { immediate: true })
+// เมื่อวันที่จาก Dashboard เปลี่ยน ให้โหลดกราฟเส้นใหม่
+watch(() => props.selectedDate, fetchChartData, { deep: true })
+
+onMounted(fetchChartData)
 
 /* ===============================
-   Chart Config
+   CHART CONFIG (คงเดิม)
 ================================ */
 const chartData = computed(() => ({
   labels: labels.value,
   datasets: [
     {
-      label: 'งานที่ปิดได้',
+      label: 'GAP ที่ปิดได้',
       data: values.value,
-      borderColor: '#6d28d9',
-      backgroundColor: 'rgba(109, 40, 217, 0.1)',
+      borderColor: '#6366f1',
+      backgroundColor: (context) => {
+        const ctx = context.chart.ctx;
+        const gradient = ctx.createLinearGradient(0, 0, 0, 300);
+        gradient.addColorStop(0, 'rgba(99, 102, 241, 0.4)');
+        gradient.addColorStop(1, 'rgba(99, 102, 241, 0.0)');
+        return gradient;
+      },
       borderWidth: 3,
       tension: 0.4,
       pointRadius: 4,
-      pointBackgroundColor: '#fff',
-      pointBorderColor: '#6d28d9',
+      pointBackgroundColor: '#ffffff',
+      pointBorderColor: '#6366f1',
+      pointBorderWidth: 2,
+      pointHoverRadius: 6,
       fill: true
     }
   ]
@@ -124,37 +136,90 @@ const chartOptions = computed(() => ({
   plugins: {
     legend: { display: false },
     tooltip: {
-      backgroundColor: '#1e293b',
-      padding: 10,
-      cornerRadius: 8,
-      displayColors: false
+      backgroundColor: 'rgba(255, 255, 255, 0.95)',
+      titleColor: '#1e293b',
+      bodyColor: '#1e293b',
+      borderColor: '#e2e8f0',
+      borderWidth: 1,
+      callbacks: {
+        label: (context) => `✅ ปิดได้: ${context.parsed.y} รายการ`
+      }
     }
   },
   scales: {
+    x: {
+      grid: { display: false },
+      ticks: { color: '#64748b' }
+    },
     y: {
       beginAtZero: true,
-      grid: { borderDash: [4, 4], color: '#e2e8f0' },
-      ticks: { precision: 0 }
-    },
-    x: {
-      grid: { display: false }
+      grid: { color: '#f1f5f9', borderDash: [5, 5] },
+      ticks: { stepSize: 1, color: '#64748b' }
     }
   }
 }))
 </script>
 
 <style scoped>
-.chart-body {
-  position: relative;
-  height: 300px;
-  width: 100%;
-}
-.loading-state {
+
+.loading-placeholder {
   display: flex;
   justify-content: center;
   align-items: center;
   height: 100%;
-  color: #94a3b8;
-  font-size: 14px;
+  color: #64748b;
+}
+
+/* สไตล์ Modern เข้ากับ Dashboard */
+.panel {
+  background: #ffffff;
+  border-radius: 24px; /* โค้งเยอะขึ้น */
+  padding: 0; /* Header กับ Body แยก padding กัน */
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.panel-header {
+  padding: 20px 24px;
+  border-bottom: 1px solid #f1f5f9;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.icon-box {
+  width: 36px;
+  height: 36px;
+  background: #e0e7ff;
+  color: #6366f1;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+}
+
+h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+  color: #0f172a;
+  font-family: 'Sarabun', sans-serif;
+}
+
+.panel-body {
+  padding: 24px;
+  flex: 1;
+  min-height: 320px;
+  position: relative;
 }
 </style>

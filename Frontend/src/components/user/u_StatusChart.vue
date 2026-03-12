@@ -1,7 +1,5 @@
 <template>
   <div class="charts-container">
-
-    <!-- Pie -->
     <div class="chart-wrapper">
       <h3>📊 สัดส่วนสถานะ GAP</h3>
       <div class="canvas-box">
@@ -9,19 +7,17 @@
       </div>
     </div>
 
-    <!-- Bar -->
     <div class="chart-wrapper">
       <h3>📈 จำนวนงานตามระดับความคืบหน้า</h3>
       <div class="canvas-box">
         <Bar :data="barChartData" :options="barOptions" />
       </div>
     </div>
-
   </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue' 
 import { Pie, Bar } from 'vue-chartjs'
 import axios from 'axios'
 import {
@@ -46,8 +42,16 @@ ChartJS.register(
 )
 
 /* ===============================
-   API
+   PROPS (รับค่าจาก Dashboard หลัก)
 ================================ */
+const props = defineProps({
+  selectedDate: {
+    type: Object,
+    required: true,
+    default: () => ({ start: '', end: '' })
+  }
+})
+
 const API = import.meta.env.VITE_API_BASE_URL
 
 /* ===============================
@@ -67,41 +71,19 @@ const progressRange = ref({
 })
 
 /* ===============================
-   Fetch Backend
-================================ */
-/* ===============================
-   Fetch Backend (แก้ไขเพื่อส่ง user_id)
+   Fetch Backend (แก้ไขให้ส่ง Query String)
 ================================ */
 const fetchCharts = async () => {
   try {
-    // 1. ดึง user_id จาก localStorage
-    const userId = localStorage.getItem('user_id')
+    const query = `?startDate=${props.selectedDate.start}&endDate=${props.selectedDate.end}`
     
-    // ตรวจสอบเบื้องต้น
-    if (!userId) {
-      console.warn('⚠️ StatusChart: ไม่พบ user_id ใน LocalStorage')
-      return
-    }
-
-    // 2. เรียก API โดยส่ง user_id ผ่าน params
     const [gapRes, progressRes] = await Promise.all([
-      axios.get(`${API}/api/user/user-dashboard/gap-summary`, {
-        params: { user_id: userId } 
-      }),
-      axios.get(`${API}/api/user/user-dashboard/progress-range`, {
-        params: { user_id: userId } 
-      })
+      axios.get(`${API}/api/user/user-dashboard/gap-summary${query}`),
+      axios.get(`${API}/api/user/user-dashboard/progress-range${query}`)
     ])
 
-    // 3. อัปเดต State
     gapSummary.value = gapRes.data
     progressRange.value = progressRes.data
-
-    console.log('✅ StatusChart: โหลดข้อมูลสำเร็จ', { 
-      summary: gapRes.data, 
-      range: progressRes.data 
-    })
-
   } catch (err) {
     console.error('❌ StatusChart API error', err)
   }
@@ -109,8 +91,16 @@ const fetchCharts = async () => {
 
 onMounted(fetchCharts)
 
+watch(
+  () => props.selectedDate,
+  () => {
+    fetchCharts()
+  },
+  { deep: true }
+)
+
 /* ===============================
-   Pie Chart
+   Pie Chart (Computed จะทำงานอัตโนมัติเมื่อ State เปลี่ยน)
 ================================ */
 const pieChartData = computed(() => ({
   labels: ['ยังไม่ปิด GAP', 'ปิด GAP เสร็จแล้ว', 'ไม่สามารถปิด GAP แต่ยอมรับได้'],
@@ -121,7 +111,7 @@ const pieChartData = computed(() => ({
         gapSummary.value.closed_gap,
         gapSummary.value.accepted_gap
       ],
-      backgroundColor: ['#6d28d9', '#16a34a', '#dc2626'],
+      backgroundColor: ['#6b7280', '#16a34a', '#dc2626'],
       borderColor: '#fff',
       borderWidth: 2
     }
@@ -141,14 +131,14 @@ const barChartData = computed(() => ({
         progressRange.value.high,
         progressRange.value.done
       ],
-      backgroundColor: ['#6b7280', '#dc2626', '#6d28d9', '#16a34a'],
+      backgroundColor: ['#6C757D', '#FFC107', '#3B82F6', '#28A745'],
       borderRadius: 6
     }
   ]
 }))
 
 /* ===============================
-   Options
+   Options (คงเดิม)
 ================================ */
 const pieOptions = {
   responsive: true,

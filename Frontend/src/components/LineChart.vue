@@ -15,7 +15,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch } from 'vue' // 1. เพิ่ม watch
+import { ref, computed, onMounted, watch } from 'vue' 
 import {
   Chart as ChartJS,
   CategoryScale,
