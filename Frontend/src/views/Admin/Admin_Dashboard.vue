@@ -43,11 +43,6 @@
             @change="onManualDateChange" />
         </div>
 
-        <button class="control-group export-btn" @click="openExportSettings" :disabled="isExporting">
-          <span class="icon" v-if="!isExporting">📤</span>
-          <span class="spinner" v-else></span>
-          <span>{{ isExporting ? 'กำลังสร้าง PDF...' : 'Export PDF' }}</span>
-        </button>
       </div>
     </header>
 

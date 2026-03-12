@@ -3,7 +3,7 @@
     <aside class="sidebar" :class="{ collapsed: isCollapsed }">
       <div class="sidebar-top">
 
-        <h1 class="page-title" v-if="!isCollapsed">
+        <h1 class="sidebar-branding-text" v-if="!isCollapsed">
           Migration Plan
         </h1>
         
