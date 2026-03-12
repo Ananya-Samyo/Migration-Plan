@@ -14,78 +14,91 @@
                 </thead>
 
                 <tbody>
-                    <template v-for="(scope, index) in scopes" :key="scope.id">
-                        <tr class="scope-row" @click="toggleRow(scope.id)">
-                            <td>{{ scope.scope_name }}</td>
-                            <td>{{ scope.department_name }}</td>
-                            <td>{{ scope.coordinator }}</td>
-                            <td>
-                                <div class="progress-wrapper">
-                                    <div class="progress-container">
-                                        <div class="progress-bar" :class="progressClass(scope.progress_percent)"
-                                            :style="{ width: scope.progress_percent + '%' }"></div>
+                    <template v-if="scopes && scopes.length > 0">
+                        <template v-for="(scope, index) in scopes" :key="scope.id">
+                            <tr :id="'scope-row-' + scope.id" class="scope-row"
+                                :class="{ 'is-expanded': String(expandedRow) === String(scope.id) }"
+                                @click="toggleRow(scope.id)">
+                                <td>{{ scope.scope_name }}</td>
+                                <td>{{ scope.department_name }}</td>
+                                <td>{{ scope.coordinator }}</td>
+                                <td>
+                                    <div class="progress-wrapper">
+                                        <div class="progress-container small">
+                                            <div class="progress-bar" :class="progressClass(scope.progress_percent)"
+                                                :style="{ width: scope.progress_percent + '%' }"></div>
+                                        </div>
+                                        <span class="progress-text">{{ scope.progress_percent }}%</span>
                                     </div>
-                                    <span class="progress-text">{{ scope.progress_percent }}%</span>
-                                </div>
-                            </td>
-                        </tr>
+                                </td>
+                            </tr>
 
-                        <tr v-if="expandedRow === scope.id">
-                            <td colspan="4">
-                                <div class="detail-box">
-                                    <table class="detail-table">
-                                        <thead>
-                                            <tr>
-                                                <th>ชื่อแผนงานที่รับผิดชอบ</th>
-                                                <th>รายละเอียดการดำเนินงาน</th>
-                                                <th>ผลการวิเคราะห์ช่องว่าง (GAP Analysis)</th>
-                                                <th>การจัดการ</th>
-                                                <th>ปุ่มดำเนินการ</th>
-                                            </tr>
-                                        </thead>
+                            <tr v-if="String(expandedRow) === String(scope.id)">
+                                <td colspan="4">
+                                    <div class="detail-box">
+                                        <table class="detail-table">
+                                            <thead>
+                                                <tr>
+                                                    <th>ชื่อแผนงานที่รับผิดชอบ</th>
+                                                    <th>รายละเอียดการดำเนินงาน</th>
+                                                    <th>ผลการวิเคราะห์ช่องว่าง (GAP Analysis)</th>
+                                                    <th>ความคืบหน้า</th>
+                                                    <th>การจัดการ</th>
+                                                </tr>
+                                            </thead>
 
-                                        <tbody>
-                                            <tr v-for="plan in scope.plans" :key="plan.id" class="plan-row">
-                                                <td class="plan-name">{{ plan.name }}</td>
-
-                                                <td>{{ plan.details }}</td>
-
-                                                <td>
-                                                    <ul class="gap-list">
-                                                        <li v-for="(gap, i) in plan.gaps" :key="i">{{ gap }}</li>
-                                                    </ul>
-                                                </td>
-
-                                                <td>
-                                                    <div class="progress-wrapper">
-                                                        <div class="progress-container small">
-                                                            <div class="progress-bar"
-                                                                :class="progressClass(plan.progress)"
-                                                                :style="{ width: plan.progress + '%' }"></div>
+                                            <tbody>
+                                                <tr v-for="plan in scope.plans" :key="plan.id" class="plan-row">
+                                                    <td class="plan-name">
+                                                        {{ plan.name }}
+                                                    </td>
+                                                    <td>{{ plan.details }}</td>
+                                                    <td>
+                                                        <ul class="gap-list">
+                                                            <li v-for="(gap, i) in plan.gaps" :key="i">
+                                                                {{ gap }}
+                                                            </li>
+                                                        </ul>
+                                                    </td>
+                                                    <td>
+                                                        <div class="progress-wrapper">
+                                                            <div class="progress-container small">
+                                                                <div class="progress-bar"
+                                                                    :class="progressClass(plan.progress)"
+                                                                    :style="{ width: plan.progress + '%' }"></div>
+                                                            </div>
+                                                            <span class="progress-text">
+                                                                {{ plan.progress }}%
+                                                            </span>
                                                         </div>
-                                                        <span class="progress-text">{{ plan.progress }}%</span>
-                                                    </div>
-                                                </td>
+                                                    </td>
+                                                    <td>
+                                                        <div class="action-buttons">
+                                                            <button class="btn-progress"
+                                                                @click.stop="goToProgress(plan.id)">
+                                                                บันทึกความก้าวหน้า
+                                                            </button>
 
-                                                <td>
-                                                    <div class="action-buttons">
-                                                        <button class="btn-progress"
-                                                            @click.stop="goToProgress(plan.id)">
-                                                            บันทึกความก้าวหน้า
-                                                        </button>
-                                                        <button class="btn-evaluate"
-                                                            @click.stop="goToEvaluation(plan.id)">
-                                                            การประเมินผล
-                                                        </button>
-                                                    </div>
-                                                </td>
-                                            </tr>
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </td>
-                        </tr>
+                                                            <button class="btn-evaluate"
+                                                                @click.stop="goToEvaluation(plan.id)">
+                                                                การประเมินผล
+                                                            </button>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </td>
+                            </tr>
+                        </template>
                     </template>
+
+                    <tr v-else>
+                        <td colspan="4" style="text-align: center; padding: 20px; color: #888;">
+                            ไม่พบข้อมูลขอบเขตงานของคุณ
+                        </td>
+                    </tr>
                 </tbody>
             </table>
         </div>
@@ -93,11 +106,11 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, nextTick, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import '../../assets/Admin/css/Admin_Scopeproject.css'
 
-const BASE_API = import.meta.env.VITE_API_BASE_URL
+const API = import.meta.env.VITE_API_BASE_URL
 const router = useRouter()
 const route = useRoute()
 
@@ -105,7 +118,77 @@ const scopes = ref([])
 const expandedRow = ref(null)
 
 /* ===============================
-   NAVIGATION 
+    ฟังก์ชันดึงข้อมูลจาก API (ใช้ Logic ของ User)
+================================ */
+const fetchScopes = async () => {
+    try {
+        const token = localStorage.getItem('token')
+        if (!token) return router.push('/')
+
+        // เปลี่ยน Endpoint เป็นของฝั่ง User
+        const res = await fetch(`${API}/api/user/scopes`, {
+            method: 'GET',
+            headers: { 
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            }
+        })
+
+        if (!res.ok) throw new Error('โหลดข้อมูลไม่สำเร็จ')
+
+        const data = await res.json()
+        scopes.value = data
+
+        console.log(`📦 โหลดข้อมูลขอบเขตงานของผู้ใช้สำเร็จ: ${scopes.value.length} รายการ`)
+        
+        // เมื่อโหลดเสร็จ ให้เช็คว่ามี Query param ให้กางแถวอัตโนมัติหรือไม่
+        await nextTick()
+        handleAutoExpand()
+
+    } catch (err) {
+        console.error('Fetch Scopes Error:', err)
+    }
+}
+
+/* ===============================
+    ฟังก์ชันกางแถวและจัดการ UI (คงไว้จาก Admin)
+================================ */
+const handleAutoExpand = () => {
+    // ใช้ได้ทั้ง query 'expand' (จาก User) หรือ 'scope_id' (จาก Admin)
+    const targetId = route.query.expand || route.query.scope_id
+    if (!targetId || scopes.value.length === 0) return
+
+    const matchedScope = scopes.value.find(s => String(s.id) === String(targetId))
+
+    if (matchedScope) {
+        expandedRow.value = matchedScope.id
+        nextTick(() => {
+            setTimeout(() => {
+                const rowElement = document.getElementById(`scope-row-${matchedScope.id}`)
+                if (rowElement) {
+                    rowElement.scrollIntoView({ behavior: 'smooth', block: 'center' })
+                    rowElement.style.transition = 'background-color 0.5s'
+                    rowElement.style.backgroundColor = '#fff9db'
+                    setTimeout(() => { rowElement.style.backgroundColor = '' }, 2500)
+                }
+            }, 600) 
+        })
+    }
+}
+
+const toggleRow = (id) => {
+    expandedRow.value = String(expandedRow.value) === String(id) ? null : id
+}
+
+const progressClass = (value) => {
+    const num = Number(value)
+    if (isNaN(num) || num < 50) return 'danger'
+    if (num < 100) return 'warning'
+    return 'success'
+}
+
+/* ===============================
+    ฟังก์ชันการนำทาง (ปรับให้เข้ากับ User Route)
 ================================ */
 const goToProgress = (planId) => {
     router.push({ name: 'UserProgress', params: { id: planId } })
@@ -115,67 +198,17 @@ const goToEvaluation = (planId) => {
     router.push({ name: 'UserEvaluation', params: { id: planId } })
 }
 
-const toggleRow = (id) => {
-    if (expandedRow.value === id) {
-        expandedRow.value = null
-    } else {
-        expandedRow.value = id
-    }
-}
-
-const progressClass = (value) => {
-    const num = Number(value)
-    if (isNaN(num)) return 'danger'
-    if (num < 50) return 'danger'
-    if (num < 100) return 'warning'
-    return 'success'
-}
-
 /* ===============================
-   FETCH DATA - ดึงข้อมูลเฉพาะของตัวเอง
+    Watcher & Lifecycle
 ================================ */
-onMounted(async () => {
-    try {
-        const token = localStorage.getItem('token');
-        const res = await fetch(`${BASE_API}/api/user/scopes`, {
-            method: 'GET',
-            headers: {
-                'Authorization': `Bearer ${token}`,
-                'Content-Type': 'application/json'
-            }
-        });
-
-        if (!res.ok) throw new Error('โหลดข้อมูลไม่สำเร็จ');
-
-        const data = await res.json();
-        scopes.value = data;
-
-        const expandId = Number(route.query.expand);
-
-        if (expandId) {
-            // 1. ค้นหาว่า ID ที่ส่งมาอยู่ในข้อมูลที่โหลดมาหรือไม่
-            const targetScope = scopes.value.find(s => Number(s.id) === expandId);
-
-            if (targetScope) {
-                // 2. สั่งกางแถวนั้น (ใช้ ID แทน Index จะแม่นยำกว่า)
-                expandedRow.value = expandId;
-
-                // 3. รอให้ Vue เรนเดอร์หน้าจอเสร็จ แล้วเลื่อนหน้าจอไปหา
-                setTimeout(() => {
-                    const targetElement = document.getElementById(`scope-${expandId}`);
-                    if (targetElement) {
-                        targetElement.scrollIntoView({
-                            behavior: 'smooth',
-                            block: 'center'
-                        });
-
-                        targetElement.classList.add('highlight-row');
-                    }
-                }, 500);
-            }
-        }
-    } catch (err) {
-        console.error('Error fetching scopes:', err);
+watch(
+    () => [route.query.expand, route.query.scope_id],
+    () => {
+        handleAutoExpand()
     }
-});
+)
+
+onMounted(() => {
+    fetchScopes()
+})
 </script>

@@ -2,7 +2,7 @@
   <div class="main-container">
     <header class="top-bar">
       <div class="left-head">
-        <h1 class="page-title">ประวัติการบันทึกงาน</h1>
+        <h1 class="page-title">บันทึกการเปลี่ยนแปลงข้อมูล</h1>
       </div>
     </header>
 
