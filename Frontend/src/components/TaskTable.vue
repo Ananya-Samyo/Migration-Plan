@@ -90,8 +90,8 @@ const goDetail = (scopeId) => {
   if (!scopeId) return
 
   router.push({
-    name: 'AdminScopeProject',
-    params: { scope_id: scopeId },
+    path: '/admin/scopeproject',
+    query: { scope_id: scopeId },
   })
 }
 

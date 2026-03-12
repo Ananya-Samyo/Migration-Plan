@@ -110,7 +110,7 @@
             </table>
         </div>
 
-        <div class="pagination-controls" v-if="totalPages > 1 && !route.params.scope_id">
+        <div class="pagination-controls" v-if="totalPages > 1 && !route.query.scope_id">
             <button class="btn-page" :disabled="currentPage === 1" @click="changePage(currentPage - 1)">
                 &lt; ย้อนกลับ
             </button>
@@ -141,7 +141,7 @@ const totalPages = ref(1)
     ฟังก์ชันกางแถวอัตโนมัติ
 ================================ */
 const handleAutoExpand = () => {
-    const targetId = route.params.scope_id
+    const targetId = route.query.scope_id
     if (!targetId || scopes.value.length === 0) return
 
     console.log("🔍 กำลังพยายามกางแถว ID:", targetId)
@@ -192,7 +192,7 @@ const fetchScopes = async (page = 1) => {
         if (!token) return router.push('/')
 
         // ถ้ามี scope_id ใน URL ให้ดึงข้อมูลชุดใหญ่มาเลยเพื่อให้หา ID นั้นเจอแน่นอน
-        const targetScopeId = route.params.scope_id
+        const targetScopeId = route.query.scope_id
         const limit = targetScopeId ? 1000 : 10
 
         const res = await fetch(`${API}/api/admin/scopes?page=${page}&limit=${limit}`, {
@@ -222,7 +222,7 @@ const fetchScopes = async (page = 1) => {
     Watcher: ตรวจจับการเปลี่ยนแปลง URL
 ================================ */
 watch(
-    () => route.params.scope_id,
+    () => route.query.scope_id,
     (newId) => {
         // กรณีอยู่ที่หน้าเดิมแต่คลิกเลือก Task ใหม่จาก Sidebar หรือ Dashboard
         if (newId) {
