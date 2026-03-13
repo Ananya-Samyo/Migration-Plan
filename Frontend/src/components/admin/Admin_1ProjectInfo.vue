@@ -4,15 +4,6 @@
       <div class="left-head">
         <h1 class="page-title">ข้อมูลแผนงาน</h1>
       </div>
-      <button class="btn-back-modern" @click="$emit('back')">
-        <div class="icon-circle">
-          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
-            <path fill-rule="evenodd"
-              d="M15 8a.5.5 0 0 0-.5-.5H2.707l3.147-3.146a.5.5 0 1 0-.708-.708l-4 4a.5.5 0 0 0 0 .708l4 4a.5.5 0 0 0 .708-.708L2.707 8.5H14.5A.5.5 0 0 0 15 8z" />
-          </svg>
-        </div>
-        <span class="text">ย้อนกลับ</span>
-      </button>
     </header>
 
     <div class="card">
@@ -147,13 +138,20 @@ onMounted(async () => {
 
   try {
     const res = await fetch(DEPT_API, {
-      headers: { 'Authorization': `Bearer ${token}` }
+      method: 'GET',
+      headers: { 
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}` 
+      }
     });
+    
     if (res.ok) {
       departments.value = await res.json();
+    } else {
+      console.warn("ไม่สามารถดึงข้อมูลแผนกได้ Status:", res.status);
     }
   } catch (err) {
-    console.error(err);
+    console.error("เกิดข้อผิดพลาดในการดึงข้อมูลแผนก:", err);
   }
 });
 
@@ -240,11 +238,16 @@ const handleNext = async () => {
 
 // --- ดึงข้อมูลจาก Email ---
 const checkUserEmail = async (personObj) => {
-  if (!personObj.email) return;
+  // ดักจับ: ถ้าช่องว่าง หรือ พิมพ์ยังไม่เป็นอีเมล (ไม่มี @) จะไม่ส่ง API
+  if (!personObj.email || !personObj.email.includes('@')) return;
 
   try {
     const res = await fetch(`${BASE_API}/api/users/check-email?email=${personObj.email}`, {
-      headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+      method: 'GET',
+      headers: { 
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${localStorage.getItem('token')}` 
+      }
     });
 
     if (res.ok) {

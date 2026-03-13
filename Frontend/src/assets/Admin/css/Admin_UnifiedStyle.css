@@ -880,3 +880,65 @@ input:focus, select:focus, textarea:focus {
   background-color: #ef4444;
   color: white;
 }
+
+/* ==========================================================================
+   Accordion สำหรับ แผนงาน
+   ========================================================================== */
+.project-accordion {
+  margin-bottom: 20px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  background: white;
+  overflow: hidden;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.02);
+}
+
+.accordion-header {
+  padding: 18px 25px;
+  background-color: #f8fafc;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+  border-left: 6px solid #d1d5db; /* สีเทาตอนยังไม่กด */
+}
+
+.accordion-header:hover {
+  background-color: #f3f0ff;
+}
+
+.accordion-header.is-active {
+  background-color: #f5f3ff;
+  border-left-color: var(--secondary-purple); /* สีม่วงตอนกดกางออก */
+  border-bottom: 1px solid var(--border-color);
+}
+
+.accordion-header .project-title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-main);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.accordion-header .badge {
+  background: var(--primary-purple);
+  color: white;
+  padding: 4px 10px;
+  border-radius: 50px;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.accordion-header .toggle-icon {
+  font-size: 14px;
+  color: var(--text-muted);
+}
+
+.accordion-content {
+  padding: 25px;
+  background-color: white;
+}

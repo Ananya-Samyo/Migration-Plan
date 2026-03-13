@@ -11,66 +11,89 @@
     </header>
 
     <div class="card">
-      <div class="project-card">
-        <div class="project-header">
-          <h3>ℹ️ ข้อมูลพื้นฐาน</h3>
+      <p class="text-muted mb-4" v-if="form.projects.length > 0">
+        กรุณาคลิกที่แผนงานเพื่อกางออกและกรอกรายละเอียดความก้าวหน้า</p>
+      <p class="text-danger mb-4" v-else>⚠️ ไม่พบข้อมูลแผนงานจากขั้นตอนที่ 1 กรุณากดย้อนกลับไปเพิ่มแผนงาน</p>
+
+      <div v-for="(project, pIndex) in form.projects" :key="pIndex" class="project-card mb-4"
+        style="border: 1px solid #eee; border-radius: 8px; margin-bottom: 20px;">
+
+        <div class="project-header" @click="toggleAccordion(pIndex)"
+          style="cursor: pointer; display: flex; justify-content: space-between; align-items: center; padding: 15px; background-color: #fcfcff; border-radius: 8px;">
+          <h3 style="margin: 0; color: var(--primary-purple); font-size: 1.1rem;">
+            {{ pIndex + 1 }}. {{ project.projectName || 'แผนงานที่ไม่ได้ระบุชื่อ' }}
+          </h3>
+          <span>{{ expandedIndex === pIndex ? '▼ ซ่อน' : '▶ กางออก' }}</span>
         </div>
-        <div class="grid-2">
-          <div class="field">
-            <label>วันที่เริ่มต้น</label>
-            <input type="date" v-model="form.startDate" />
+
+        <div v-show="expandedIndex === pIndex" class="project-body mt-3" style="padding: 15px;">
+          <div class="grid-2">
+            <div class="field">
+              <label>วันที่เริ่มต้น</label>
+              <input type="date" v-model="project.startDate" />
+            </div>
+            <div class="field">
+              <label>วันที่สิ้นสุด</label>
+              <input type="date" v-model="project.endDate" />
+            </div>
           </div>
-          <div class="field">
-            <label>วันที่สิ้นสุด</label>
-            <input type="date" v-model="form.endDate" />
+
+          <div class="project-header mt-4" style="display: flex; justify-content: space-between; align-items: center;">
+            <h3 style="margin-bottom: 0;">📈 รายการวิเคราะห์ช่องว่าง (GAP)</h3>
+            <span :class="['status-badge', getTotalWeight(pIndex) > 100 ? 'text-red' : 'text-green']"
+              style="font-size: 0.9rem;">
+              น้ำหนักรวม: {{ getTotalWeight(pIndex) }}%
+            </span>
           </div>
-        </div>
-      </div>
 
-      <div class="project-card">
-        <div class="project-header">
-          <h3>📈 รายการวิเคราะห์ช่องว่าง (GAP)</h3>
-          <span :class="['status-badge', totalWeight > 100 ? 'text-red' : 'text-green']">
-            น้ำหนักรวม: {{ totalWeight }}%
-          </span>
-        </div>
+          <div v-for="(gap, gIndex) in project.gaps" :key="gIndex" class="gap-row"
+            style="display: flex; gap: 10px; margin-bottom: 10px;">
+            <input v-model="gap.detail" placeholder="รายละเอียด GAP" style="flex: 2;" />
+            <input type="number" v-model.number="gap.weight" :disabled="isViewer" placeholder="%" style="flex: 0.5;" />
+            <select v-model="gap.status" style="flex: 1;">
+              <option value="processing_gap">กำลังดำเนินการ</option>
+              <option value="complete_gap">เสร็จสิ้น</option>
+              <option value="acceptable_gap">ยอมรับได้</option>
+            </select>
+            <button v-if="!isViewer" class="remove-member" @click="removeGap(pIndex, gIndex)"
+              style="color: red; background: none; border: none; font-weight: bold;">✕</button>
+          </div>
+          <button v-if="!isViewer" class="add-member" @click="addGap(pIndex)"
+            style="color: var(--primary-purple); background: none; border: none; cursor: pointer;">+ เพิ่มรายการ
+            GAP</button>
 
-        <div v-for="(gap, index) in form.gaps" :key="index" class="gap-row">
-          <input v-model="gap.detail" placeholder="รายละเอียด GAP" />
-          <input type="number" v-model.number="gap.weight" :disabled="isViewer" placeholder="%" />
-          <select v-model="gap.status">
-            <option value="processing_gap">กำลังดำเนินการ</option>
-            <option value="complete_gap">เสร็จสิ้น</option>
-            <option value="acceptable_gap">ยอมรับได้</option>
-          </select>
-          <button v-if="!isViewer" class="remove-member" @click="removeGap(index)">✕</button>
-        </div>
-        <button v-if="!isViewer" class="add-member" @click="addGap">+ เพิ่มรายการ GAP</button>
-      </div>
+          <div class="project-header mt-4">
+            <h3 style="margin-bottom: 10px;">📝 ปัญหาและแนวทางแก้ไข</h3>
+          </div>
 
-      <div class="project-card">
-        <div class="project-header">
-          <h3>📝 ปัญหาและแนวทางแก้ไข</h3>
-        </div>
+          <div v-for="(issue, iIndex) in project.issues" :key="iIndex" class="issue-row"
+            style="display: flex; gap: 10px; margin-bottom: 10px;">
+            <textarea v-model="issue.problem" placeholder="ปัญหา / อุปสรรค" rows="2" style="flex: 1;"></textarea>
+            <textarea v-model="issue.solution" placeholder="แนวทางแก้ไข" rows="2" style="flex: 1;"></textarea>
+            <button class="remove-member" @click="removeIssue(pIndex, iIndex)"
+              style="color: red; background: none; border: none; font-weight: bold; align-self: flex-start;">✕</button>
+          </div>
+          <button class="add-member" @click="addIssue(pIndex)"
+            style="color: var(--primary-purple); background: none; border: none; cursor: pointer;">+
+            เพิ่มรายการปัญหา</button>
 
-        <div v-for="(item, index) in form.issues" :key="index" class="issue-row">
-          <textarea v-model="item.problem" placeholder="ปัญหา / อุปสรรค" rows="2"></textarea>
-          <textarea v-model="item.solution" placeholder="แนวทางแก้ไข" rows="2"></textarea>
-          <button class="remove-member" @click="removeIssue(index)">✕</button>
-        </div>
-        <button class="add-member" @click="addIssue">+ เพิ่มรายการปัญหา</button>
-      </div>
+          <div class="field mt-4">
+            <label style="margin-bottom: 10px; display: block; font-weight: bold;">ความคืบหน้าภาพรวม (%)</label>
 
-      <div class="project-card">
-        <div class="field">
-          <label>ความคืบหน้าภาพรวม ({{ form.progress }}%)</label>
-          <input type="range" v-model="form.progress" min="0" max="100"
-            style="width: 100%; accent-color: var(--primary-purple);" />
+            <div style="display: flex; align-items: center; gap: 15px;">
+              <input type="number" v-model.number="project.progress" min="0" max="100" :disabled="isViewer"
+                style="width: 90px; padding: 8px; border: 1px solid #ccc; border-radius: 6px; text-align: center; font-size: 1rem;" />
+
+              <input type="range" v-model.number="project.progress" min="0" max="100" :disabled="isViewer"
+                style="flex: 1; accent-color: var(--primary-purple); cursor: pointer; padding: 0; margin: 0; box-sizing: border-box;" />
+            </div>
+          </div>
         </div>
       </div>
 
       <div style="display: flex; gap: 15px; margin-top: 20px;">
-        <button :class="isViewer ? 'btn-next-viewer' : 'btn-primary'" style="flex: 1;"
+        <button :class="isViewer ? 'btn-next-viewer' : 'btn-primary'"
+          style="flex: 1; padding: 12px; border-radius: 8px; color: white; border: none; cursor: pointer; background-color: var(--primary-purple);"
           @click="isViewer ? $emit('next') : handleNext()">
           <span v-if="isViewer">ดูขั้นตอนประเมินผลต่อไป ➔</span>
           <span v-else>ยืนยันและไปขั้นตอนประเมินผล ➔</span>
@@ -81,7 +104,7 @@
 </template>
 
 <script setup>
-import { ref, computed, watch } from 'vue'
+import { ref, watch, onMounted } from 'vue'
 import Swal from 'sweetalert2'
 import '../../assets/Admin/css/Admin_UnifiedStyle.css'
 import '../../assets/Admin/css/Admin_Progress.css'
@@ -89,39 +112,72 @@ import '../../assets/Admin/css/Admin_Progress.css'
 const rawRole = localStorage.getItem('role') || '';
 const isViewer = rawRole.toLowerCase() === 'viewer';
 
-const props = defineProps(['modelValue', 'projectId'])
+const props = defineProps(['modelValue', 'masterData', 'projectId'])
 const emit = defineEmits(['next', 'back', 'update:modelValue'])
 
-// รับค่าจาก Master และตั้งโครงสร้างให้เหมือน Step 1
-const form = ref(props.modelValue && props.modelValue.gaps ? props.modelValue : {
-  startDate: '',
-  endDate: '',
-  progress: 0,
-  gaps: [{ detail: '', weight: 0, status: 'processing_gap' }],
-  issues: [{ problem: '', solution: '' }]
+const form = ref({ projects: [] })
+const expandedIndex = ref(0)
+
+const toggleAccordion = (index) => {
+  expandedIndex.value = expandedIndex.value === index ? -1 : index;
+}
+
+onMounted(() => {
+  // 1. ดึงแผนงานจากหน้า 1 (นี่คือจุดที่แก้ให้ไปดึงจาก step1)
+  const step1Projects = props.masterData?.step1?.projects || [];
+
+  // 2. ดึงข้อมูลหน้า 2 ที่อาจจะเคยกรอกไว้แล้ว (เพื่อป้องกันข้อมูลหายเวลากดย้อนกลับ)
+  const step2Projects = props.modelValue?.projects || [];
+
+  if (step2Projects.length > 0) {
+    // ถ้าเคยกรอกหน้า 2 ไว้แล้ว ให้ใช้ข้อมูลหน้า 2
+    form.value.projects = JSON.parse(JSON.stringify(step2Projects));
+  } else if (step1Projects.length > 0) {
+    // ถ้าเพิ่งเข้ามาครั้งแรก ให้เอาข้อมูลจากหน้า 1 มาตั้งต้น
+    form.value.projects = JSON.parse(JSON.stringify(step1Projects));
+  }
+
+  // เตรียมโครงสร้างฟอร์มให้พร้อมใช้งาน
+  form.value.projects.forEach(project => {
+    if (!project.startDate) project.startDate = '';
+    if (!project.endDate) project.endDate = '';
+    if (!project.progress) project.progress = 0;
+    if (!project.gaps || project.gaps.length === 0) {
+      project.gaps = [{ detail: '', weight: 0, status: 'processing_gap' }];
+    }
+    if (!project.issues || project.issues.length === 0) {
+      project.issues = [{ problem: '', solution: '' }];
+    }
+  });
 })
 
-// คอยส่งข้อมูลกลับไปที่ MasterStepper ตลอดเวลา
+// คอยส่งข้อมูลกลับไปเก็บใน masterData.step2 ของหน้าหลัก
 watch(form, (newVal) => {
-  emit('update:modelValue', newVal)
+  emit('update:modelValue', { projects: newVal.projects })
 }, { deep: true })
 
-const totalWeight = computed(() => {
-  return form.value.gaps.reduce((sum, g) => sum + Number(g.weight || 0), 0)
-})
+const getTotalWeight = (pIndex) => {
+  if (!form.value.projects[pIndex] || !form.value.projects[pIndex].gaps) return 0;
+  return form.value.projects[pIndex].gaps.reduce((sum, g) => sum + Number(g.weight || 0), 0)
+}
 
-const addGap = () => form.value.gaps.push({ detail: '', weight: 0, status: 'processing_gap' })
-const removeGap = (index) => form.value.gaps.splice(index, 1)
+const addGap = (pIndex) => form.value.projects[pIndex].gaps.push({ detail: '', weight: 0, status: 'processing_gap' })
+const removeGap = (pIndex, gIndex) => form.value.projects[pIndex].gaps.splice(gIndex, 1)
 
-const addIssue = () => form.value.issues.push({ problem: '', solution: '' })
-const removeIssue = (index) => form.value.issues.splice(index, 1)
+const addIssue = (pIndex) => form.value.projects[pIndex].issues.push({ problem: '', solution: '' })
+const removeIssue = (pIndex, iIndex) => form.value.projects[pIndex].issues.splice(iIndex, 1)
 
 const handleNext = async () => {
-  // ตรวจสอบความถูกต้องเบื้องต้น (เช่น น้ำหนัก GAP)
-  const totalW = form.value.gaps.reduce((sum, g) => sum + Number(g.weight || 0), 0);
-  if (totalW > 100) {
-    return Swal.fire('คำเตือน', 'น้ำหนักรวม GAP เกิน 100%', 'warning');
-  }
+  let hasError = false;
+  form.value.projects.forEach((project, index) => {
+    const totalW = project.gaps.reduce((sum, g) => sum + Number(g.weight || 0), 0);
+    if (totalW > 100) {
+      Swal.fire('คำเตือน', `น้ำหนักรวม GAP ของ แผนงานที่ ${index + 1} เกิน 100%`, 'warning');
+      hasError = true;
+    }
+  });
+
+  if (hasError) return;
 
   Swal.fire({ title: 'กำลังบันทึกความก้าวหน้า...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
 
@@ -134,20 +190,17 @@ const handleNext = async () => {
       },
       body: JSON.stringify({
         projectId: props.projectId,
-        startDate: form.value.startDate,
-        endDate: form.value.endDate,
-        progress: form.value.progress,
-        gaps: form.value.gaps,
-        issues: form.value.issues
+        projects: form.value.projects
       })
     });
 
-    if (!res.ok) throw new Error('บันทึกข้อมูล Step 2 ไม่สำเร็จ');
+    if (!res.ok) throw new Error('เกิดข้อผิดพลาดในการบันทึกข้อมูล');
 
     Swal.close();
     emit('next');
-  } catch (err) {
-    Swal.fire('เกิดข้อผิดพลาด', err.message, 'error');
+
+  } catch (error) {
+    Swal.fire('ข้อผิดพลาด', error.message, 'error');
   }
 }
 </script>
