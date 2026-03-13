@@ -27,14 +27,45 @@
         </div>
 
         <div v-show="expandedIndex === pIndex" class="project-body mt-3" style="padding: 15px;">
-          <div class="grid-2">
+        <div class="grid-2">
             <div class="field">
               <label>วันที่เริ่มต้น</label>
-              <input type="date" v-model="project.startDate" />
+              <div style="position: relative; width: 100%;">
+                <input 
+                  type="text" 
+                  :value="toThaiDate(project.startDate)" 
+                  placeholder="เลือกวันที่เริ่มต้น" 
+                  readonly 
+                  style="width: 100%; cursor: pointer; background-color: #fff;"
+                />
+                <input 
+                  type="date" 
+                  v-model="project.startDate" 
+                  :disabled="isViewer"
+                  @click="$event.target.showPicker && $event.target.showPicker()"
+                  style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; z-index: 10;" 
+                />
+              </div>
             </div>
+
             <div class="field">
               <label>วันที่สิ้นสุด</label>
-              <input type="date" v-model="project.endDate" />
+              <div style="position: relative; width: 100%;">
+                <input 
+                  type="text" 
+                  :value="toThaiDate(project.endDate)" 
+                  placeholder="เลือกวันที่สิ้นสุด" 
+                  readonly 
+                  style="width: 100%; cursor: pointer; background-color: #fff;"
+                />
+                <input 
+                  type="date" 
+                  v-model="project.endDate" 
+                  :disabled="isViewer"
+                  @click="$event.target.showPicker && $event.target.showPicker()"
+                  style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; z-index: 10;" 
+                />
+              </div>
             </div>
           </div>
 
@@ -61,33 +92,6 @@
           <button v-if="!isViewer" class="add-member" @click="addGap(pIndex)"
             style="color: var(--primary-purple); background: none; border: none; cursor: pointer;">+ เพิ่มรายการ
             GAP</button>
-
-          <div class="project-header mt-4">
-            <h3 style="margin-bottom: 10px;">📝 ปัญหาและแนวทางแก้ไข</h3>
-          </div>
-
-          <div v-for="(issue, iIndex) in project.issues" :key="iIndex" class="issue-row"
-            style="display: flex; gap: 10px; margin-bottom: 10px;">
-            <textarea v-model="issue.problem" placeholder="ปัญหา / อุปสรรค" rows="2" style="flex: 1;"></textarea>
-            <textarea v-model="issue.solution" placeholder="แนวทางแก้ไข" rows="2" style="flex: 1;"></textarea>
-            <button class="remove-member" @click="removeIssue(pIndex, iIndex)"
-              style="color: red; background: none; border: none; font-weight: bold; align-self: flex-start;">✕</button>
-          </div>
-          <button class="add-member" @click="addIssue(pIndex)"
-            style="color: var(--primary-purple); background: none; border: none; cursor: pointer;">+
-            เพิ่มรายการปัญหา</button>
-
-          <div class="field mt-4">
-            <label style="margin-bottom: 10px; display: block; font-weight: bold;">ความคืบหน้าภาพรวม (%)</label>
-
-            <div style="display: flex; align-items: center; gap: 15px;">
-              <input type="number" v-model.number="project.progress" min="0" max="100" :disabled="isViewer"
-                style="width: 90px; padding: 8px; border: 1px solid #ccc; border-radius: 6px; text-align: center; font-size: 1rem;" />
-
-              <input type="range" v-model.number="project.progress" min="0" max="100" :disabled="isViewer"
-                style="flex: 1; accent-color: var(--primary-purple); cursor: pointer; padding: 0; margin: 0; box-sizing: border-box;" />
-            </div>
-          </div>
         </div>
       </div>
 
@@ -114,6 +118,14 @@ const isViewer = rawRole.toLowerCase() === 'viewer';
 
 const props = defineProps(['modelValue', 'masterData', 'projectId'])
 const emit = defineEmits(['next', 'back', 'update:modelValue'])
+
+// ฟังก์ชันแปลงวันที่ YYYY-MM-DD เป็น วว/ดด/ปปปป (พ.ศ.)
+const toThaiDate = (dateString) => {
+  if (!dateString) return '';
+  const [year, month, day] = dateString.split('-');
+  const thaiYear = parseInt(year) + 543;
+  return `${day}/${month}/${thaiYear}`;
+}
 
 const form = ref({ projects: [] })
 const expandedIndex = ref(0)
@@ -166,6 +178,7 @@ const removeGap = (pIndex, gIndex) => form.value.projects[pIndex].gaps.splice(gI
 
 const addIssue = (pIndex) => form.value.projects[pIndex].issues.push({ problem: '', solution: '' })
 const removeIssue = (pIndex, iIndex) => form.value.projects[pIndex].issues.splice(iIndex, 1)
+
 
 const handleNext = async () => {
   let hasError = false;
