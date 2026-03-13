@@ -25,8 +25,8 @@
             <th>ชื่อ</th>
             <th>กอง</th>
             <th>อีเมล</th>
-            <th>เบอร์โทร</th>
-            <th>สิทธิ์</th>
+            <th>เบอร์โทรศัพท์</th>
+            <th>สิทธิ์การใช้งาน</th>
             <th>จัดการ</th>
           </tr>
         </thead>
@@ -36,8 +36,8 @@
             <td>{{ admin.name }}</td>
             <td>{{ admin.department || '-' }}</td>
             <td>{{ admin.email }}</td>
-            <td>{{ admin.phone_number || '-' }}</td>
-            <td>
+            <td style="text-align: center;">{{ admin.phone_number || '-' }}</td>
+            <td style="text-align: center;">
               <span :class="['role-badge', admin.role]">
                 {{ admin.role === 'admin' ? 'ผู้ดูแลระบบ' : 'ผู้เข้าชม (Viewer)' }}
               </span>

@@ -179,11 +179,11 @@ const removeGap = (pIndex, gIndex) => form.value.projects[pIndex].gaps.splice(gI
 const addIssue = (pIndex) => form.value.projects[pIndex].issues.push({ problem: '', solution: '' })
 const removeIssue = (pIndex, iIndex) => form.value.projects[pIndex].issues.splice(iIndex, 1)
 
-
+// --- หน้า 2: บันทึกความก้าวหน้าเงียบๆ แล้วไปหน้า 3 ---
 const handleNext = async () => {
   let hasError = false;
   form.value.projects.forEach((project, index) => {
-    const totalW = project.gaps.reduce((sum, g) => sum + Number(g.weight || 0), 0);
+    const totalW = project.gaps?.reduce((sum, g) => sum + Number(g.weight || 0), 0) || 0;
     if (totalW > 100) {
       Swal.fire('คำเตือน', `น้ำหนักรวม GAP ของ แผนงานที่ ${index + 1} เกิน 100%`, 'warning');
       hasError = true;
@@ -192,26 +192,26 @@ const handleNext = async () => {
 
   if (hasError) return;
 
-  Swal.fire({ title: 'กำลังบันทึกความก้าวหน้า...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
-
   try {
+    // โชว์ Loading
+    Swal.fire({ title: 'กำลังบันทึกข้อมูลส่วนที่ 2...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+
     const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/admin/update-progress`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${localStorage.getItem('token')}`
       },
-      body: JSON.stringify({
-        projectId: props.projectId,
-        projects: form.value.projects
+      body: JSON.stringify({ 
+        projectId: props.projectId, 
+        projects: form.value.projects 
       })
     });
 
     if (!res.ok) throw new Error('เกิดข้อผิดพลาดในการบันทึกข้อมูล');
 
-    Swal.close();
-    emit('next');
-
+    Swal.close(); // ปิด Loading
+    emit('next'); // เปลี่ยนไปหน้า 3
   } catch (error) {
     Swal.fire('ข้อผิดพลาด', error.message, 'error');
   }

@@ -93,13 +93,8 @@ import Swal from 'sweetalert2'
 import '../../assets/Admin/css/Admin_Evaluation.css'
 import '../../assets/Admin/css/Admin_UnifiedStyle.css'
 
-const props = defineProps({
-  modelValue: Object,
-  masterData: {
-    type: Object,
-    default: () => ({})
-  }
-})
+// ดึง props และประกาศ emit ไว้บนสุด (สำคัญมาก)
+const props = defineProps(['modelValue', 'masterData', 'projectId'])
 const emit = defineEmits(['back', 'complete', 'update:modelValue'])
 
 const evaluation = ref(props.modelValue && props.modelValue.items ? props.modelValue : {
@@ -158,28 +153,21 @@ const swalConfig = {
   cancelButtonText: 'ยกเลิก'
 }
 
+// --- ฟังก์ชันบันทึกข้อมูลหลัก (ทำหน้าที่รวบรวมข้อมูลทั้งหมดส่ง Database) ---
 const saveEvaluation = async () => {
   const s1 = props.masterData?.step1 || {};
   const s2 = props.masterData?.step2 || {};
   const s3 = evaluation.value;
 
-  const pId = props.masterData?.projectId;
-
-  console.log("เช็คค่า ID ก่อนส่ง:", pId);
-
   // 1. ตรวจสอบข้อมูลหาย
   let missingFields = [];
   if (!s1.scopeName) missingFields.push("ชื่อขอบเขตงาน (Step 1)");
-  if (!pId) missingFields.push("รหัสอ้างอิงโครงการ (Project ID)");
-
-  console.log("เช็คค่า ID ก่อนส่ง:", pId);
 
   // 2. ถ้ามีข้อมูลหาย และยังไม่เคยบันทึกสำเร็จมาก่อน
   if (missingFields.length > 0 && !s3.isAlreadySaved) {
     const checkData = await Swal.fire({
       ...swalConfig,
       title: 'ข้อมูลไม่สมบูรณ์',
-      // 🚩 แสดงรายการที่หายไปให้ User เห็นชัดๆ
       html: `
         <div style="text-align: left;">
           <p>ระบบตรวจพบว่าข้อมูลต่อไปนี้หายไป:</p>
@@ -201,19 +189,19 @@ const saveEvaluation = async () => {
 
   const isEditMode = s3.isAlreadySaved;
 
-// 2. Popup สรุปข้อมูล (Summary Preview)
+  // 2. Popup สรุปข้อมูล (Summary Preview)
   const getStatusLabel = (status) => {
     if (status === 'complete_gap') return 'เสร็จสิ้น';
     if (status === 'acceptable_gap') return 'ยอมรับได้';
     return 'กำลังดำเนินการ';
   };
 
-  const gapsHtml = (s2.gaps && s2.gaps.length > 0) 
-    ? s2.gaps.map(g => `<li style="margin-bottom: 4px;">${g.detail || '-'} (น้ำหนัก: ${g.weight || 0}%, สถานะ: ${getStatusLabel(g.status)})</li>`).join('')
+  const gapsHtml = (s2.projects?.[0]?.gaps && s2.projects[0].gaps.length > 0) 
+    ? s2.projects[0].gaps.map(g => `<li style="margin-bottom: 4px;">${g.detail || '-'} (น้ำหนัก: ${g.weight || 0}%, สถานะ: ${getStatusLabel(g.status)})</li>`).join('')
     : '<li>- ไม่มีข้อมูลวิเคราะห์ช่องว่าง -</li>';
 
-  const issuesHtml = (s2.issues && s2.issues.length > 0)
-    ? s2.issues.map(iss => `<li style="margin-bottom: 8px;"><b>ปัญหา:</b> ${iss.problem || '-'}<br/><b>แนวทางแก้ไข:</b> ${iss.solution || '-'}</li>`).join('')
+  const issuesHtml = (s2.projects?.[0]?.issues && s2.projects[0].issues.length > 0)
+    ? s2.projects[0].issues.map(iss => `<li style="margin-bottom: 8px;"><b>ปัญหา:</b> ${iss.problem || '-'}<br/><b>แนวทางแก้ไข:</b> ${iss.solution || '-'}</li>`).join('')
     : '<li>- ไม่มีข้อมูลปัญหาและอุปสรรค -</li>';
 
   const { isConfirmed } = await Swal.fire({
@@ -248,11 +236,11 @@ const saveEvaluation = async () => {
             <table style="width: 100%; border-collapse: collapse; margin-bottom: 12px;">
               <tr>
                 <td style="width: 160px; padding: 4px 0;"><b>ระยะเวลาดำเนินการ:</b></td>
-                <td>${s2.startDate || '-'} ถึง ${s2.endDate || '-'}</td>
+                <td>${s2.projects?.[0]?.startDate || '-'} ถึง ${s2.projects?.[0]?.endDate || '-'}</td>
               </tr>
               <tr>
                 <td style="padding: 4px 0;"><b>ความคืบหน้าภาพรวม:</b></td>
-                <td><b>${s2.progress || 0}%</b></td>
+                <td><b>${s2.projects?.[0]?.progress || 0}%</b></td>
               </tr>
             </table>
             
@@ -320,19 +308,12 @@ const saveEvaluation = async () => {
   });
 
   try {
-    // ✅ 1. สร้าง FormData เพียงตัวเดียวไว้ข้างใน try
     const fd = new FormData();
 
-    // ✅ 2. เตรียมข้อมูล Step 1 พร้อม ID ให้ชัวร์
-    const step1WithId = {
-      ...props.masterData.step1,
-      projectId: props.masterData.projectId 
-    };
-
-    // ✅ 3. Append ข้อมูลทั้งหมดลงใน fd ตัวนี้
-    fd.append('step1', JSON.stringify(step1WithId));
-    fd.append('step2', JSON.stringify(props.masterData.step2 || {}));
-    fd.append('step3', JSON.stringify(evaluation.value));
+    // Append ข้อมูลทั้งหมดลงใน fd 
+    fd.append('step1', JSON.stringify(s1));
+    fd.append('step2', JSON.stringify(s2));
+    fd.append('step3', JSON.stringify(s3));
     fd.append('edit_reason', finalData.reason || '');
     fd.append('mode', isEditMode ? 'edit' : 'first_save');
 
@@ -341,7 +322,7 @@ const saveEvaluation = async () => {
       Array.from(finalData.files).forEach(f => fd.append('attachments', f));
     }
 
-    // ✅ 4. ส่งข้อมูลไปยัง API
+    // ✅ ส่งข้อมูลไปยัง API
     const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/admin/complete-workflow`, {
       method: 'POST',
       headers: { 
@@ -355,11 +336,11 @@ const saveEvaluation = async () => {
       throw new Error(errorData.message || 'เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์');
     }
 
-    // ✅ 5. เมื่อบันทึกสำเร็จ
+    // เมื่อบันทึกสำเร็จ
     evaluation.value.isAlreadySaved = true;
     await Swal.fire({
       title: 'บันทึกสำเร็จ!',
-      text: 'ระบบได้บันทึกข้อมูลและส่งอีเมลแจ้งเตือนเรียบร้อยแล้ว',
+      text: 'ระบบได้บันทึกข้อมูลโครงการครบถ้วนเรียบร้อยแล้ว',
       icon: 'success',
       confirmButtonColor: '#4b2e83',
       confirmButtonText: 'ตกลง'

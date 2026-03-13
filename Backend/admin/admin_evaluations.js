@@ -75,211 +75,118 @@ router.get('/evaluations/:projectId', verifyToken, isAdmin, async (req, res) => 
   }
 });
 
-/* ======================================================
-    ADMIN EVALUATIONS ROUTES
-====================================================== */
-
-// [GET] ดึงข้อมูลเดิมมาแสดงใน Step 3
-router.get('/evaluations/:projectId', verifyToken, isAdmin, async (req, res) => {
-  const { projectId } = req.params;
-  try {
-    const [rows] = await db.query(`
-      SELECT 
-        pp.project_plan_id, s.scope_name, u.user_name AS owner,
-        pe.objective, pe.before_plan, pe.expected_outcome, 
-        pe.actual_outcome, pe.recommendation, pe.project_status, 
-        pe.evaluation_status, p.problem_detail AS problem
-      FROM project_plans pp
-      JOIN scopes s ON pp.scope_id = s.scope_id
-      LEFT JOIN users u ON s.coordinator_id = u.user_id
-      LEFT JOIN plan_evaluations pe ON pp.project_plan_id = pe.project_plan_id
-      LEFT JOIN problems p ON pp.project_plan_id = p.project_plan_id
-      WHERE pp.project_plan_id = ? LIMIT 1
-    `, [projectId]);
-
-    if (rows.length === 0) return res.status(404).json({ message: 'ไม่พบข้อมูล' });
-    res.json(rows[0]);
-  } catch (err) {
-    res.status(500).json({ message: 'Server error' });
-  }
-});
-
-// [POST] บันทึกและจบกระบวนการ (แก้ไขจาก 404 เป็นการทำงานจริง)
+// [POST] บันทึกผลการประเมิน อัปโหลดไฟล์ และส่งอีเมลจบกระบวนการ
 router.post('/complete-workflow', verifyToken, isAdmin, upload.array('attachments'), async (req, res) => {
-  const conn = await db.getConnection();
+  let connection;
   try {
-    await conn.beginTransaction();
+    connection = await db.getConnection();
+    await connection.beginTransaction();
 
-    // 1. ตรวจสอบข้อมูลที่ส่งมาจาก Frontend
-    if (!req.body.step1 || !req.body.step3) {
-      throw new Error('ข้อมูลจากหน้าบ้านส่งมาไม่ครบถ้วน');
-    }
-
+    // 1. แกะกล่องข้อมูลที่ส่งมาจาก Frontend
     const step1 = JSON.parse(req.body.step1 || '{}');
-    const step2 = JSON.parse(req.body.step2 || '{}'); 
+    const step2 = JSON.parse(req.body.step2 || '{}');
     const step3 = JSON.parse(req.body.step3 || '{}');
+    
+    // ดึง project_plan_id ที่บันทึกไว้ตั้งแต่หน้า 1 (ต้องมีส่งมาใน step1 หรือจาก Vue)
+    // สมมติว่าใน Vue มีการส่ง projectId มาใน step1.id หรือคุณอาจส่งแยกมาใน req.body.projectId ก็ได้
+    const projectId = step1.id || req.body.projectId; 
+    
+    if (!projectId) throw new Error("ไม่พบรหัสโครงการ (Project ID) กรุณากลับไปเริ่มใหม่");
 
-    const { edit_reason, mode } = req.body;
-
-    // ดึง Project ID (เช็คทุกช่องทางเพื่อให้มั่นใจว่าได้เลข 31 หรือ ID ที่ถูกต้อง)
-    const projectId = step1.projectId || step1.id || step3.project_plan_id || req.body.projectId;
-
-    if (!projectId || projectId === 'undefined') {
-      throw new Error('ไม่พบรหัสแผนงาน (Project ID) กรุณาตรวจสอบการส่งค่าจากหน้าบ้าน');
-    }
-
-    // 2. ดึงข้อมูลพื้นฐานโครงการ (เพื่อหา scope_id และอีเมลผู้รับผิดชอบ)
-    const [projectData] = await conn.query(`
-      SELECT s.scope_id, s.scope_name, u.email, u.user_name 
-      FROM project_plans pp
-      JOIN scopes s ON pp.scope_id = s.scope_id
-      LEFT JOIN users u ON s.coordinator_id = u.user_id
-      WHERE pp.project_plan_id = ?
-    `, [projectId]);
-
-    if (projectData.length === 0) throw new Error('ไม่พบข้อมูลแผนงานหลักในระบบ');
-    const { scope_id, email, user_name, scope_name } = projectData[0];
-
-    // 3. เตรียมข้อมูลประเมิน (แปลง Array เป็น JSON String)
-    const objectiveJson = JSON.stringify(step3.items?.map(i => i.objective) || []);
-    const beforePlanJson = JSON.stringify(step3.items?.map(i => i.beforeImprove) || []);
-    const expectedOutcomeJson = JSON.stringify(step3.items?.map(i => i.expectedAfter) || []);
-
-    // 4. บันทึกผลการประเมินลงตาราง plan_evaluations
-    // ✅ แก้ไขชื่อคอลัมน์เป็น 'recommendation' ตาม phpMyAdmin ของคุณ
-    // ✅ ตัด 'updated_at' ออก เพราะตารางนี้ของคุณไม่มีคอลัมน์นี้
-    await conn.query(`
+    // 2. บันทึกข้อมูลลงตาราง plan_evaluations
+    const [evalRes] = await connection.query(`
       INSERT INTO plan_evaluations 
-        (project_plan_id, scope_id, objective, before_plan, expected_outcome, actual_outcome, recommendation, project_status, evaluation_status)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-      ON DUPLICATE KEY UPDATE 
-        objective = VALUES(objective),
-        before_plan = VALUES(before_plan),
-        expected_outcome = VALUES(expected_outcome),
-        actual_outcome = VALUES(actual_outcome),
-        recommendation = VALUES(recommendation),
-        project_status = VALUES(project_status),
-        evaluation_status = VALUES(evaluation_status)
+      (project_plan_id, scope_id, objective, before_plan, expected_outcome, actual_outcome, recommendation, project_status, evaluation_status)
+      VALUES (?, (SELECT scope_id FROM project_plans WHERE project_plan_id = ?), ?, ?, ?, ?, ?, ?, ?)
     `, [
-      projectId,
-      scope_id,
-      objectiveJson,
-      beforePlanJson,
-      expectedOutcomeJson,
-      step3.actualResult,
-      step3.suggestion, // ข้อมูล suggestion จากหน้าบ้านจะลงที่ช่อง recommendation
-      step3.projectStatus,
-      step3.evaluation
+      projectId, projectId,
+      step3.objective, step3.beforePlan, step3.expectedResult, step3.actualResult,
+      step3.suggestion, step3.projectStatus, step3.evaluation
     ]);
 
-    // 5. บันทึกปัญหา (Problems)
+    // 3. บันทึกปัญหา (ถ้ามีการกรอกมาในหน้า 3) ลงตาราง problems
     if (step3.problem) {
-      await conn.query(`
-        INSERT INTO problems (project_plan_id, problem_detail) 
-        VALUES (?, ?) ON DUPLICATE KEY UPDATE problem_detail = VALUES(problem_detail)
+      await connection.query(`
+        INSERT INTO problems (project_plan_id, problem_detail) VALUES (?, ?)
       `, [projectId, step3.problem]);
     }
 
-    // 6. บันทึกประวัติการแก้ไขและไฟล์แนบ
-    await conn.query(`INSERT INTO edit_reasons (ref_type, ref_id, reason_text) VALUES ('evaluation', ?, ?)`,
-      [projectId, edit_reason || (mode === 'first_save' ? 'บันทึกข้อมูลครั้งแรก' : 'อัปเดตข้อมูล')]
-    );
-
-    // ✅ แก้ไขตาราง attachments: ตัด file_name ออก เพราะใน phpMyAdmin ของคุณไม่มี
+    // 4. จัดการไฟล์แนบ (ถ้ามี) บันทึกลงตาราง attachments
     if (req.files && req.files.length > 0) {
       for (const file of req.files) {
-        await conn.query(
-          `INSERT INTO attachments (ref_type, ref_id, file_path, file_type) VALUES ('evaluation', ?, ?, ?)`,
-          [projectId, file.path, file.mimetype]
-        );
+        await connection.query(`
+          INSERT INTO attachments (ref_type, ref_id, file_path, file_type)
+          VALUES ('evaluation', ?, ?, ?)
+        `, [evalRes.insertId, file.filename, file.mimetype]);
       }
     }
 
-    await conn.commit();
+    // --- 5. จัดเตรียมข้อมูลสำหรับส่งอีเมล ---
+    const userEmail = step1.coordinator?.email || req.user.email; // ส่งหาผู้ประสานงาน หรือคนที่กำลังล็อกอิน
+    const projectName = step1.projects?.[0]?.projectName || 'โครงการใหม่';
+    const statusText = step3.projectStatus === 'finish' ? 'เสร็จสิ้นการดำเนินงาน' : 'อยู่ระหว่างดำเนินการ';
+    const evalText = step3.evaluation === 'pass' ? 'บรรลุเป้าหมาย' : (step3.evaluation === 'fail' ? 'ไม่บรรลุเป้าหมาย' : 'ยังไม่ได้ระบุ');
 
-    // 7. ส่งอีเมลแจ้งเตือน
-    if (email) {
-      // ฟังก์ชันตัวช่วยสำหรับแสดงสถานะในอีเมล
-      const getStatusLabel = (status) => {
-        if (status === 'complete_gap') return 'เสร็จสิ้น';
-        if (status === 'acceptable_gap') return 'ยอมรับได้';
-        return 'กำลังดำเนินการ';
-      };
-
-      // เตรียมรายการ List ในรูปแบบ HTML สำหรับอีเมล
-      const gapsHtmlEmail = (step2.gaps && step2.gaps.length > 0)
-        ? step2.gaps.map(g => `<li style="margin-bottom: 5px;">${g.detail || '-'} (น้ำหนัก: ${g.weight || 0}%, สถานะ: ${getStatusLabel(g.status)})</li>`).join('')
-        : '<li>- ไม่มีข้อมูลวิเคราะห์ช่องว่าง -</li>';
-
-      const issuesHtmlEmail = (step2.issues && step2.issues.length > 0)
-        ? step2.issues.map(iss => `<li style="margin-bottom: 5px;"><b>ปัญหา:</b> ${iss.problem || '-'}<br/><b>แนวทางแก้ไข:</b> ${iss.solution || '-'}</li>`).join('')
-        : '<li>- ไม่มีข้อมูลปัญหาและอุปสรรค -</li>';
-
-      const mailOptions = {
-        from: process.env.MAIL_USER,
-        to: email,
-        subject: `แจ้งสรุปผลการดำเนินงานระบบ Migration Plan: ขอบเขตงาน ${scope_name}`,
-        html: `
-        <div style="font-family: 'Sarabun', Tahoma, sans-serif; color: #333; max-width: 800px; margin: 0 auto; line-height: 1.6;">
-          <h3 style="color: #4b2e83;">เรียน คุณ ${user_name}</h3>
-          <p>ขอเรียนให้ทราบว่า ระบบ Migration Plan ได้ดำเนินการบันทึกข้อมูลและผลการประเมินของขอบเขตงาน <b>"${scope_name}"</b> เป็นที่เรียบร้อยแล้ว โดยมีรายละเอียดสรุปผลการดำเนินงานดังนี้:</p>
+    // สร้าง HTML สำหรับอีเมล
+    const mailOptions = {
+      from: `"Migration Plan System" <${process.env.MAIL_USER}>`,
+      to: userEmail,
+      subject: `[แจ้งเตือน] สรุปผลการดำเนินงาน: ${projectName}`,
+      html: `
+      <div style="font-family: Arial, sans-serif; color: #333; line-height: 1.6; max-width: 800px; margin: auto; padding: 20px; border: 1px solid #ddd; border-radius: 10px;">
+        <h2 style="color: #4f46e5; text-align: center;">สรุปรายงานความก้าวหน้าโครงการ</h2>
+        <hr style="border: none; border-top: 2px solid #e5e7eb; margin: 20px 0;">
+        
+        <table style="width: 100%; border-collapse: collapse;">
+          <tr>
+            <td style="background-color: #f8fafc; border: 1px solid #cbd5e1; padding: 15px; border-radius: 8px;">
+              <h4 style="margin-top: 0; color: #4f46e5; border-bottom: 1px solid #cbd5e1; padding-bottom: 8px;">ข้อมูลส่วนที่ ๑: รายละเอียดแผนงาน</h4>
+              <p><b>ชื่อขอบเขตงาน:</b> ${step1.scopeName || '-'}</p>
+              <p><b>ชื่อแผนงาน:</b> ${projectName}</p>
+              <p><b>ผู้ประสานงาน:</b> ${step1.coordinator?.name || '-'}</p>
+            </td>
+          </tr>
+          <tr><td style="height: 15px;"></td></tr>
           
-          <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse: collapse; margin-bottom: 20px;">
-            <tr>
-              <td style="background-color: #f8fafc; border: 1px solid #cbd5e1; padding: 15px; border-radius: 8px;">
-                <h4 style="margin-top: 0; color: #4b2e83; border-bottom: 1px solid #cbd5e1; padding-bottom: 8px;">ส่วนที่ ๑: ข้อมูลทั่วไปของแผนงาน</h4>
-                <p style="margin: 5px 0;"><b>ชื่อขอบเขตงาน:</b> ${step1.scopeName || scope_name}</p>
-                <p style="margin: 5px 0;"><b>แผนงาน/โครงการ:</b> ${step1.projects?.[0]?.projectName || '-'}</p>
-                <p style="margin: 5px 0;"><b>ผู้ประสานงานหลัก:</b> ${step1.projects?.[0]?.coordinator?.name || '-'}</p>
-              </td>
-            </tr>
-          </table>
+          <tr>
+            <td style="background-color: #fcfcff; border: 1px solid #cbd5e1; padding: 15px; border-radius: 8px;">
+              <h4 style="margin-top: 0; color: #b45309; border-bottom: 1px solid #cbd5e1; padding-bottom: 8px;">ข้อมูลส่วนที่ ๒: ปัญหาและข้อเสนอแนะ</h4>
+              <ul>
+                <li style="margin-bottom: 5px;"><b>ปัญหาอุปสรรค:</b> ${step3.problem || '- ไม่มี -'}</li>
+                <li style="margin-bottom: 5px;"><b>ข้อเสนอแนะ:</b> ${step3.suggestion || '- ไม่มี -'}</li>
+              </ul>
+            </td>
+          </tr>
+          <tr><td style="height: 15px;"></td></tr>
 
-          <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse: collapse; margin-bottom: 20px;">
-            <tr>
-              <td style="background-color: #f8fafc; border: 1px solid #cbd5e1; padding: 15px; border-radius: 8px;">
-                <h4 style="margin-top: 0; color: #b45309; border-bottom: 1px solid #cbd5e1; padding-bottom: 8px;">ส่วนที่ ๒: ความก้าวหน้าและวิเคราะห์ช่องว่าง</h4>
-                <p style="margin: 5px 0;"><b>ระยะเวลาดำเนินการ:</b> ${step2.startDate || '-'} ถึง ${step2.endDate || '-'}</p>
-                <p style="margin: 5px 0;"><b>ความคืบหน้าภาพรวม:</b> <span style="color: #b45309; font-weight: bold;">${step2.progress || 0}%</span></p>
-                
-                <p style="margin: 15px 0 5px 0; font-weight: bold;">รายการวิเคราะห์ช่องว่าง (GAP):</p>
-                <ul style="margin: 0; padding-left: 20px;">${gapsHtmlEmail}</ul>
+          <tr>
+            <td style="background-color: #f8fafc; border: 1px solid #cbd5e1; padding: 15px; border-radius: 8px;">
+              <h4 style="margin-top: 0; color: #16a34a; border-bottom: 1px solid #cbd5e1; padding-bottom: 8px;">ส่วนที่ ๓: การประเมินผลลัพธ์</h4>
+              <p><b>สถานะโครงการ:</b> ${statusText}</p>
+              <p><b>ผลการประเมิน:</b> <span style="color: ${step3.evaluation === 'pass' ? '#16a34a' : '#dc2626'}; font-weight: bold;">${evalText}</span></p>
+              <p><b>ผลที่ได้รับจริง:</b><br/> ${step3.actualResult || '-'}</p>
+            </td>
+          </tr>
+        </table>
+        <br/>
+        <p style="text-align: center; color: #666;">อีเมลฉบับนี้เป็นการแจ้งเตือนอัตโนมัติจากระบบ กรุณาอย่าตอบกลับ</p>
+      </div>
+      `
+    };
 
-                <p style="margin: 15px 0 5px 0; font-weight: bold;">ปัญหาอุปสรรคและแนวทางแก้ไข:</p>
-                <ul style="margin: 0; padding-left: 20px;">${issuesHtmlEmail}</ul>
-              </td>
-            </tr>
-          </table>
+    // ส่งอีเมล
+    await transporter.sendMail(mailOptions);
 
-          <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse: collapse; margin-bottom: 20px;">
-            <tr>
-              <td style="background-color: #f8fafc; border: 1px solid #cbd5e1; padding: 15px; border-radius: 8px;">
-                <h4 style="margin-top: 0; color: #16a34a; border-bottom: 1px solid #cbd5e1; padding-bottom: 8px;">ส่วนที่ ๓: การประเมินผลลัพธ์</h4>
-                <p style="margin: 5px 0;"><b>สถานะโครงการ:</b> ${step3.projectStatus === 'finish' ? 'เสร็จสิ้นการดำเนินงาน' : 'อยู่ระหว่างดำเนินการ'}</p>
-                <p style="margin: 5px 0;"><b>ผลการประเมิน:</b> ${step3.evaluation === 'pass' ? 'บรรลุเป้าหมาย' : step3.evaluation === 'fail' ? 'ไม่บรรลุเป้าหมาย' : 'ยังไม่ได้ระบุ'}</p>
-                <p style="margin: 5px 0; font-weight: bold;">ผลที่ได้รับจริง:</p>
-                <div style="background: #ffffff; padding: 10px; border: 1px solid #e2e8f0; border-radius: 4px; white-space: pre-wrap; font-size: 14px;">${step3.actualResult || '-'}</div>
-              </td>
-            </tr>
-          </table>
-          <br/>
-          <p>ขอแสดงความนับถือ<br/><b>ระบบบริหารจัดการแผนงาน (Migration Plan)</b></p>
-        </div>
-        `
-      };
-      transporter.sendMail(mailOptions).catch(e => console.error("Email Error:", e));
-    }
+    await connection.commit(); // ยืนยันการบันทึกฐานข้อมูล
+    res.json({ success: true, message: 'บันทึกข้อมูลและส่งอีเมลสำเร็จ!' });
 
-    res.json({ success: true, message: 'บันทึกข้อมูลและจบกระบวนการเรียบร้อยแล้ว' });
-
-  } catch (err) {
-    if (conn) await conn.rollback();
-    console.error("❌ Workflow Error:", err.message);
-    res.status(500).json({ success: false, message: err.message });
+  } catch (error) {
+    if (connection) await connection.rollback(); // ถ้ายกเลิก ให้ย้อนกลับข้อมูลที่ทำมาทั้งหมด
+    console.error('Workflow Error:', error);
+    res.status(500).json({ success: false, message: error.message || 'เกิดข้อผิดพลาดในการบันทึกข้อมูล' });
   } finally {
-    if (conn) conn.release();
+    if (connection) connection.release();
   }
-
 });
 
 export default router;

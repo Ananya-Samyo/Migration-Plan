@@ -212,7 +212,8 @@ const handleNext = async () => {
   }
 
   try {
-    Swal.fire({ title: 'กำลังบันทึก...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+    // โชว์ Loading แบบไม่มีปุ่มกด
+    Swal.fire({ title: 'กำลังบันทึกข้อมูลส่วนที่ 1...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
 
     const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/admin/projects`, {
       method: 'POST',
@@ -226,8 +227,8 @@ const handleNext = async () => {
     const result = await res.json();
 
     if (res.ok && result.success) {
-      Swal.close();
-      emit('next', result.id);
+      Swal.close(); // ปิด Loading ทันที
+      emit('next', result.id); // เปลี่ยนหน้าพร้อมส่ง ID ไปให้หน้า 2
     } else {
       throw new Error(result.message || 'บันทึกไม่สำเร็จ');
     }
