@@ -17,7 +17,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch } from 'vue' 
+import { ref, computed, onMounted, watch } from 'vue' // เพิ่ม watch ตรงนี้
 import { Pie, Bar } from 'vue-chartjs'
 import axios from 'axios'
 import {
@@ -75,6 +75,7 @@ const progressRange = ref({
 ================================ */
 const fetchCharts = async () => {
   try {
+    // สร้าง query จาก props ที่ได้รับมา
     const query = `?startDate=${props.selectedDate.start}&endDate=${props.selectedDate.end}`
     
     const [gapRes, progressRes] = await Promise.all([
@@ -89,8 +90,10 @@ const fetchCharts = async () => {
   }
 }
 
+// โหลดครั้งแรกเมื่อ Component พร้อม
 onMounted(fetchCharts)
 
+// คอยดูว่าถ้า selectedDate ใน Dashboard เปลี่ยน ให้โหลดข้อมูลกราฟใหม่ทันที
 watch(
   () => props.selectedDate,
   () => {

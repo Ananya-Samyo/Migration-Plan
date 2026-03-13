@@ -7,7 +7,8 @@
       <button class="btn-back-modern" @click="$emit('back')">
         <div class="icon-circle">
           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
-            <path fill-rule="evenodd" d="M15 8a.5.5 0 0 0-.5-.5H2.707l3.147-3.146a.5.5 0 1 0-.708-.708l-4 4a.5.5 0 0 0 0 .708l4 4a.5.5 0 0 0 .708-.708L2.707 8.5H14.5A.5.5 0 0 0 15 8z" />
+            <path fill-rule="evenodd"
+              d="M15 8a.5.5 0 0 0-.5-.5H2.707l3.147-3.146a.5.5 0 1 0-.708-.708l-4 4a.5.5 0 0 0 0 .708l4 4a.5.5 0 0 0 .708-.708L2.707 8.5H14.5A.5.5 0 0 0 15 8z" />
           </svg>
         </div>
         <span class="text">ย้อนกลับ</span>
@@ -45,41 +46,61 @@
         </div>
 
         <div class="field">
-          <label>ผู้ประสานงาน (หลัก)</label>
+          <div class="label-header">
+            <label style="margin-bottom: 0;">ผู้ประสานงาน (หลัก)</label>
+            <label v-if="pIndex > 0" class="copy-checkbox-wrapper">
+              <input type="checkbox" @change="copyFromFirst(pIndex, 'coordinator')">
+              <span>คัดลอกรายชื่อจากแผนงานที่ 1</span>
+            </label>
+          </div>
           <div class="grid-3">
             <input v-model="project.coordinator.name" type="text" placeholder="ชื่อ-สกุล" />
-            <input v-model="project.coordinator.email" type="email" placeholder="อีเมล" @blur="checkUserEmail(project.coordinator)" />
+            <input v-model="project.coordinator.email" type="email" placeholder="อีเมล"
+              @blur="checkUserEmail(project.coordinator)" />
             <input v-model="project.coordinator.phone_number" type="text" placeholder="เบอร์โทรศัพท์" />
           </div>
         </div>
 
         <div class="field">
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+          <div class="label-header">
             <label style="margin-bottom: 0;">คณะทำงาน</label>
-            <button type="button" class="btn-add-small" @click="addMember(pIndex)" style="padding: 5px 12px; background: #6366f1; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 13px;">
-              + เพิ่มรายชื่อคณะทำงาน
-            </button>
+
+            <label v-if="pIndex > 0" class="copy-checkbox-wrapper">
+              <input type="checkbox" @change="copyFromFirst(pIndex, 'teamMembers')">
+              <span>คัดลอกรายชื่อจากแผนงานที่ 1</span>
+            </label>
           </div>
-          
-          <div v-for="(member, mIndex) in project.teamMembers" :key="mIndex" class="team-item" style="margin-bottom: 10px;">
-            <div style="display: flex; gap: 10px; align-items: center;">
-              <div class="grid-3" style="flex: 1;">
-                <input v-model="member.name" type="text" :placeholder="`ชื่อ-สกุลคนที่ ${mIndex + 1}`" />
-                <input v-model="member.email" type="email" placeholder="อีเมล" @blur="checkUserEmail(member)" />
-                <input v-model="member.phone_number" type="text" placeholder="เบอร์โทรศัพท์" />
-              </div>
-              <button v-if="project.teamMembers.length > 1" @click="removeMember(pIndex, mIndex)" style="background: #ef4444; color: white; border: none; border-radius: 4px; width: 35px; height: 35px; cursor: pointer;">
-                ✕
-              </button>
-            </div>
+
+        </div>
+
+        <div v-for="(member, mIndex) in project.teamMembers" :key="mIndex" class="team-item">
+          <div class="grid-team">
+            <input v-model="member.name" type="text" :placeholder="`ชื่อ-สกุลคนที่ ${mIndex + 1}`" />
+            <input v-model="member.email" type="email" placeholder="อีเมล" @blur="checkUserEmail(member)" />
+            <input v-model="member.phone_number" type="text" placeholder="เบอร์โทรศัพท์" />
+
+            <button v-if="project.teamMembers.length > 1" class="btn-remove-member"
+              @click="removeMember(pIndex, mIndex)">
+              ✕
+            </button>
+            <div v-else></div>
           </div>
         </div>
-      </div>
 
-      <div style="display: flex; gap: 15px; margin-top: 20px;">
-        <button class="add-project" style="flex: 1;" @click="addProject">+ เพิ่มแผนงานใหม่</button>
-        <button class="btn-primary" style="flex: 1;" @click="handleNext">ไปขั้นตอนถัดไป ➔</button>
+        <div class="add-member-container">
+          <button type="button" class="btn-add-modern" @click="addMember(pIndex)">
+            <div class="icon-circle-add">
+              <span>+</span>
+            </div>
+            <span class="text">เพิ่มรายชื่อคณะทำงาน</span>
+          </button>
+        </div>
       </div>
+    </div>
+
+    <div style="display: flex; gap: 15px; margin-top: 20px;">
+      <button class="add-project" style="flex: 1;" @click="addProject">+ เพิ่มแผนงานใหม่</button>
+      <button class="btn-primary" style="flex: 1;" @click="handleNext">ไปขั้นตอนถัดไป ➔</button>
     </div>
   </div>
 </template>
@@ -136,6 +157,29 @@ onMounted(async () => {
   }
 });
 
+// --- ฟังก์ชันคัดลอกข้อมูลจากแผนงานที่ 1 ---
+const copyFromFirst = (currentIndex, type) => {
+  const firstProject = form.value.projects[0];
+  const currentProject = form.value.projects[currentIndex];
+
+  if (type === 'coordinator') {
+    currentProject.coordinator = { ...firstProject.coordinator };
+  }
+  else if (type === 'teamMembers') {
+    // คัดลอกรายชื่อคณะทำงานทั้งหมด
+    currentProject.teamMembers = firstProject.teamMembers.map(member => ({ ...member }));
+  }
+
+  Swal.fire({
+    toast: true,
+    position: 'top-end',
+    icon: 'success',
+    title: 'คัดลอกข้อมูลเรียบร้อย',
+    showConfirmButton: false,
+    timer: 1000
+  });
+}
+
 // --- ฟังก์ชันจัดการแผนงาน ---
 const addProject = () => {
   form.value.projects.push({
@@ -152,10 +196,10 @@ const removeProject = (index) => form.value.projects.splice(index, 1)
 
 // --- ฟังก์ชันจัดการคณะทำงาน ---
 const addMember = (pIndex) => {
-  form.value.projects[pIndex].teamMembers.push({ 
-    name: '', 
-    email: '', 
-    phone_number: '' 
+  form.value.projects[pIndex].teamMembers.push({
+    name: '',
+    email: '',
+    phone_number: ''
   })
 }
 
@@ -208,7 +252,7 @@ const checkUserEmail = async (personObj) => {
       if (userData.found) {
         personObj.name = userData.user.user_name;
         personObj.phone_number = userData.user.phone_number || '';
-        
+
         Swal.fire({
           toast: true,
           position: 'top-end',
