@@ -78,27 +78,53 @@
 
                         <div class="chart-container">
                             <h5 class="chart-title">📊 กราฟสรุปสัดส่วนสถานะการปิด GAP</h5>
-                            <div class="stacked-bar-chart">
-                                <div class="bar-segment closed" :style="{ width: gapSummary.closedPercent + '%' }">
-                                    <span v-if="gapSummary.closedPercent > 5">{{ gapSummary.closedPercent }}%</span>
+                            
+                            <div style="display: flex; gap: 30px; align-items: center; justify-content: center; margin-top: 20px; margin-bottom: 20px;">
+                                
+                                <div class="chart-box" style="width: 130px; height: 130px; position: relative; flex-shrink: 0;">
+                                    <svg viewBox="0 0 36 36" style="width: 100%; height: 100%; transform: rotate(-90deg);">
+                                        <circle cx="18" cy="18" r="15.915" fill="none" stroke="#e2e8f0" stroke-width="4.5"></circle>
+                                        
+                                        <circle v-if="gapDonutSegments.closed.val > 0" cx="18" cy="18" r="15.915" fill="none"
+                                            stroke="#22c55e" stroke-width="4.5"
+                                            :stroke-dasharray="gapDonutSegments.closed.dasharray"
+                                            :stroke-dashoffset="gapDonutSegments.closed.offset">
+                                        </circle>
+                                        
+                                        <circle v-if="gapDonutSegments.pending.val > 0" cx="18" cy="18" r="15.915" fill="none"
+                                            stroke="#f97316" stroke-width="4.5"
+                                            :stroke-dasharray="gapDonutSegments.pending.dasharray"
+                                            :stroke-dashoffset="gapDonutSegments.pending.offset">
+                                        </circle>
+                                    </svg>
+
+                                    <div class="donut-center" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center;">
+                                        <span style="font-size: 24px; font-weight: bold; color: #1e293b;">{{ gapSummary.total }}</span>
+                                        <span style="display: block; font-size: 11px; color: #64748b;">รายการ</span>
+                                    </div>
                                 </div>
-                                <div class="bar-segment pending" :style="{ width: gapSummary.pendingPercent + '%' }">
-                                    <span v-if="gapSummary.pendingPercent > 5">{{ gapSummary.pendingPercent }}%</span>
+
+                                <div class="legend-box" style="display: flex; flex-direction: column; justify-content: center; gap: 10px;">
+                                    <div class="legend-item" style="display: flex; align-items: center; gap: 8px;">
+                                        <span style="background-color: #22c55e; width: 12px; height: 12px; display: inline-block; border-radius: 50%;"></span> 
+                                        ปิด GAP แล้ว ({{ gapSummary.closedPercent }}%)
+                                    </div>
+                                    <div class="legend-item" style="display: flex; align-items: center; gap: 8px;">
+                                        <span style="background-color: #f97316; width: 12px; height: 12px; display: inline-block; border-radius: 50%;"></span> 
+                                        กำลังดำเนินการ ({{ gapSummary.pendingPercent }}%)
+                                    </div>
                                 </div>
-                            </div>
-                            <div class="chart-legend">
-                                <div class="legend-item"><span class="dot closed"></span> ปิด GAP แล้ว</div>
-                                <div class="legend-item"><span class="dot pending"></span> กำลังดำเนินการ</div>
+                                
                             </div>
                         </div>
                     </div>
 
-                    <template v-for="group in gapGroups" :key="group.taskId">
+                    <template v-for="group in gapGroups" :key="group.scopeId || group.taskId">
                         <div v-if="group.gaps && group.gaps.filter(g => g.selected).length > 0" class="avoid-break"
                             style="margin-bottom: 30px;">
                             <h4
                                 style="color: var(--primary-purple); font-size: 16px; margin-bottom: 10px; font-weight: 800;">
-                                ◼️ ขอบเขตงาน: {{ group.taskName }}
+                                ◼️ ขอบเขตงาน: {{ group.scopeName || group.taskName }}
                             </h4>
                             <table class="modern-preview-table">
                                 <thead>
@@ -110,22 +136,22 @@
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    <tr v-for="gap in group.gaps.filter(g => g.selected)" :key="gap.id">
-                                        <td>{{ gap.gapName }}</td>
-                                        <td class="text-center">{{ gap.year }}</td>
+                                    <tr v-for="gap in group.gaps.filter(g => g.selected)" :key="gap.operation_id || gap.id">
+                                        <td>{{ gap.detail || gap.gapName }}</td>
+                                        <td class="text-center">{{ gap.year || '2569' }}</td>
                                         <td>
                                             <div class="preview-p-container">
                                                 <div class="preview-p-bar">
-                                                    <div class="preview-p-fill" :style="{ width: gap.progress + '%' }">
+                                                    <div class="preview-p-fill" :style="{ width: (gap.progress_percent || gap.progress || 0) + '%' }">
                                                     </div>
                                                 </div>
-                                                <span class="preview-p-text">{{ gap.progress }}%</span>
+                                                <span class="preview-p-text">{{ gap.progress_percent || gap.progress || 0 }}%</span>
                                             </div>
                                         </td>
                                         <td class="text-center">
                                             <span class="status-chip-preview"
-                                                :class="gap.status === 'closed' ? 'status-closed' : 'status-pending'">
-                                                {{ gap.status === 'closed' ? 'ปิด GAP แล้ว' : 'กำลังดำเนินการ' }}
+                                                :class="(gap.status_id === 3 || gap.status === 'closed') ? 'status-closed' : 'status-pending'">
+                                                {{ (gap.status_id === 3 || gap.status === 'closed') ? 'ปิด GAP แล้ว' : 'กำลังดำเนินการ' }}
                                             </span>
                                         </td>
                                     </tr>
@@ -379,6 +405,7 @@ const getStatusClass = (status) => {
 }
 
 // ================= ฟังก์ชันสำหรับ Step 2 =================
+// ก้อนที่ 1: gapSummary
 const gapSummary = computed(() => {
     let total = 0, closed = 0, pending = 0, totalProgress = 0
 
@@ -391,9 +418,14 @@ const gapSummary = computed(() => {
             const selectedGaps = group.gaps.filter(g => g.selected)
             selectedGaps.forEach(gap => {
                 total++
-                if (gap.status === 'closed') closed++
-                else pending++
-                totalProgress += Number(gap.progress) || 0
+                // รองรับ status_id จาก Database (สมมติ 3 = เสร็จสิ้น)
+                if (gap.status_id === 3 || gap.status === 'closed') {
+                    closed++
+                } else {
+                    pending++
+                }
+                // ดึงค่า % ตามตัวแปรใหม่
+                totalProgress += Number(gap.progress_percent || gap.progress || 0)
             })
         }
     })
@@ -402,7 +434,25 @@ const gapSummary = computed(() => {
     const closedPercent = total > 0 ? Math.round((closed / total) * 100) : 0
     const pendingPercent = total > 0 ? 100 - closedPercent : 0
 
+    // จบการทำงานของ gapSummary แค่ตรงนี้
     return { total, closed, pending, avgProgress, closedPercent, pendingPercent }
+})
+
+
+// ก้อนที่ 2: gapDonutSegments (ต้องแยกออกมาอยู่ข้างนอกแบบนี้ครับ)
+const gapDonutSegments = computed(() => {
+    // ดึงค่าจาก gapSummary.value มาใช้ได้เลย เพราะประกาศแยกกันแล้ว
+    const s = gapSummary.value
+    
+    if (s.total === 0) return { closed: { val: 0 }, pending: { val: 0 } }
+
+    const pClosed = s.closedPercent
+    const pPending = s.pendingPercent
+
+    return {
+        closed: { val: pClosed, dasharray: `${pClosed} ${100 - pClosed}`, offset: 0 },
+        pending: { val: pPending, dasharray: `${pPending} ${100 - pPending}`, offset: 100 - pClosed }
+    }
 })
 
 // ================= ฟังก์ชันสำหรับ Step 3 =================

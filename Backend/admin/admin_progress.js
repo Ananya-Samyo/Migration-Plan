@@ -394,4 +394,70 @@ const [gapRows] = await db.query(`
   }
 });
 
+// ========================================================
+// ✅ 4. API สำหรับหน้า Export (ขั้นตอนที่ 2: ดึง GAP ตาม Scope)
+// ========================================================
+router.get('/gap-analysis', verifyToken, isAdmin, async (req, res) => {
+  try {
+    const { scopeIds } = req.query;
+    
+    // ตรวจสอบว่ามีการส่ง scopeIds มาหรือไม่
+    if (!scopeIds) {
+      return res.status(400).json({ message: 'กรุณาส่งค่า scopeIds' });
+    }
+
+    const scopeIdArray = scopeIds.split(',').map(id => id.trim());
+
+    // 1. ดึงข้อมูล GAP ทั้งหมดที่อยู่ใน scope_id ที่เลือก
+    const [rows] = await db.query(`
+      SELECT 
+        s.scope_id AS scopeId, 
+        s.scope_name AS scopeName,
+        p.project_plan_name AS planName,
+        od.operation_id, 
+        od.detail, 
+        od.progress_percent, 
+        od.status_id
+      FROM scopes s
+      JOIN project_plans p ON s.scope_id = p.scope_id
+      JOIN operational_details od ON p.project_plan_id = od.project_plan_id
+      WHERE s.scope_id IN (?)
+    `, [scopeIdArray]);
+
+    const groupedData = rows.reduce((acc, row) => {
+      // หาว่ามีกลุ่มของ scope_id นี้ใน array หรือยัง
+      let group = acc.find(g => g.scopeId === row.scopeId);
+      
+      // ถ้ายังไม่มี ให้สร้างกลุ่มใหม่
+      if (!group) {
+        group = { 
+          scopeId: row.scopeId, 
+          scopeName: row.scopeName, 
+          planName: row.planName,
+          gaps: [] 
+        };
+        acc.push(group);
+      }
+      
+      // ใส่ข้อมูล GAP เข้าไปในกลุ่ม
+      group.gaps.push({
+        operation_id: row.operation_id,
+        planName: row.planName, 
+        detail: row.detail,
+        progress_percent: row.progress_percent || 0,
+        status_id: row.status_id
+      });
+      
+      return acc;
+    }, []);
+
+    // ส่งข้อมูลที่จัดกลุ่มแล้วกลับไปให้ Frontend
+    res.json(groupedData);
+
+  } catch (err) {
+    console.error('Error fetching gap-analysis:', err);
+    res.status(500).json({ message: 'Server error', error: err.message });
+  }
+});
+
 export default router
