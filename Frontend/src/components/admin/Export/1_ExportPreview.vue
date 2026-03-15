@@ -52,7 +52,7 @@
 
                 <div v-if="currentStep === 2" class="fade-in">
                     <div class="agenda-header">
-                        <h4 class="agenda-label">วาระที่ 2 :</h4>
+                        <h4 class="agenda-label">วาระที่ 1 :</h4>
                         <h3 class="agenda-title">ผลการปิด GAP รายขอบเขตงาน</h3>
                     </div>
 
@@ -167,7 +167,7 @@
 
                 <div v-if="currentStep === 3" class="fade-in">
                     <div class="agenda-header">
-                        <h4 class="agenda-label">วาระที่ 3 :</h4>
+                        <h4 class="agenda-label">วาระที่ 2 :</h4>
                         <h3 class="agenda-title">การประเมินผลประโยชน์ที่ได้รับ</h3>
                     </div>
 
@@ -249,7 +249,7 @@
 
                 <div v-if="currentStep === 4" class="fade-in">
                     <div class="agenda-header">
-                        <h4 class="agenda-label">วาระที่ 4 :</h4>
+                        <h4 class="agenda-label">วาระที่ 3 :</h4>
                         <h3 class="agenda-title">ภาพรวมประเด็นปัญหา</h3>
                     </div>
 

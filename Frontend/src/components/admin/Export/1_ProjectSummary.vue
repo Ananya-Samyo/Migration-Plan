@@ -145,6 +145,7 @@ const fetchTasksFromSystem = async () => {
     const response = await axios.get('http://localhost:3000/api/admin/project-summary')
     tasks.value = response.data.map(item => ({ ...item, selected: false }))
     emitUpdate()
+    console.log('📌 [Step 1] ข้อมูลที่ดึงมาได้ 1 รายการ:', tasks.value[0])
   } catch (error) {
     console.error('Error:', error)
   }
