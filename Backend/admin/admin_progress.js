@@ -328,67 +328,70 @@ router.put('/projects/:id', verifyToken, isAdmin, upload.array('attachments'), a
 
 // ================= GET Route =================
 router.get('/projects/:id', verifyToken, isAdmin, async (req, res) => {
-  const { id } = req.params
+  const { id } = req.params;
   try {
+    // 1. ดึงข้อมูล Project + Scope + ข้อมูลผู้ประสานงาน (JOIN ตาราง users เพิ่ม)
     const [[project]] = await db.query(`
       SELECT 
         p.project_plan_id, 
-        p.scope_id, 
         p.project_plan_name, 
-        p.progress_percent, 
         p.start_date,  
         p.end_date,      
-        p.details,           
+        p.department_id,
+        s.scope_id,
         s.scope_name, 
-        s.start_date AS scope_start, 
-        s.end_date AS scope_end, 
-        st.status_code
+        u.user_name AS coord_name, 
+        u.email AS coord_email, 
+        u.phone_number AS coord_phone
       FROM project_plans p
       JOIN scopes s ON p.scope_id = s.scope_id
-      JOIN status st ON p.status_id = st.status_id
+      LEFT JOIN users u ON s.coordinator_id = u.user_id
       WHERE p.project_plan_id = ?
-    `, [id])
+    `, [id]);
 
-    if (!project) return res.status(404).json({ message: 'ไม่พบแผนงาน' })
+    if (!project) return res.status(404).json({ message: 'ไม่พบแผนงาน' });
 
-    // ฟังก์ชันช่วยจัดการ format วันที่ให้เป็น YYYY-MM-DD
     const formatDate = (dateVal) => {
       if (!dateVal) return '';
       const d = new Date(dateVal);
       return d.toISOString().split('T')[0]; 
-    }
+    };
 
-    // ดึงข้อมูล GAPs
-    const [gapRows] = await db.query(`
-      SELECT od.detail AS text, od.weight_percent AS weight, 
-             od.progress_percent AS progress, st.status_code AS status
-      FROM operational_details od
-      JOIN status st ON od.status_id = st.status_id
-      WHERE od.project_plan_id = ?
-    `, [id])
+    // 2. ดึงข้อมูล GAPs จากตาราง operational_details
+    // ในส่วนของ GET /projects/:id
+const [gapRows] = await db.query(`
+  SELECT 
+    od.operation_id, 
+    od.detail, 
+    od.weight_percent AS weight, 
+    od.progress_percent AS progress, 
+    st.status_code AS status
+  FROM operational_details od
+  JOIN status st ON od.status_id = st.status_id
+  WHERE od.project_plan_id = ?
+`, [id]);
 
-    // ดึงข้อมูลปัญหาและทางแก้
-    const [problemRows] = await db.query(`SELECT problem_detail FROM problems WHERE project_plan_id = ?`, [id])
-    const [solutionRows] = await db.query(`SELECT solution_detail FROM solutions WHERE project_plan_id = ?`, [id])
 
+    // 3. จัด Format ให้ตรงกับ projectData ใน Vue.js
     res.json({
-      id: project.project_plan_id,
-      name: project.project_plan_name,
-      scope: project.scope_name,
-      // 🚩 ส่งวันที่ในรูปแบบที่ input date ต้องการ (YYYY-MM-DD)
-      startDate: formatDate(project.start_date),
-      endDate: formatDate(project.end_date),
-      status: project.status_code,
-      progress: Number(project.progress_percent),
-      gaps: gapRows,
-      details: project.details || '',
-      problems: problemRows.map(r => r.problem_detail).join('\n'),
-      solutions: solutionRows.map(r => r.solution_detail).join('\n')
-    })
+      project_plan_id: project.project_plan_id,
+      scope_name: project.scope_name, // แก้ไขได้แล้ว
+      plan_name: project.project_plan_name,
+      department_id: project.department_id,
+      start_date: formatDate(project.start_date),
+      end_date: formatDate(project.end_date),
+      coordinator: {
+        name: project.coord_name || '',
+        email: project.coord_email || '',
+        phone_number: project.coord_phone || ''
+      },
+      gaps: gapRows.length > 0 ? gapRows : [{ detail: '', weight: 0, status: 'processing_gap' }]
+    });
+
   } catch (err) {
-    console.error('GET project error:', err)
-    res.status(500).json({ message: 'Server error', error: err.message })
+    console.error('GET project error:', err);
+    res.status(500).json({ message: 'Server error', error: err.message });
   }
-})
+});
 
 export default router

@@ -1,7 +1,33 @@
 <template>
     <div class="scope-page">
-        <h1 class="page-title">ขอบเขตแผนงาน</h1>
+        <div class="page-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+            <h1 class="page-title" style="margin: 0;">ขอบเขตแผนงาน</h1>
 
+            <div class="header-actions" style="display: flex; gap: 15px; align-items: center;">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <label style="font-weight: bold; color: #4b2e83;">หน่วยงาน:</label>
+                    <select v-model="selectedDepartment" @change="applyFilter" class="filter-select" style="padding: 8px; border-radius: 4px; border: 1px solid #ccc; outline: none;">
+                        <option value="">-- ทั้งหมด --</option>
+                        <option v-for="dept in departments" :key="dept.department_id" :value="dept.department_name">
+                            {{ dept.department_name }}
+                        </option>
+                    </select>
+                </div>
+
+                <div class="search-box" style="display: flex;">
+                    <input 
+                        v-model="searchQuery" 
+                        type="text" 
+                        placeholder="ค้นหา ขอบเขตงาน, ผู้รายงาน..." 
+                        @keyup.enter="applyFilter"
+                        style="padding: 8px 12px; border-radius: 4px 0 0 4px; border: 1px solid #ccc; width: 250px; outline: none;"
+                    />
+                    <button @click="applyFilter" style="padding: 8px 16px; border: none; background: #4b2e83; color: white; border-radius: 0 4px 4px 0; cursor: pointer; font-weight: bold;">
+                        ค้นหา
+                    </button>
+                </div>
+            </div>
+        </div>
         <div class="table-wrapper">
             <table class="scope-table">
                 <thead>
@@ -131,10 +157,44 @@ const API = import.meta.env.VITE_API_BASE_URL
 const router = useRouter()
 const route = useRoute()
 
+// ตัวแปรเดิม
 const scopes = ref([])
 const expandedRow = ref(null)
 const currentPage = ref(1)
 const totalPages = ref(1)
+
+// 🌟 ตัวแปรใหม่สำหรับ Filter และ Search
+const selectedDepartment = ref('')
+const searchQuery = ref('')
+const departments = ref([]) // สำหรับเก็บรายการกองทั้งหมด
+
+/* ===============================
+    ฟังก์ชันดึงรายชื่อหน่วยงานสำหรับ Dropdown
+================================ */
+const fetchDepartments = async () => {
+    try {
+        const token = localStorage.getItem('token')
+        const res = await fetch(`${API}/api/departments`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        })
+        const data = await res.json()
+        if (Array.isArray(data)) {
+            departments.value = data
+        } else if (data.data) {
+            departments.value = data.data
+        }
+    } catch (err) {
+        console.error('Fetch Departments Error:', err)
+    }
+}
+
+/* ===============================
+    ฟังก์ชันกดค้นหา / เปลี่ยน Dropdown
+================================ */
+const applyFilter = () => {
+    expandedRow.value = null
+    fetchScopes(1) // กลับไปหน้า 1 เสมอเวลาค้นหา
+}
 
 /* ===============================
     ฟังก์ชันกางแถวอัตโนมัติ
@@ -178,7 +238,7 @@ const toggleRow = (id) => {
 }
 
 /* ===============================
-    ฟังก์ชันดึงข้อมูลจาก API
+    ฟังก์ชันดึงข้อมูลจาก API (อัปเดตเพื่อรองรับ Filter)
 ================================ */
 const fetchScopes = async (page = 1) => {
     try {
@@ -188,7 +248,16 @@ const fetchScopes = async (page = 1) => {
         const targetScopeId = route.query.scope_id
         const limit = targetScopeId ? 1000 : 10
 
-        const res = await fetch(`${API}/api/admin/scopes?page=${page}&limit=${limit}`, {
+        // 🌟 ต่อ string URL เพื่อส่ง parameter search และ department
+        let url = `${API}/api/admin/scopes?page=${page}&limit=${limit}`
+        if (searchQuery.value) {
+            url += `&search=${encodeURIComponent(searchQuery.value)}`
+        }
+        if (selectedDepartment.value) {
+            url += `&department=${encodeURIComponent(selectedDepartment.value)}`
+        }
+
+        const res = await fetch(url, {
             headers: { 'Authorization': `Bearer ${token}` }
         })
 
@@ -200,6 +269,9 @@ const fetchScopes = async (page = 1) => {
             totalPages.value = responseData.meta?.totalPages || 1
 
             console.log(`📦 โหลดข้อมูลสำเร็จ: ${scopes.value.length} รายการ`)
+        } else {
+            // กรณีไม่มีข้อมูล
+            scopes.value = []
         }
         await nextTick()
         handleAutoExpand()
@@ -235,16 +307,14 @@ const progressClass = (value) => {
     if (num < 100) return 'warning'
     return 'success'
 }
-
 /* ===============================
-    ฟังก์ชันการนำทาง
+    ฟังก์ชันการนำทาง 
 ================================ */
-const goToProjectDetail = (id) => {
-    router.push(`/admin/project/${id}`)
-}
-
 const goToProgress = (planId) => {
-    router.push({ name: 'AdminProgress', params: { id: planId } })
+    router.push({ 
+        name: 'AdminEditProgress', 
+        params: { id: planId } 
+    })
 }
 
 const goToEvaluation = (planId) => {
@@ -255,6 +325,7 @@ const goToEvaluation = (planId) => {
     เริ่มต้นโหลดข้อมูล
 ================================ */
 onMounted(() => {
+    fetchDepartments()
     fetchScopes(1)
 })
 </script>

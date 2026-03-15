@@ -46,7 +46,6 @@ const routes = [
         name: 'AdminProject',
         component: () => import('../views/Admin/Admin_MainStepper.vue')
       },
-      // ในไฟล์ router/index.js (ส่วนของ children: [ ... ])
       {
         path: 'scopeproject',
         name: 'AdminScopeProject',
@@ -73,6 +72,12 @@ const routes = [
         path: 'scope/:scope_id',
         name: 'AdminScopeProjectDetail',
         component: () => import('../views/Admin/Admin_ScopeProject.vue'),
+        props: true
+      },
+      {
+        path: '/admin/edit-progress/:id',
+        name: 'AdminEditProgress',
+        component: () => import('../components/admin/Edit/Admin_2EditProgress.vue'), 
         props: true
       },
       {
