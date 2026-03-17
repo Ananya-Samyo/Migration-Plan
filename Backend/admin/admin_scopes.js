@@ -197,58 +197,57 @@ router.get('/scopes', verifyToken, canViewBasic, async (req, res) => {
       ORDER BY s.scope_id DESC, pp.project_plan_id
     `, [scopeIds])
 
-    // 5. จัดรูปแบบข้อมูล (Logic เดิม)
-    const map = {}
-    
-    // วนลูปสร้างโครงสร้างตามลำดับของ scopeIds เพื่อรักษาลำดับการเรียง
-    scopeIds.forEach(id => {
-       // เตรียม Object ไว้รอ (เผื่อบางอันไม่มี row กลับมา แต่จริงๆ ควรมี)
-       // แต่เราจะ build จาก rows เป็นหลัก
-    })
+    // 5. จัดรูปแบบข้อมูล
+const map = {}
 
-    for (const r of rows) {
-      if (!map[r.scope_id]) {
-        map[r.scope_id] = {
-          id: r.scope_id,
-          scope_name: r.scope_name,
-          department_name: r.department_name,
-          coordinator: r.coordinator,
-          progress_percent: 0,
-          plans: []
-        }
-      }
+for (const r of rows) {
+  // 1. ถ้ายังไม่มี Scope นี้ใน map ให้สร้างขึ้นมา
+  if (!map[r.scope_id]) {
+    map[r.scope_id] = {
+      id: r.scope_id,
+      scope_name: r.scope_name,
+      department_name: r.department_name,
+      coordinator: r.coordinator,
+      progress_percent: 0,
+      plansMap: {}, 
+      plans: []    
+    }
+  }
 
-      if (r.project_plan_id) {
-        let plan = map[r.scope_id].plans.find(p => p.id === r.project_plan_id)
-        
-        if (!plan) {
-          plan = {
-            id: r.project_plan_id,
-            name: r.project_plan_name,
-            progress: Number(r.plan_progress || 0),
-            details: r.plan_details || '-',
-            action: "-", 
-            gaps: []
-          }
-          map[r.scope_id].plans.push(plan)
-        }
+  const currentScope = map[r.scope_id];
 
-        if (r.gap_detail) {
-          plan.gaps.push(r.gap_detail)
-        }
-      }
+  if (r.project_plan_id) {
+    const planId = String(r.project_plan_id);
+
+    if (!currentScope.plansMap[planId]) {
+      currentScope.plansMap[planId] = {
+        id: r.project_plan_id,
+        name: r.project_plan_name,
+        progress: Number(r.plan_progress || 0),
+        details: r.plan_details || '-',
+        gaps: []
+      };
+      currentScope.plans.push(currentScope.plansMap[planId]);
     }
 
-    // คำนวณ Progress และแปลงเป็น Array
-    const resultData = Object.values(map).map(scope => {
-      if (!scope.plans.length) {
-        scope.progress_percent = 0
-      } else {
-        const totalProgress = scope.plans.reduce((sum, p) => sum + p.progress, 0)
-        scope.progress_percent = Math.round(totalProgress / scope.plans.length)
-      }
-      return scope
-    })
+    if (r.gap_detail) {
+      currentScope.plansMap[planId].gaps.push(r.gap_detail);
+    }
+  }
+}
+
+// คำนวณ Progress และลบตัวแปรพัก (plansMap) ออกก่อนส่ง
+const resultData = Object.values(map).map(scope => {
+  delete scope.plansMap; // ลบออกเพราะ Frontend ไม่ต้องใช้
+  
+  if (!scope.plans.length) {
+    scope.progress_percent = 0;
+  } else {
+    const totalProgress = scope.plans.reduce((sum, p) => sum + p.progress, 0);
+    scope.progress_percent = Math.round(totalProgress / scope.plans.length);
+  }
+  return scope;
+});
 
     // เรียงลำดับ resultData ให้ตรงกับ scopeIds อีกครั้ง (เพื่อให้มั่นใจว่า Scope ล่าสุดอยู่บนสุด)
     const sortedResult = scopeIds.map(id => resultData.find(item => item.id === id)).filter(Boolean)

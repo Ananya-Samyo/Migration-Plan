@@ -77,18 +77,20 @@ router.post('/update-progress', verifyToken, isAdmin, async (req, res) => {
 
     // 3. จัดการ GAPs (ตาราง operational_details)
     await conn.query(`DELETE FROM operational_details WHERE project_plan_id = ?`, [projectId]);
-    
+
     if (gaps && gaps.length > 0) {
       for (const gap of gaps) {
+        console.log("Saving GAP:", gap);
+
         const gapDetail = gap.detail || gap.text;
-        if (gapDetail) {
+        if (gapDetail && gapDetail.trim() !== "") {
           await conn.query(`
-            INSERT INTO operational_details (project_plan_id, detail, weight_percent, status_id)
-            VALUES (?, ?, ?, (SELECT COALESCE((SELECT status_id FROM status WHERE status_code = ? LIMIT 1), 1)))
-          `, [
-            projectId, 
-            gapDetail, 
-            gap.weight || 0, 
+        INSERT INTO operational_details (project_plan_id, detail, weight_percent, status_id)
+        VALUES (?, ?, ?, (SELECT status_id FROM status WHERE status_code = ? LIMIT 1))
+      `, [
+            projectId,
+            gapDetail,
+            gap.weight || 0,
             gap.status || 'processing_gap'
           ]);
         }
@@ -354,12 +356,12 @@ router.get('/projects/:id', verifyToken, isAdmin, async (req, res) => {
     const formatDate = (dateVal) => {
       if (!dateVal) return '';
       const d = new Date(dateVal);
-      return d.toISOString().split('T')[0]; 
+      return d.toISOString().split('T')[0];
     };
 
     // 2. ดึงข้อมูล GAPs จากตาราง operational_details
     // ในส่วนของ GET /projects/:id
-const [gapRows] = await db.query(`
+    const [gapRows] = await db.query(`
   SELECT 
     od.operation_id, 
     od.detail, 
@@ -400,7 +402,7 @@ const [gapRows] = await db.query(`
 router.get('/gap-analysis', verifyToken, isAdmin, async (req, res) => {
   try {
     const { scopeIds } = req.query;
-    
+
     // ตรวจสอบว่ามีการส่ง scopeIds มาหรือไม่
     if (!scopeIds) {
       return res.status(400).json({ message: 'กรุณาส่งค่า scopeIds' });
@@ -427,27 +429,27 @@ router.get('/gap-analysis', verifyToken, isAdmin, async (req, res) => {
     const groupedData = rows.reduce((acc, row) => {
       // หาว่ามีกลุ่มของ scope_id นี้ใน array หรือยัง
       let group = acc.find(g => g.scopeId === row.scopeId);
-      
+
       // ถ้ายังไม่มี ให้สร้างกลุ่มใหม่
       if (!group) {
-        group = { 
-          scopeId: row.scopeId, 
-          scopeName: row.scopeName, 
+        group = {
+          scopeId: row.scopeId,
+          scopeName: row.scopeName,
           planName: row.planName,
-          gaps: [] 
+          gaps: []
         };
         acc.push(group);
       }
-      
+
       // ใส่ข้อมูล GAP เข้าไปในกลุ่ม
       group.gaps.push({
         operation_id: row.operation_id,
-        planName: row.planName, 
+        planName: row.planName,
         detail: row.detail,
         progress_percent: row.progress_percent || 0,
         status_id: row.status_id
       });
-      
+
       return acc;
     }, []);
 

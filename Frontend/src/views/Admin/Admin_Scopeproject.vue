@@ -1,12 +1,14 @@
 <template>
     <div class="scope-page">
-        <div class="page-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <div class="page-header"
+            style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
             <h1 class="page-title" style="margin: 0;">ขอบเขตแผนงาน</h1>
 
             <div class="header-actions" style="display: flex; gap: 15px; align-items: center;">
                 <div style="display: flex; align-items: center; gap: 8px;">
                     <label style="font-weight: bold; color: #4b2e83;">หน่วยงาน:</label>
-                    <select v-model="selectedDepartment" @change="applyFilter" class="filter-select" style="padding: 8px; border-radius: 4px; border: 1px solid #ccc; outline: none;">
+                    <select v-model="selectedDepartment" @change="applyFilter" class="filter-select"
+                        style="padding: 8px; border-radius: 4px; border: 1px solid #ccc; outline: none;">
                         <option value="">-- ทั้งหมด --</option>
                         <option v-for="dept in departments" :key="dept.department_id" :value="dept.department_name">
                             {{ dept.department_name }}
@@ -15,14 +17,11 @@
                 </div>
 
                 <div class="search-box" style="display: flex;">
-                    <input 
-                        v-model="searchQuery" 
-                        type="text" 
-                        placeholder="ค้นหา ขอบเขตงาน, ผู้รายงาน..." 
+                    <input v-model="searchQuery" type="text" placeholder="ค้นหา ขอบเขตงาน, ผู้รายงาน..."
                         @keyup.enter="applyFilter"
-                        style="padding: 8px 12px; border-radius: 4px 0 0 4px; border: 1px solid #ccc; width: 250px; outline: none;"
-                    />
-                    <button @click="applyFilter" style="padding: 8px 16px; border: none; background: #4b2e83; color: white; border-radius: 0 4px 4px 0; cursor: pointer; font-weight: bold;">
+                        style="padding: 8px 12px; border-radius: 4px 0 0 4px; border: 1px solid #ccc; width: 250px; outline: none;" />
+                    <button @click="applyFilter"
+                        style="padding: 8px 16px; border: none; background: #4b2e83; color: white; border-radius: 0 4px 4px 0; cursor: pointer; font-weight: bold;">
                         ค้นหา
                     </button>
                 </div>
@@ -85,11 +84,14 @@
                                                     <td>{{ plan.details }}</td>
 
                                                     <td>
-                                                        <ul class="gap-list">
-                                                            <li v-for="(gap, i) in plan.gaps" :key="i">
-                                                                {{ gap }}
-                                                            </li>
-                                                        </ul>
+                                                        <div v-if="plan.gaps && plan.gaps.length > 0">
+                                                            <ul style="list-style: none; padding: 0; margin: 0;">
+                                                                <li v-for="(gap, i) in plan.gaps" :key="i">
+                                                                    {{ typeof gap === 'object' ? gap.detail : gap }}
+                                                                </li>
+                                                            </ul>
+                                                        </div>
+                                                        <span v-else style="color: #ccc;">-</span>
                                                     </td>
 
                                                     <td>
@@ -166,7 +168,7 @@ const totalPages = ref(1)
 // 🌟 ตัวแปรใหม่สำหรับ Filter และ Search
 const selectedDepartment = ref('')
 const searchQuery = ref('')
-const departments = ref([]) // สำหรับเก็บรายการกองทั้งหมด
+const departments = ref([])
 
 /* ===============================
     ฟังก์ชันดึงรายชื่อหน่วยงานสำหรับ Dropdown
@@ -193,7 +195,7 @@ const fetchDepartments = async () => {
 ================================ */
 const applyFilter = () => {
     expandedRow.value = null
-    fetchScopes(1) // กลับไปหน้า 1 เสมอเวลาค้นหา
+    fetchScopes(1)
 }
 
 /* ===============================
@@ -226,7 +228,7 @@ const handleAutoExpand = () => {
                     rowElement.style.backgroundColor = '#fff9db'
                     setTimeout(() => { rowElement.style.backgroundColor = '' }, 2500)
                 }
-            }, 600) 
+            }, 600)
         })
     } else {
         console.warn("❌ ไม่พบ ID นี้ในข้อมูลที่โหลดมา")
@@ -262,6 +264,7 @@ const fetchScopes = async (page = 1) => {
         })
 
         const responseData = await res.json()
+        console.log("Check Data:", responseData.data);
 
         if (responseData.data) {
             scopes.value = responseData.data
@@ -311,14 +314,17 @@ const progressClass = (value) => {
     ฟังก์ชันการนำทาง 
 ================================ */
 const goToProgress = (planId) => {
-    router.push({ 
-        name: 'AdminEditProgress', 
-        params: { id: planId } 
+    router.push({
+        name: 'AdminEditProgress',
+        params: { id: planId }
     })
 }
 
 const goToEvaluation = (planId) => {
-    router.push({ name: 'AdminEvaluation', params: { id: planId } })
+    router.push({
+        name: 'AdminEditEvaluation',
+        params: { id: planId }
+    })
 }
 
 /* ===============================

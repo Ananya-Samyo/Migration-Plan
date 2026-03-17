@@ -27,44 +27,30 @@
         </div>
 
         <div v-show="expandedIndex === pIndex" class="project-body mt-3" style="padding: 15px;">
-        <div class="grid-2">
+          <div class="grid-2">
             <div class="field">
               <label>วันที่เริ่มต้น</label>
-              <div style="position: relative; width: 100%;">
-                <input 
-                  type="text" 
-                  :value="toThaiDate(project.startDate)" 
-                  placeholder="เลือกวันที่เริ่มต้น" 
-                  readonly 
-                  style="width: 100%; cursor: pointer; background-color: #fff;"
-                />
-                <input 
-                  type="date" 
-                  v-model="project.startDate" 
-                  :disabled="isViewer"
+              <div style="position: relative; width: 100%; display: flex; align-items: center;">
+                <span style="position: absolute; left: 10px; z-index: 5;">📅</span>
+
+                <input type="text" :value="toThaiDate(project.startDate)" placeholder="เลือกวันที่เริ่มต้น" readonly
+                  style="width: 100%; cursor: pointer; background-color: #fff; padding-left: 35px;" /> <input
+                  type="date" v-model="project.startDate" :disabled="isViewer"
                   @click="$event.target.showPicker && $event.target.showPicker()"
-                  style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; z-index: 10;" 
-                />
+                  style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; z-index: 10;" />
               </div>
             </div>
 
             <div class="field">
               <label>วันที่สิ้นสุด</label>
-              <div style="position: relative; width: 100%;">
-                <input 
-                  type="text" 
-                  :value="toThaiDate(project.endDate)" 
-                  placeholder="เลือกวันที่สิ้นสุด" 
-                  readonly 
-                  style="width: 100%; cursor: pointer; background-color: #fff;"
-                />
-                <input 
-                  type="date" 
-                  v-model="project.endDate" 
-                  :disabled="isViewer"
+              <div style="position: relative; width: 100%; display: flex; align-items: center;">
+                <span style="position: absolute; left: 10px; z-index: 5;">📅</span>
+
+                <input type="text" :value="toThaiDate(project.endDate)" placeholder="เลือกวันที่สิ้นสุด" readonly
+                  style="width: 100%; cursor: pointer; background-color: #fff; padding-left: 35px;" /> <input
+                  type="date" v-model="project.endDate" :disabled="isViewer"
                   @click="$event.target.showPicker && $event.target.showPicker()"
-                  style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; z-index: 10;" 
-                />
+                  style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; z-index: 10;" />
               </div>
             </div>
           </div>
@@ -80,7 +66,8 @@
           <div v-for="(gap, gIndex) in project.gaps" :key="gIndex" class="gap-row"
             style="display: flex; gap: 10px; margin-bottom: 10px;">
             <input v-model="gap.detail" placeholder="รายละเอียด GAP" style="flex: 2;" />
-            <input type="number" v-model.number="gap.weight" :disabled="isViewer" placeholder="%" style="flex: 0.5;" />
+            <input type="number" v-model.number="gap.weight" :disabled="isViewer" placeholder="%" min="0" max="100"
+              @input="gap.weight = Math.max(0, Math.min(100, gap.weight))" />
             <select v-model="gap.status" style="flex: 1;">
               <option value="processing_gap">กำลังดำเนินการ</option>
               <option value="complete_gap">เสร็จสิ้น</option>
@@ -182,6 +169,8 @@ const removeIssue = (pIndex, iIndex) => form.value.projects[pIndex].issues.splic
 // --- หน้า 2: บันทึกความก้าวหน้าเงียบๆ แล้วไปหน้า 3 ---
 const handleNext = async () => {
   let hasError = false;
+  
+  // 1. ตรวจสอบเงื่อนไขน้ำหนักรวมก่อนส่ง
   form.value.projects.forEach((project, index) => {
     const totalW = project.gaps?.reduce((sum, g) => sum + Number(g.weight || 0), 0) || 0;
     if (totalW > 100) {
@@ -194,7 +183,13 @@ const handleNext = async () => {
 
   try {
     // โชว์ Loading
-    Swal.fire({ title: 'กำลังบันทึกข้อมูลส่วนที่ 2...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+    Swal.fire({ 
+      title: 'กำลังบันทึกข้อมูลส่วนที่ 2...', 
+      allowOutsideClick: false, 
+      didOpen: () => Swal.showLoading() 
+    });
+
+    const currentProject = form.value.projects[0]; 
 
     const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/admin/update-progress`, {
       method: 'POST',
@@ -202,17 +197,27 @@ const handleNext = async () => {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${localStorage.getItem('token')}`
       },
-      body: JSON.stringify({ 
-        projectId: props.projectId, 
-        projects: form.value.projects 
+      body: JSON.stringify({
+        projectId: props.projectId,           
+        startDate: currentProject.startDate,  
+        endDate: currentProject.endDate,        
+        progress: currentProject.progress || 0, 
+        gaps: currentProject.gaps,              
+        issues: currentProject.issues           
       })
     });
 
-    if (!res.ok) throw new Error('เกิดข้อผิดพลาดในการบันทึกข้อมูล');
+    const result = await res.json();
 
-    Swal.close(); // ปิด Loading
-    emit('next'); // เปลี่ยนไปหน้า 3
+    if (!res.ok) {
+      throw new Error(result.message || 'เกิดข้อผิดพลาดในการบันทึกข้อมูล');
+    }
+
+    Swal.close(); 
+    emit('next'); 
+
   } catch (error) {
+    console.error("❌ Save Error:", error);
     Swal.fire('ข้อผิดพลาด', error.message, 'error');
   }
 }

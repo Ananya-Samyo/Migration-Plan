@@ -47,10 +47,16 @@
     </header>
 
     <section class="summary-grid">
-      <SummaryCard title="ขอบเขตงานทั้งหมด" :value="total" type="primary" icon="📁" />
-      <SummaryCard title="ปิด GAP เสร็จแล้ว" :value="closedCount" type="success" icon="✅" />
-      <SummaryCard title="ยังไม่ปิด GAP" :value="openCount" type="warning" icon="📌" />
-      <SummaryCard title="ไม่สามารถปิด GAP แต่ยอมรับได้" :value="acceptableCount" type="danger" icon="⚠️" />
+      <SummaryCard title="ขอบเขตงานทั้งหมด" :value="total" type="warning" icon="📁" @details="handleCardClick('all')" />
+
+      <SummaryCard title="ยังไม่ปิด GAP" :value="openCount" type="primary" icon="📌"
+        @details="handleCardClick('primary')" />
+
+      <SummaryCard title="ปิด GAP เสร็จแล้ว" :value="closedCount" type="success" icon="✅"
+        @details="handleCardClick('success')" />
+
+      <SummaryCard title="ไม่สามารถปิด GAP แต่ยอมรับได้" :value="acceptableCount" type="danger" icon="⚠️"
+        @details="handleCardClick('danger')" />
     </section>
 
     <div class="overall-progress-bar">
@@ -120,7 +126,8 @@
       <div v-if="total > 0" class="dtg-content">
 
         <div class="dtg-col-left">
-          <div class="section-title" style="font-weight: bold; margin-bottom: 10px;">1. ผลการดำเนินงานทุกขอบเขตงานในภาพรวม-รายขอบเขตงาน</div>
+          <div class="section-title" style="font-weight: bold; margin-bottom: 10px;">1.
+            ผลการดำเนินงานทุกขอบเขตงานในภาพรวม-รายขอบเขตงาน</div>
           <table class="dtg-table">
             <thead>
               <tr>
@@ -149,9 +156,9 @@
           <div class="section-title" style="font-weight: bold; margin-bottom: 10px;">2. ผลการปิด GAP รายขอบเขตงาน</div>
 
           <div style="width: 35%; padding-top: 10px;">
-              <StatusChart :selectedDate="selectedDate" />
-            </div>
-          
+            <StatusChart :selectedDate="selectedDate" />
+          </div>
+
           <div style="display: flex; gap: 15px; align-items: flex-start;">
 
             <div style="width: 65%;">
@@ -186,17 +193,65 @@
         <h3>ไม่มีข้อมูลสำหรับช่วงเวลานี้</h3>
       </div>
 
-      <div class="dtg-footer-container" v-if="total > 0" style="display: flex; justify-content: flex-end; margin-top: 30px;">
-        <div class="dtg-legend-box" style="border: 1px solid #ccc; padding: 15px; border-radius: 4px; background: #fff; min-width: 220px;">
-          <div class="legend-title" style="font-weight: bold; margin-bottom: 10px; border-bottom: 1px solid #eee; padding-bottom: 5px;">สถานะ :</div>
+      <div class="dtg-footer-container" v-if="total > 0"
+        style="display: flex; justify-content: flex-end; margin-top: 30px;">
+        <div class="dtg-legend-box"
+          style="border: 1px solid #ccc; padding: 15px; border-radius: 4px; background: #fff; min-width: 220px;">
+          <div class="legend-title"
+            style="font-weight: bold; margin-bottom: 10px; border-bottom: 1px solid #eee; padding-bottom: 5px;">สถานะ :
+          </div>
           <div class="legend-items-vertical" style="display: flex; flex-direction: column; gap: 8px;">
-            <div class="legend-item" style="display: flex; align-items: center; gap: 10px;"><span class="status-dot green"></span> ปิด GAP เสร็จแล้ว</div>
-            <div class="legend-item" style="display: flex; align-items: center; gap: 10px;"><span class="status-dot yellow"></span> ไม่สามารถปิด GAP แต่ยอมรับได้</div>
-            <div class="legend-item" style="display: flex; align-items: center; gap: 10px;"><span class="status-dot red"></span> ยังไม่ปิด GAP</div>
+            <div class="legend-item" style="display: flex; align-items: center; gap: 10px;"><span
+                class="status-dot green"></span> ปิด GAP เสร็จแล้ว</div>
+            <div class="legend-item" style="display: flex; align-items: center; gap: 10px;"><span
+                class="status-dot yellow"></span> ไม่สามารถปิด GAP แต่ยอมรับได้</div>
+            <div class="legend-item" style="display: flex; align-items: center; gap: 10px;"><span
+                class="status-dot red"></span> ยังไม่ปิด GAP</div>
           </div>
         </div>
       </div>
 
+    </div>
+
+    <div v-if="isModalOpen" class="custom-modal-overlay" @click.self="isModalOpen = false">
+      <div class="custom-modal-content">
+        <div class="modal-header">
+          <h3>{{ modalTitle }}</h3>
+          <button @click="isModalOpen = false" class="close-btn">&times;</button>
+        </div>
+
+        <div class="modal-body">
+          <table class="modal-table">
+            <thead>
+              <tr>
+                <th>ชื่อขอบเขตแผนงาน</th>
+                <th style="text-align: center;">ความคืบหน้า</th>
+                <th style="text-align: center;">ความเร่งด่วน</th>
+                <th style="text-align: center;">จัดการ</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="item in filteredTasksForModal" :key="item.id">
+                <td>{{ item.title }}</td>
+                <td style="text-align: center;">
+                  <div class="mini-progress">
+                    <div class="bar" :style="{ width: item.progress + '%' }"></div>
+                    <span>{{ item.progress }}%</span>
+                  </div>
+                </td>
+                <td style="text-align: center;">
+                  <span :class="['urgency-badge', getUrgency(item.endDate).class]">
+                    {{ getUrgency(item.endDate).label }}
+                  </span>
+                </td>
+                <td style="text-align: center;">
+                  <button @click="goToScopePage(item.id)" class="btn-go">ไปที่งาน ➔</button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
     </div>
 
   </div>
@@ -241,6 +296,40 @@ const currentExportDate = computed(() => {
   const d = new Date()
   return `${d.getDate()} ${d.toLocaleDateString('th-TH', { month: 'long' })} ${d.getFullYear() + 543}`
 })
+
+// เพิ่ม State เหล่านี้ในหน้า Dashboard หลัก
+const isModalOpen = ref(false)
+const modalTitle = ref('')
+const filteredTasksForModal = ref([])
+
+const handleCardClick = (type) => {
+  const titles = {
+    warning: 'ขอบเขตงานทั้งหมด',
+    primary: 'รายการที่ยังไม่ปิด GAP',
+    success: 'รายการที่ปิด GAP เสร็จแล้ว',
+    danger: 'รายการที่ไม่สามารถปิด GAP แต่ยอมรับได้'
+  }
+  modalTitle.value = titles[type] || 'รายละเอียด'
+
+  // กรองข้อมูลจากตัวแปร tasks (ที่คุณ fetch มาจาก /api/admin/dashboard/tasks)
+  if (type === 'warning') {
+    filteredTasksForModal.value = tasks.value
+  } else if (type === 'primary') {
+    // กรองเอาเฉพาะอันที่สถานะไม่ใช่ปิดแล้ว (closed) และไม่ใช่ยอมรับได้ (acceptable)
+    filteredTasksForModal.value = tasks.value.filter(t => t.status !== 'closed' && t.status !== 'acceptable')
+  } else if (type === 'success') {
+    filteredTasksForModal.value = tasks.value.filter(t => t.status === 'closed')
+  } else if (type === 'danger') {
+    filteredTasksForModal.value = tasks.value.filter(t => t.status === 'acceptable')
+  }
+
+  isModalOpen.value = true
+}
+
+const goToScopePage = (scopeId) => {
+  isModalOpen.value = false
+  router.push({ path: '/admin/scopeproject', query: { scope_id: scopeId } })
+}
 
 /* ===============================
     COMPUTED PROPERTIES
@@ -344,6 +433,19 @@ const fetchDashboard = async () => {
   } catch (err) {
     console.error('❌ Fetch Dashboard Error:', err)
   }
+}
+
+const getUrgency = (endDate) => {
+  if (!endDate) return { label: 'ไม่ระบุ', class: 'gray' };
+
+  const today = new Date();
+  const target = new Date(endDate);
+  const diffDays = Math.ceil((target - today) / (1000 * 60 * 60 * 24));
+
+  if (diffDays < 0) return { label: 'เลยกำหนด', class: 'urgent-critical' };
+  if (diffDays <= 7) return { label: 'ด่วนมาก (ใน 7 วัน)', class: 'urgent-high' };
+  if (diffDays <= 30) return { label: 'เร่งด่วน (ใน 1 เดือน)', class: 'urgent-medium' };
+  return { label: 'ปกติ', class: 'urgent-low' };
 }
 
 /* ===============================
@@ -459,7 +561,7 @@ const generateDTGReport = async (selectedTasks) => {
       margin: { left: 15, right: 155 },
       head: [['ชื่อขอบเขตงาน', 'ปีที่ทำ', 'สถานะ (%)']],
       body: selectedTasks.map(t => [t.title || t.name || 'ไม่ระบุ', t.year || '2568', `${t.progress || 0}%`]),
-      styles: { font: 'Sarabun', fontStyle: 'normal', fontSize: 10, cellPadding: 3 }, 
+      styles: { font: 'Sarabun', fontStyle: 'normal', fontSize: 10, cellPadding: 3 },
       headStyles: {
         fillColor: [79, 70, 229],
         halign: 'center'

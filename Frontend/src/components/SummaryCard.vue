@@ -11,50 +11,24 @@ const props = defineProps({
   }
 })
 
-/* =========================================
-   UPDATE: ปรับ Theme สีตามที่ขอมา
-========================================= */
+// แจ้งไปยัง Parent ว่ากล่องนี้ถูกคลิก
+const emit = defineEmits(['details'])
+
 const theme = {
-  // สีเหลือง -> สำหรับ "งานทั้งหมด"
-  warning: {
-    border: '#ca8a04', // เหลืองเข้ม (Gold)
-    bg: '#fefce8',     // เหลืองอ่อนมาก
-    defaultIcon: '📁'
-  },
-  // สีม่วง -> สำหรับ "ยังไม่ปิด GAP"
-  primary: {
-    border: '#6d28d9',
-    bg: '#ede9fe',
-    defaultIcon: '📌'
-  },
-  // สีเขียว -> สำหรับ "ปิด GAP เสร็จแล้ว"
-  success: {
-    border: '#15803d',
-    bg: '#dcfce7',
-    defaultIcon: '✅'
-  },
-  // สีแดง -> สำหรับ "ไม่สามารถปิด GAP แต่ยอมรับได้"
-  danger: {
-    border: '#b91c1c',
-    bg: '#fee2e2',
-    defaultIcon: '⚠️'
-  }
+  warning: { border: '#ca8a04', bg: '#fefce8', defaultIcon: '📁' },
+  primary: { border: '#6d28d9', bg: '#ede9fe', defaultIcon: '📌' },
+  success: { border: '#15803d', bg: '#dcfce7', defaultIcon: '✅' },
+  danger: { border: '#b91c1c', bg: '#fee2e2', defaultIcon: '⚠️' }
 }
 
-const activeTheme = computed(() => {
-  return theme[props.type] || theme['primary']
-})
-
-const displayIcon = computed(() => {
-  return props.icon || activeTheme.value.defaultIcon
-})
+const activeTheme = computed(() => theme[props.type] || theme['primary'])
+const displayIcon = computed(() => props.icon || activeTheme.value.defaultIcon)
 </script>
 
 <template>
-  <div class="card" :style="{
-    borderLeft: '5px solid ' + activeTheme.border,
-    background: activeTheme.bg
-  }">
+  <div class="card clickable" 
+       @click="emit('details', type)" 
+       :style="{ borderLeft: '5px solid ' + activeTheme.border, background: activeTheme.bg }">
     <div class="icon">{{ displayIcon }}</div>
     <div class="card-content">
       <h4 :style="{ color: activeTheme.border }">{{ title }}</h4>
@@ -64,6 +38,12 @@ const displayIcon = computed(() => {
 </template>
 
 <style scoped>
+.card.clickable:hover { filter: brightness(0.95); transform: translateY(-2px); transition: 0.2s; }
+.card.clickable {
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
 .card {
   display: flex;
   align-items: center;

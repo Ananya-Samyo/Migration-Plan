@@ -310,6 +310,8 @@ const saveEvaluation = async () => {
   try {
     const fd = new FormData();
 
+    fd.append('projectId', props.projectId);
+
     // Append ข้อมูลทั้งหมดลงใน fd 
     fd.append('step1', JSON.stringify(s1));
     fd.append('step2', JSON.stringify(s2));

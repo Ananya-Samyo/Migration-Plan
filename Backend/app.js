@@ -17,6 +17,7 @@ import adminEvaluationRoutes from './admin/admin_evaluations.js'
 import adminProjectsRoutes from './admin/admin_projects.js'
 import adminExportRoutes from './admin/admin_export.js'
 import adminEditProjectRoutes from './admin/admin_editprogress.js'
+import evaluationRoutes from './admin/admin_editevaluations.js';
 
 // ✅ Import Global Routes
 import departmentRoutes from './global/departments.js'
@@ -70,6 +71,7 @@ app.use('/api/admin', verifyToken, isAdmin, adminLogRoutes)
 app.use('/api/admin', verifyToken, isAdmin, adminProjectsRoutes)
 app.use('/api/admin', verifyToken, isAdmin, adminExportRoutes);
 app.use('/api/admin', verifyToken, isAdmin, adminEditProjectRoutes)
+app.use('/api/admin', verifyToken, isAdmin, evaluationRoutes);
 
 // ===============================================
 

@@ -17,7 +17,7 @@
 
             <div class="stepper-item" :class="{ active: currentStep >= 3 }">
                 <div class="step-counter">3</div>
-                <div class="step-name">การประเมินผล</div>
+                <div class="step-name">ประโยชน์</div>
             </div>
         </div>
 

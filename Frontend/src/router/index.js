@@ -77,8 +77,13 @@ const routes = [
       {
         path: '/admin/edit-progress/:id',
         name: 'AdminEditProgress',
-        component: () => import('../components/admin/Edit/Admin_2EditProgress.vue'), 
+        component: () => import('../components/admin/Edit/Admin_2EditProgress.vue'),
         props: true
+      },
+      {
+        path: '/admin/edit-evaluation/:id',
+        name: 'AdminEditEvaluation',
+        component: () => import('../components/admin/Edit/Admin_3EditEvaluation.vue')
       },
       {
         path: 'log',

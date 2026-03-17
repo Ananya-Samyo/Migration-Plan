@@ -521,6 +521,40 @@ input:focus, select:focus, textarea:focus {
   border-radius: 8px;
 }
 
+.gap-row {
+  display: flex;
+  align-items: center; 
+  gap: 12px;
+  background: #fff;
+  padding: 10px;
+  border-radius: 8px;
+  border: 1px solid #f0f0f0;
+  margin-bottom: 10px;
+}
+
+.gap-row input[type="text"] {
+  flex: 2; 
+  padding: 8px 12px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+}
+
+.gap-row input[type="number"] {
+  flex: 0 0 80px; 
+  padding: 8px;
+  text-align: center;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+}
+
+.gap-row select {
+  flex: 1;
+  padding: 8px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  background-color: #fff;
+}
+
 
 /* 8. Responsive
 ------------------------------------------ */

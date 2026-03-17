@@ -82,36 +82,44 @@ router.post('/complete-workflow', verifyToken, isAdmin, upload.array('attachment
     connection = await db.getConnection();
     await connection.beginTransaction();
 
-    // 1. แกะกล่องข้อมูลที่ส่งมาจาก Frontend
+    // 🟢 1. ตรวจสอบข้อมูลที่รับมาก่อน (ช่วยให้รู้ว่าหน้าบ้านส่งอะไรมาบ้าง)
+    console.log("📦 ข้อมูลที่ได้รับจาก Frontend:", req.body);
+
+    // แกะกล่องข้อมูลที่ส่งมาจาก Frontend
     const step1 = JSON.parse(req.body.step1 || '{}');
     const step2 = JSON.parse(req.body.step2 || '{}');
     const step3 = JSON.parse(req.body.step3 || '{}');
     
-    // ดึง project_plan_id ที่บันทึกไว้ตั้งแต่หน้า 1 (ต้องมีส่งมาใน step1 หรือจาก Vue)
-    // สมมติว่าใน Vue มีการส่ง projectId มาใน step1.id หรือคุณอาจส่งแยกมาใน req.body.projectId ก็ได้
-    const projectId = step1.id || req.body.projectId; 
+    // 🟢 2. ดึง Project ID และดักจับกรณีค่าเป็นตัวหนังสือ 'undefined' หรือ 'null'
+    let projectId = req.body.projectId || step1.id; 
+    if (projectId === 'undefined' || projectId === 'null') {
+        projectId = null;
+    }
     
     if (!projectId) throw new Error("ไม่พบรหัสโครงการ (Project ID) กรุณากลับไปเริ่มใหม่");
 
-    // 2. บันทึกข้อมูลลงตาราง plan_evaluations
+    // 3. บันทึกข้อมูลลงตาราง plan_evaluations
     const [evalRes] = await connection.query(`
       INSERT INTO plan_evaluations 
       (project_plan_id, scope_id, objective, before_plan, expected_outcome, actual_outcome, recommendation, project_status, evaluation_status)
       VALUES (?, (SELECT scope_id FROM project_plans WHERE project_plan_id = ?), ?, ?, ?, ?, ?, ?, ?)
     `, [
       projectId, projectId,
-      step3.objective, step3.beforePlan, step3.expectedResult, step3.actualResult,
+      JSON.stringify(step3.objective || []), 
+      JSON.stringify(step3.beforePlan || []), 
+      JSON.stringify(step3.expectedResult || []), 
+      step3.actualResult,
       step3.suggestion, step3.projectStatus, step3.evaluation
     ]);
 
-    // 3. บันทึกปัญหา (ถ้ามีการกรอกมาในหน้า 3) ลงตาราง problems
+    // 4. บันทึกปัญหา (ถ้ามีการกรอกมาในหน้า 3) ลงตาราง problems
     if (step3.problem) {
       await connection.query(`
         INSERT INTO problems (project_plan_id, problem_detail) VALUES (?, ?)
       `, [projectId, step3.problem]);
     }
 
-    // 4. จัดการไฟล์แนบ (ถ้ามี) บันทึกลงตาราง attachments
+    // 5. จัดการไฟล์แนบ (ถ้ามี) บันทึกลงตาราง attachments
     if (req.files && req.files.length > 0) {
       for (const file of req.files) {
         await connection.query(`
@@ -121,64 +129,92 @@ router.post('/complete-workflow', verifyToken, isAdmin, upload.array('attachment
       }
     }
 
-    // --- 5. จัดเตรียมข้อมูลสำหรับส่งอีเมล ---
-    const userEmail = step1.coordinator?.email || req.user.email; // ส่งหาผู้ประสานงาน หรือคนที่กำลังล็อกอิน
-    const projectName = step1.projects?.[0]?.projectName || 'โครงการใหม่';
-    const statusText = step3.projectStatus === 'finish' ? 'เสร็จสิ้นการดำเนินงาน' : 'อยู่ระหว่างดำเนินการ';
-    const evalText = step3.evaluation === 'pass' ? 'บรรลุเป้าหมาย' : (step3.evaluation === 'fail' ? 'ไม่บรรลุเป้าหมาย' : 'ยังไม่ได้ระบุ');
+    // --- 6. จัดเตรียมข้อมูลและตรวจสอบอีเมลก่อนส่ง ---
+    
+    // 🟢 แก้ไขเส้นทางการดึงอีเมลให้เจาะเข้าไปใน projects[0] (อนุโลมให้ใช้อีเมลของคนแรกเป็นหลัก)
+    let userEmail = step1.projects?.[0]?.coordinator?.email;
+    
+    if (!userEmail || userEmail === 'undefined' || userEmail === 'null' || userEmail.trim() === '') {
+        userEmail = req.user ? req.user.email : null;
+    }
 
-    // สร้าง HTML สำหรับอีเมล
-    const mailOptions = {
-      from: `"Migration Plan System" <${process.env.MAIL_USER}>`,
-      to: userEmail,
-      subject: `[แจ้งเตือน] สรุปผลการดำเนินงาน: ${projectName}`,
-      html: `
-      <div style="font-family: Arial, sans-serif; color: #333; line-height: 1.6; max-width: 800px; margin: auto; padding: 20px; border: 1px solid #ddd; border-radius: 10px;">
-        <h2 style="color: #4f46e5; text-align: center;">สรุปรายงานความก้าวหน้าโครงการ</h2>
-        <hr style="border: none; border-top: 2px solid #e5e7eb; margin: 20px 0;">
-        
-        <table style="width: 100%; border-collapse: collapse;">
-          <tr>
-            <td style="background-color: #f8fafc; border: 1px solid #cbd5e1; padding: 15px; border-radius: 8px;">
-              <h4 style="margin-top: 0; color: #4f46e5; border-bottom: 1px solid #cbd5e1; padding-bottom: 8px;">ข้อมูลส่วนที่ ๑: รายละเอียดแผนงาน</h4>
-              <p><b>ชื่อขอบเขตงาน:</b> ${step1.scopeName || '-'}</p>
-              <p><b>ชื่อแผนงาน:</b> ${projectName}</p>
-              <p><b>ผู้ประสานงาน:</b> ${step1.coordinator?.name || '-'}</p>
-            </td>
-          </tr>
-          <tr><td style="height: 15px;"></td></tr>
-          
-          <tr>
-            <td style="background-color: #fcfcff; border: 1px solid #cbd5e1; padding: 15px; border-radius: 8px;">
-              <h4 style="margin-top: 0; color: #b45309; border-bottom: 1px solid #cbd5e1; padding-bottom: 8px;">ข้อมูลส่วนที่ ๒: ปัญหาและข้อเสนอแนะ</h4>
-              <ul>
-                <li style="margin-bottom: 5px;"><b>ปัญหาอุปสรรค:</b> ${step3.problem || '- ไม่มี -'}</li>
-                <li style="margin-bottom: 5px;"><b>ข้อเสนอแนะ:</b> ${step3.suggestion || '- ไม่มี -'}</li>
-              </ul>
-            </td>
-          </tr>
-          <tr><td style="height: 15px;"></td></tr>
+    // 🟢 สร้างเงื่อนไข "เกราะป้องกันขั้นสุด": ต้องเป็น String และต้องมีตัว @ เท่านั้นถึงจะส่ง
+    const isEmailValid = typeof userEmail === 'string' && userEmail.includes('@');
 
-          <tr>
-            <td style="background-color: #f8fafc; border: 1px solid #cbd5e1; padding: 15px; border-radius: 8px;">
-              <h4 style="margin-top: 0; color: #16a34a; border-bottom: 1px solid #cbd5e1; padding-bottom: 8px;">ส่วนที่ ๓: การประเมินผลลัพธ์</h4>
-              <p><b>สถานะโครงการ:</b> ${statusText}</p>
-              <p><b>ผลการประเมิน:</b> <span style="color: ${step3.evaluation === 'pass' ? '#16a34a' : '#dc2626'}; font-weight: bold;">${evalText}</span></p>
-              <p><b>ผลที่ได้รับจริง:</b><br/> ${step3.actualResult || '-'}</p>
-            </td>
-          </tr>
-        </table>
-        <br/>
-        <p style="text-align: center; color: #666;">อีเมลฉบับนี้เป็นการแจ้งเตือนอัตโนมัติจากระบบ กรุณาอย่าตอบกลับ</p>
-      </div>
-      `
-    };
+    if (isEmailValid) {
+        // 🌟 [แก้ไขจุดนี้] วนลูปดึงชื่อแผนงานทั้งหมดมาสร้างเป็น List <li>
+        let projectListHTML = '<p style="display:inline; margin-left:5px;">โครงการใหม่</p>';
+        if (step1.projects && step1.projects.length > 0) {
+            projectListHTML = '<ul style="margin-top: 5px; margin-bottom: 0; padding-left: 20px;">' + 
+                              step1.projects.map(p => `<li style="margin-bottom: 4px;">${p.projectName}</li>`).join('') + 
+                              '</ul>';
+        }
 
-    // ส่งอีเมล
-    await transporter.sendMail(mailOptions);
+        const statusText = step3.projectStatus === 'finish' ? 'เสร็จสิ้นการดำเนินงาน' : 'อยู่ระหว่างดำเนินการ';
+        const evalText = step3.evaluation === 'pass' ? 'บรรลุเป้าหมาย' : (step3.evaluation === 'fail' ? 'ไม่บรรลุเป้าหมาย' : 'ยังไม่ได้ระบุ');
 
-    await connection.commit(); // ยืนยันการบันทึกฐานข้อมูล
-    res.json({ success: true, message: 'บันทึกข้อมูลและส่งอีเมลสำเร็จ!' });
+        // สร้าง HTML สำหรับอีเมล
+        const mailOptions = {
+          from: `"Migration Plan System" <${process.env.MAIL_USER}>`,
+          to: userEmail,
+          // เปลี่ยน Subject ให้ครอบคลุมด้วยชื่อขอบเขตงาน (Scope) เพราะตอนนี้มีหลายแผนงาน
+          subject: `[แจ้งเตือน] สรุปผลการดำเนินงาน: ${step1.scopeName || 'โครงการ'}`,
+          html: `
+          <div style="font-family: Arial, sans-serif; color: #333; line-height: 1.6; max-width: 800px; margin: auto; padding: 20px; border: 1px solid #ddd; border-radius: 10px;">
+            <h2 style="color: #4f46e5; text-align: center;">สรุปรายงานความก้าวหน้าโครงการ</h2>
+            <hr style="border: none; border-top: 2px solid #e5e7eb; margin: 20px 0;">
+            
+            <table style="width: 100%; border-collapse: collapse;">
+              <tr>
+                <td style="background-color: #f8fafc; border: 1px solid #cbd5e1; padding: 15px; border-radius: 8px;">
+                  <h4 style="margin-top: 0; color: #4f46e5; border-bottom: 1px solid #cbd5e1; padding-bottom: 8px;">ข้อมูลส่วนที่ ๑: รายละเอียดแผนงาน</h4>
+                  <p><b>ชื่อขอบเขตงาน:</b> ${step1.scopeName || '-'}</p>
+                  <div><b>ชื่อแผนงาน:</b> ${projectListHTML}</div>
+                </td>
+              </tr>
+              <tr><td style="height: 15px;"></td></tr>
+              
+              <tr>
+                <td style="background-color: #fcfcff; border: 1px solid #cbd5e1; padding: 15px; border-radius: 8px;">
+                  <h4 style="margin-top: 0; color: #b45309; border-bottom: 1px solid #cbd5e1; padding-bottom: 8px;">ข้อมูลส่วนที่ ๒: ปัญหาและข้อเสนอแนะ</h4>
+                  <ul>
+                    <li style="margin-bottom: 5px;"><b>ปัญหาอุปสรรค:</b> ${step3.problem || '- ไม่มี -'}</li>
+                    <li style="margin-bottom: 5px;"><b>ข้อเสนอแนะ:</b> ${step3.suggestion || '- ไม่มี -'}</li>
+                  </ul>
+                </td>
+              </tr>
+              <tr><td style="height: 15px;"></td></tr>
+
+              <tr>
+                <td style="background-color: #f8fafc; border: 1px solid #cbd5e1; padding: 15px; border-radius: 8px;">
+                  <h4 style="margin-top: 0; color: #16a34a; border-bottom: 1px solid #cbd5e1; padding-bottom: 8px;">ส่วนที่ ๓: การประเมินผลลัพธ์</h4>
+                  <p><b>สถานะโครงการ:</b> ${statusText}</p>
+                  <p><b>ผลการประเมิน:</b> <span style="color: ${step3.evaluation === 'pass' ? '#16a34a' : '#dc2626'}; font-weight: bold;">${evalText}</span></p>
+                  <p><b>ผลที่ได้รับจริง:</b><br/> ${step3.actualResult || '-'}</p>
+                </td>
+              </tr>
+            </table>
+            <br/>
+            <p style="text-align: center; color: #666;">อีเมลฉบับนี้เป็นการแจ้งเตือนอัตโนมัติจากระบบ กรุณาอย่าตอบกลับ</p>
+          </div>
+          `
+        };
+
+        // 🟢 แยก try-catch เฉพาะการส่งอีเมล เผื่อเมลส่งไม่ผ่าน Database จะได้ไม่พัง
+        try {
+            await transporter.sendMail(mailOptions);
+            console.log(`📧 ส่งอีเมลสำเร็จไปยัง: ${userEmail}`);
+        } catch (mailError) {
+            console.log(`⚠️ ส่งอีเมลไม่สำเร็จ แต่บันทึกข้อมูลแล้ว:`, mailError.message);
+        }
+
+    } else {
+        console.log(`⚠️ ข้ามการส่งอีเมล: เนื่องจากหา Email ผู้รับไม่พบ หรืออีเมลไม่ถูกต้อง (ค่าที่ได้คือ: ${userEmail})`);
+    }
+
+    // 🟢 7. ยืนยันการบันทึกฐานข้อมูล (ทำงานเสมอ ไม่ว่าเมลจะถูกส่งหรือไม่ก็ตาม)
+    await connection.commit(); 
+    res.json({ success: true, message: 'บันทึกข้อมูลสำเร็จ!' });
 
   } catch (error) {
     if (connection) await connection.rollback(); // ถ้ายกเลิก ให้ย้อนกลับข้อมูลที่ทำมาทั้งหมด
