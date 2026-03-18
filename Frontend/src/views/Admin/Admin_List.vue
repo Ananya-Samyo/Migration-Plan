@@ -7,8 +7,8 @@
         <span class="filter-label">กรองสิทธิ์:</span>
         <select v-model="filterRole" @change="loadAdmins(1)" class="filter-select">
           <option value="">ทั้งหมด</option>
-          <option value="admin">Admin</option>
-          <option value="viewer">Viewer</option>
+          <option value="admin">ผู้ดูแลระบบ</option>
+          <option value="viewer">ผู้เข้าชม</option>
         </select>
 
         <button class="btn-primary" @click="openAdd">
@@ -39,12 +39,18 @@
             <td style="text-align: center;">{{ admin.phone_number || '-' }}</td>
             <td style="text-align: center;">
               <span :class="['role-badge', admin.role]">
-                {{ admin.role === 'admin' ? 'ผู้ดูแลระบบ' : 'ผู้เข้าชม (Viewer)' }}
+                {{ admin.role === 'admin' ? 'ผู้ดูแลระบบ' : 'ผู้เข้าชม' }}
               </span>
             </td>
             <td class="actions">
               <button class="btn-edit" @click="openEdit(admin)">แก้ไข</button>
-              <button class="btn-delete" @click="removeAdmin(admin.id)">ลบ</button>
+
+              <button class="btn-delete" :disabled="admin.id === loggedInUserId"
+                :style="admin.id === loggedInUserId ? 'opacity: 0.5; cursor: not-allowed;' : ''"
+                :title="admin.id === loggedInUserId ? 'คุณไม่สามารถลบบัญชีของตัวเองได้' : 'ลบข้อมูล'"
+                @click="removeAdmin(admin.id)">
+                ลบ
+              </button>
             </td>
           </tr>
           <tr v-if="adminsData.length === 0">
@@ -85,7 +91,12 @@
 
         <div class="form-group">
           <label>อีเมล</label>
-          <input v-model="form.email" type="email" />
+          <input v-model="form.email" type="email" @input="onEmailType" />
+
+          <span v-if="emailError"
+            style="color: #ff4d4f; font-size: 13px; margin-top: 5px; display: block; font-weight: bold;">
+            * {{ emailError }}
+          </span>
         </div>
 
         <div class="form-group">
@@ -128,6 +139,23 @@ const currentPage = ref(1)
 const totalPages = ref(1)
 
 const filterRole = ref('')
+
+const emailError = ref('')
+const originalEmail = ref('')
+let emailTimeout = null
+
+const loggedInUserId = ref(Number(localStorage.getItem('userId')) || null)
+
+// ฟังก์ชันนี้จะทำงานทุกครั้งที่แป้นพิมพ์ขยับ
+const onEmailType = () => {
+  emailError.value = ''
+
+  if (emailTimeout) clearTimeout(emailTimeout)
+
+  emailTimeout = setTimeout(() => {
+    checkEmailDuplicate()
+  }, 500)
+}
 
 // Form Structure
 const form = ref({
@@ -181,6 +209,8 @@ onMounted(() => {
 
 const openAdd = () => {
   isEdit.value = false
+  emailError.value = ''
+  originalEmail.value = ''
   form.value = {
     id: null,
     name: '',
@@ -194,6 +224,8 @@ const openAdd = () => {
 
 const openEdit = (admin) => {
   isEdit.value = true
+  emailError.value = ''
+  originalEmail.value = admin.email
   form.value = {
     id: admin.id,
     name: admin.name,
@@ -207,8 +239,41 @@ const openEdit = (admin) => {
 
 const closeModal = () => { showModal.value = false }
 
+const checkEmailDuplicate = async () => {
+  const currentEmail = form.value.email?.trim()
+
+  if (!currentEmail) {
+    emailError.value = ''
+    return
+  }
+
+  if (isEdit.value && currentEmail === originalEmail.value) {
+    emailError.value = ''
+    return
+  }
+
+  try {
+    const checkUrl = `${BASE_API}/api/admin/check-email?email=${currentEmail}`
+
+    const res = await fetch(checkUrl, { headers: getHeaders() })
+    const data = await res.json()
+
+    if (data.found) {
+      emailError.value = 'อีเมลนี้มีผู้ใช้งานแล้ว กรุณาใช้อีเมลอื่น'
+    } else {
+      emailError.value = ''
+    }
+  } catch (err) {
+    console.error('Check email error:', err)
+  }
+}
+
 // บันทึกข้อมูล (Create / Update)
 const saveAdmin = async () => {
+  if (emailError.value) {
+    Swal.fire('ข้อผิดพลาด', 'กรุณาแก้ไขอีเมลที่ซ้ำซ้อนก่อนบันทึก', 'warning')
+    return
+  }
   const name = form.value.name?.trim()
   const email = form.value.email?.trim()
   const dept_id = form.value.department_id

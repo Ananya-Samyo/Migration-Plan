@@ -95,12 +95,22 @@ router.post('/users', async (req, res) => {
 router.put('/users/:id', async (req, res) => {
   const { id } = req.params;
   const { name, email, department_id, phone_number, role } = req.body;
+  
   try {
-    // ✅ อัปเดตข้อมูลรวมถึงเปลี่ยนสิทธิ์ (role) ได้
+    const [existing] = await db.query(
+      `SELECT user_id FROM users WHERE email = ? AND user_id != ?`, 
+      [email, id]
+    );
+
+    if (existing.length > 0) {
+      return res.status(400).json({ message: 'Email นี้มีผู้ใช้งานในระบบแล้ว' });
+    }
+
     await db.query(
       `UPDATE users SET user_name = ?, email = ?, phone_number = ?, department_id = ?, role = ? WHERE user_id = ?`,
       [name, email, phone_number || null, department_id || null, role || 'admin', id]
     );
+    
     res.json({ message: 'updated' });
   } catch (err) {
     console.error('PUT error:', err);
@@ -125,7 +135,6 @@ router.delete('/users/:id', async (req, res) => {
   }
 });
 
-// ... ส่วน check-email คงเดิม ...
 router.get('/check-email', async (req, res) => {
   const { email } = req.query; 
   if (!email) return res.status(400).json({ found: false, message: 'ไม่มีอีเมลส่งมา' });
