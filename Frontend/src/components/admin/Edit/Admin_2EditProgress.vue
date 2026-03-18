@@ -12,7 +12,7 @@
 
     <div class="card shadow-sm mb-4 p-4">
       <h2 class="section-title mb-4">1. รายละเอียดแผนงาน (Project Info)</h2>
-      
+
       <div class="field mb-3">
         <label class="fw-bold">ชื่อขอบเขตงาน</label>
         <input v-model="form.scopeName" type="text" class="form-control bg-light" />
@@ -38,7 +38,8 @@
           <label>ผู้ประสานงานหลัก (Coordinator)</label>
           <div class="grid-3">
             <input v-model="projectData.coordinator.name" placeholder="ชื่อ-สกุล" :disabled="isViewer" />
-            <input v-model="projectData.coordinator.email" placeholder="อีเมล" @blur="checkUserEmail" :disabled="isViewer" />
+            <input v-model="projectData.coordinator.email" placeholder="อีเมล" @blur="checkUserEmail"
+              :disabled="isViewer" />
             <input v-model="projectData.coordinator.phone_number" placeholder="เบอร์โทร" :disabled="isViewer" />
           </div>
         </div>
@@ -47,7 +48,7 @@
       <hr class="my-5">
 
       <h2 class="section-title text-success mb-4">2. ความก้าวหน้าและการวิเคราะห์ช่องว่าง (GAP)</h2>
-      
+
       <div class="grid-2 mb-4">
         <div class="field">
           <label>วันที่เริ่มต้นแผน</label>
@@ -77,16 +78,22 @@
           </select>
           <button v-if="!isViewer" class="btn btn-outline-danger btn-sm" @click="removeGap(gIndex)">✕</button>
         </div>
-        
+
         <button v-if="!isViewer" @click="addGap" class="btn-add-gap mt-2">+ เพิ่มรายการ GAP</button>
       </div>
     </div>
 
-    <div class="action-bar sticky-bottom p-3 bg-white border-top shadow-lg">
-      <button v-if="!isViewer" class="btn-primary w-100 py-3" @click="handleSave">
-        💾 บันทึกข้อมูลทั้งหมด
+    <div class="action-bar sticky-bottom p-3 bg-white border-top shadow-lg mt-4"
+      style="display: flex; justify-content: center; width: 100%;">
+
+      <button v-if="!isViewer" class="btn-primary py-3 px-5" @click="handleSave" style="min-width: 250px;">
+        💾 บันทึกข้อมูลการประเมิน
       </button>
-      <button v-else class="btn-secondary w-100 py-3" @click="router.back()">ย้อนกลับ</button>
+
+      <button v-else class="btn-secondary py-3 px-5" @click="router.back()" style="min-width: 250px;">
+        ย้อนกลับ
+      </button>
+
     </div>
   </div>
   <div v-else class="loading-screen text-center p-5">กำลังโหลดข้อมูล...</div>
@@ -158,7 +165,7 @@ const removeGap = (index) => projectData.value.gaps.splice(index, 1)
 
 const handleSave = async () => {
   if (totalWeight.value > 100) return Swal.fire('เตือน', 'น้ำหนัก GAP รวมเกิน 100%', 'warning')
-  
+
   try {
     Swal.fire({ title: 'กำลังบันทึก...', allowOutsideClick: false, didOpen: () => Swal.showLoading() })
     const res = await fetch(`${BASE_API}/api/admin/update-all-in-one`, {

@@ -47,7 +47,8 @@
     </header>
 
     <section class="summary-grid">
-      <SummaryCard title="ขอบเขตงานทั้งหมด" :value="total" type="warning" icon="📁" @details="handleCardClick('all')" />
+      <SummaryCard title="ขอบเขตงานทั้งหมด" :value="total" type="warning" icon="📁"
+        @details="handleCardClick('warning')" />
 
       <SummaryCard title="ยังไม่ปิด GAP" :value="openCount" type="primary" icon="📌"
         @details="handleCardClick('primary')" />
@@ -230,24 +231,44 @@
                 <th style="text-align: center;">จัดการ</th>
               </tr>
             </thead>
+
             <tbody>
-              <tr v-for="item in filteredTasksForModal" :key="item.id">
-                <td>{{ item.title }}</td>
-                <td style="text-align: center;">
-                  <div class="mini-progress">
-                    <div class="bar" :style="{ width: item.progress + '%' }"></div>
-                    <span>{{ item.progress }}%</span>
-                  </div>
-                </td>
-                <td style="text-align: center;">
-                  <span :class="['urgency-badge', getUrgency(item.endDate).class]">
-                    {{ getUrgency(item.endDate).label }}
-                  </span>
-                </td>
-                <td style="text-align: center;">
-                  <button @click="goToScopePage(item.id)" class="btn-go">ไปที่งาน ➔</button>
-                </td>
-              </tr>
+              <template v-if="filteredTasksForModal && filteredTasksForModal.length > 0">
+                <tr v-for="(item, index) in filteredTasksForModal" :key="index" style="vertical-align: middle;">
+                  
+                  <td style="vertical-align: middle;">
+                    {{ item.title }}
+                  </td>
+                  
+                  <td style="text-align: center; vertical-align: middle;">
+                    {{ item.progress || 0 }}%
+                  </td>
+                  
+                  <td style="text-align: center; vertical-align: middle;">
+                    <span :class="['urgency-badge', getUrgency(item.endDate).class]">
+                      {{ getUrgency(item.endDate).label }}
+                    </span>
+                  </td>
+                  
+                  <td style="text-align: center; vertical-align: middle;">
+                    <button @click="goToScopePage(item.id)" class="btn-go">
+                      ไปที่ขอบเขตงาน &#10140;
+                    </button>
+                  </td>
+                  
+                </tr>
+              </template>
+
+              <template v-else>
+                <tr>
+                  <td colspan="4" style="text-align: center; padding: 40px 20px; color: #94a3b8; vertical-align: middle;">
+                    <div style="display: flex; flex-direction: column; align-items: center; gap: 10px;">
+                      <span style="font-size: 2rem;">📭</span>
+                      <span style="font-size: 1rem; font-weight: 500;">ไม่มีข้อมูลรายการในหมวดหมู่นี้</span>
+                    </div>
+                  </td>
+                </tr>
+              </template>
             </tbody>
           </table>
         </div>
@@ -260,10 +281,12 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import html2canvas from 'html2canvas'
 import Swal from 'sweetalert2'
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
+
 import '../../assets/Admin/css/Admin_Dashboard.css'
 
 import { thaiFontBase64 } from '@/assets/fonts/thaiFont.js'
@@ -274,6 +297,7 @@ import StatusChart from '@/components/StatusChart.vue'
 import LineChart from '@/components/LineChart.vue'
 
 const API = import.meta.env.VITE_API_BASE_URL
+const router = useRouter()
 
 /* ===============================
     STATE & DATE LOGIC
@@ -311,11 +335,9 @@ const handleCardClick = (type) => {
   }
   modalTitle.value = titles[type] || 'รายละเอียด'
 
-  // กรองข้อมูลจากตัวแปร tasks (ที่คุณ fetch มาจาก /api/admin/dashboard/tasks)
   if (type === 'warning') {
-    filteredTasksForModal.value = tasks.value
+    filteredTasksForModal.value = [...tasks.value]
   } else if (type === 'primary') {
-    // กรองเอาเฉพาะอันที่สถานะไม่ใช่ปิดแล้ว (closed) และไม่ใช่ยอมรับได้ (acceptable)
     filteredTasksForModal.value = tasks.value.filter(t => t.status !== 'closed' && t.status !== 'acceptable')
   } else if (type === 'success') {
     filteredTasksForModal.value = tasks.value.filter(t => t.status === 'closed')

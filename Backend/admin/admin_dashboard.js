@@ -44,8 +44,9 @@ router.get('/dashboard/tasks', async (req, res) => {
         s.scope_id         AS id,           
         s.scope_name       AS title,        
         st.status_code     AS status,       
-        s.progress_percent,                 
-        s.created_at       AS start_date   
+        s.progress_percent AS progress,  
+        s.created_at       AS start_date,   
+        s.end_date         AS endDate   
       FROM scopes s
       JOIN status st ON s.status_id = st.status_id
       WHERE (? IS NULL OR DATE(s.created_at) BETWEEN ? AND ?)

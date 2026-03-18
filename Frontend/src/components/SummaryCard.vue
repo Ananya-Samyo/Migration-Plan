@@ -1,3 +1,15 @@
+<template>
+  <div class="card clickable" 
+       @click="emit('details', type)" 
+       :style="{ borderLeft: '5px solid ' + activeTheme.border, background: activeTheme.bg }">
+    <div class="icon">{{ displayIcon }}</div>
+    <div class="card-content">
+      <h4 :style="{ color: activeTheme.border }">{{ title }}</h4>
+      <h1>{{ value }}</h1>
+    </div>
+  </div>
+</template>
+
 <script setup>
 import { computed } from 'vue'
 
@@ -24,18 +36,6 @@ const theme = {
 const activeTheme = computed(() => theme[props.type] || theme['primary'])
 const displayIcon = computed(() => props.icon || activeTheme.value.defaultIcon)
 </script>
-
-<template>
-  <div class="card clickable" 
-       @click="emit('details', type)" 
-       :style="{ borderLeft: '5px solid ' + activeTheme.border, background: activeTheme.bg }">
-    <div class="icon">{{ displayIcon }}</div>
-    <div class="card-content">
-      <h4 :style="{ color: activeTheme.border }">{{ title }}</h4>
-      <h1>{{ value }}</h1>
-    </div>
-  </div>
-</template>
 
 <style scoped>
 .card.clickable:hover { filter: brightness(0.95); transform: translateY(-2px); transition: 0.2s; }

@@ -32,8 +32,8 @@
           <div class="form-group">
             <label>สถานะแผนงานในปัจจุบัน</label>
             <select v-model="evaluation.projectStatus">
-              <option value="processing">กำลังดำเนินการ</option>
-              <option value="finish">เสร็จสิ้นโครงการ</option>
+              <option value="processing">อยู่ระหว่างการประเมินผลขอบเขตงาน</option>
+              <option value="finish">เสร็จสิ้นขอบเขตงาน</option>
             </select>
           </div>
         </div>
@@ -41,7 +41,7 @@
 
       <section class="card">
         <div class="card-header flex-between">
-          <h3>🎯 ผลที่คาดว่าจะได้รับ (Expected Benefits)</h3>
+          <h3>🎯 ผลที่คาดว่าจะได้รับจากการทำ Low Level</h3>
           <button type="button" class="btn-purple-sm" @click="addItem">+ เพิ่มรายการ</button>
         </div>
 
@@ -60,11 +60,11 @@
 
             <div class="grid-2">
               <div class="form-group">
-                <label>สภาพก่อนปรับปรุง (As-Is)</label>
+                <label>ก่อนปรับปรุงตามแผนงาน</label>
                 <textarea v-model="item.beforeImprove" placeholder="รายละเอียดสถานะเดิม..." rows="2" />
               </div>
               <div class="form-group">
-                <label>เป้าหมายหลังปรับปรุง (To-Be)</label>
+                <label>ผลที่คาดว่าจะได้รับหลังปรับปรุงแผนงาน</label>
                 <textarea v-model="item.expectedAfter" placeholder="รายละเอียดผลที่อยากให้เกิด..." rows="2" />
               </div>
             </div>

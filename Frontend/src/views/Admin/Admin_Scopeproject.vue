@@ -81,7 +81,7 @@
                                                         {{ plan.name || plan.plan_name }}
                                                     </td>
 
-                                                    <td>{{ plan.details }}</td>
+                                                    <td>{{ plan.detail }}</td>
 
                                                     <td>
                                                         <div v-if="plan.gaps && plan.gaps.length > 0">
@@ -265,6 +265,7 @@ const fetchScopes = async (page = 1) => {
 
         const responseData = await res.json()
         console.log("Check Data:", responseData.data);
+        console.log(responseData.data[0].plans)
 
         if (responseData.data) {
             scopes.value = responseData.data

@@ -75,7 +75,7 @@ router.post('/update-progress', verifyToken, isAdmin, async (req, res) => {
       WHERE scope_id = (SELECT scope_id FROM project_plans WHERE project_plan_id = ? LIMIT 1)
     `, [startDate || null, endDate || null, projectId]);
 
-    // 3. จัดการ GAPs (ตาราง operational_details)
+   // 3. จัดการ GAPs (ตาราง operational_details)
     await conn.query(`DELETE FROM operational_details WHERE project_plan_id = ?`, [projectId]);
 
     if (gaps && gaps.length > 0) {
@@ -85,13 +85,13 @@ router.post('/update-progress', verifyToken, isAdmin, async (req, res) => {
         const gapDetail = gap.detail || gap.text;
         if (gapDetail && gapDetail.trim() !== "") {
           await conn.query(`
-        INSERT INTO operational_details (project_plan_id, detail, weight_percent, status_id)
-        VALUES (?, ?, ?, (SELECT status_id FROM status WHERE status_code = ? LIMIT 1))
-      `, [
+            INSERT INTO operational_details (project_plan_id, detail, weight_percent, progress_percent, status_id)
+            VALUES (?, ?, ?, 0, (SELECT status_id FROM status WHERE status_code = ? LIMIT 1))
+          `, [
             projectId,
             gapDetail,
             gap.weight || 0,
-            gap.status || 'processing_gap'
+            gap.status || 'processing_gap' 
           ]);
         }
       }

@@ -687,6 +687,24 @@
 .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
 .btn-go { background: #6d28d9; color: white; border: none; padding: 5px 12px; border-radius: 4px; cursor: pointer; }
 
+/* ป้องกันข้อความในปุ่มตกบรรทัด */
+.btn-go {
+  white-space: nowrap; 
+}
+
+/* บังคับให้คอลัมน์ที่ 2, 3, 4 (ความคืบหน้า, ความเร่งด่วน, จัดการ) จัดกึ่งกลางเสมอ */
+.modal-table th:nth-child(n+2),
+.modal-table td:nth-child(n+2) {
+  text-align: center;
+  justify-content: center; /* สำหรับ flexbox ข้างใน */
+}
+
+/* จัดให้ Badge ความเร่งด่วนอยู่ตรงกลาง */
+.urgency-badge {
+  justify-content: center;
+  min-width: 80px; /* กำหนดความกว้างขั้นต่ำให้ป้ายดูขนาดเท่าๆ กัน */
+}
+
 /* Responsive สำหรับมือถือ */
 @media (max-width: 640px) {
   .date-picker-manual {
@@ -706,6 +724,215 @@
   }
 }
 
+/* --- ส่วนตกแต่ง Modal เพิ่มเติม (CSS ใหม่) --- */
+
+/* 1. Modal Overview (ปรับให้นุ่มนวลและชัดเจน) */
+.custom-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5); /* สีพื้นหลังโปร่งแสงนุ่มๆ */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+  /* เพิ่ม Backdrop Blur เพื่อความพรีเมียม (ถ้าต้องการ) */
+  /* backdrop-filter: blur(5px); */
+  opacity: 0;
+  animation: fadeIn 0.3s ease-out forwards;
+}
+
+.custom-modal-content {
+  background-color: #fff;
+  border-radius: 12px; /* มุมโค้งมน */
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1); /* เงาที่ดูมีมิติ */
+  padding: 0; /* เอา padding หลักออกเพื่อความสมดุล */
+  width: 90%;
+  max-width: 800px;
+  max-height: 80vh; /* จำกัดความสูง */
+  display: flex;
+  flex-direction: column;
+  transform: translateY(-20px);
+  animation: slideDown 0.3s ease-out 0.1s forwards;
+  overflow: hidden; /* เพื่อป้องกันเนื้อหาหลุดมุมโค้ง */
+}
+
+/* Animations */
+@keyframes fadeIn {
+  to { opacity: 1; }
+}
+@keyframes slideDown {
+  to { transform: translateY(0); opacity: 1; }
+}
+
+/* 2. Modal Header (ปรับให้เด่นและชัดเจน) */
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 24px;
+  background-color: #f8fafc; /* พื้นหลังส่วนหัวนุ่มๆ */
+  border-bottom: 1px solid #e2e8f0; /* เส้นคั่น */
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+.modal-header h3 {
+  margin: 0;
+  font-size: 1.5rem; /* ขนาดใหญ่ขึ้น */
+  font-weight: 700; /* ตัวหนา */
+  color: #2d3e50; /* สีเข้มขึ้น */
+}
+
+.close-btn {
+  background: none;
+  border: none;
+  font-size: 1.25rem;
+  color: #a0aec0; /* สีเทาอ่อนๆ */
+  cursor: pointer;
+  transition: all 0.2s ease;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  border-radius: 50%; /* ทำให้ปุ่มเป็นวงกลมเมื่อ hover */
+}
+
+.close-btn:hover {
+  color: #333;
+  background-color: rgba(0, 0, 0, 0.05); /* ไฮไลท์สีเทาอ่อนๆ */
+}
+
+/* 3. Modal Body (ตารางสวยงาม อ่านง่าย) */
+.modal-body {
+  padding: 0; /* เอา padding ออกเพื่อความสมดุล */
+  overflow-y: auto; /* เพื่อให้เนื้อหาส่วน body สกรอลล์ได้ */
+}
+
+.modal-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.modal-table th {
+  text-align: left;
+  padding: 12px 24px;
+  font-weight: 600;
+  color: #555;
+  background-color: #fff;
+  border-bottom: 2px solid #e2e8f0; /* เส้นคั่นเด่น */
+}
+
+.modal-table td {
+  padding: 12px 24px;
+  border-bottom: 1px solid #eee; /* เส้นคั่นนุ่มๆ */
+  color: #333;
+  transition: background-color 0.2s ease;
+  vertical-align: middle !important;
+}
+
+/* Zebra Striping (สลับสีแถวเพื่อความอ่านง่าย) */
+.modal-table tbody tr:nth-child(even) {
+  background-color: #f8fafc;
+}
+
+.modal-table tbody tr:hover td {
+  background-color: #f1f5f9; /* ไฮไลท์เมื่อ hover แถว */
+}
+
+/* 4. Mini Progress Bar (ปรับให้พรีเมียม) */
+.mini-progress {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.mini-progress .bar-container { /* เพิ่ม class Container สำหรับความเนียน */
+  width: 60px;
+  height: 6px;
+  background-color: #e2e8f0;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.mini-progress .bar {
+  height: 100%;
+  background-color: #6b46c1; /* สี purple หลัก */
+  border-radius: 6px;
+  transition: width 0.3s ease;
+}
+
+.mini-progress span {
+  font-size: 0.875rem;
+  color: #555;
+  font-weight: 500;
+}
+
+/* 5. Urgency Badge (ปรับให้สะอาดตา) */
+.urgency-badge {
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* สถานะปกติ (สีเขียว) */
+.urgency-badge.urgent-low {
+  background-color: #f0fdf4;
+  color: #16a34a;
+}
+/* เพิ่ม class สำหรับ Font Awesome icon ใน Badge */
+.urgency-badge i {
+  font-size: 0.8rem;
+}
+
+/* 6. ปุ่มจัดการ (Professional และชัดเจนว่ากดได้) */
+.btn-go {
+  background-color: #6b46c1; /* สี purple หลัก */
+  color: #fff;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 8px; /* มุมโค้งมน */
+  font-weight: 600;
+  cursor: pointer;
+  margin: 0 auto;
+  vertical-align: middle;
+  transition: all 0.3s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px; /* ช่องว่างระหว่างข้อความและไอคอน */
+  font-size: 0.875rem;
+  box-shadow: 0 4px 10px rgba(107, 70, 193, 0.2); /* เงาของปุ่ม */
+}
+
+.btn-go:hover {
+  background-color: #553c9a; /* สี purple เข้มขึ้นเมื่อ hover */
+  transform: translateY(-2px); /* ปุ่มยกตัวขึ้นเล็กน้อย */
+  box-shadow: 0 6px 15px rgba(107, 70, 193, 0.3); /* เงาชัดเจนขึ้นเมื่อ hover */
+}
+
+.btn-go:active {
+  transform: translateY(0); /* ปุ่มกดลงเมื่อ click */
+  box-shadow: 0 2px 6px rgba(107, 70, 193, 0.2);
+}
+
+.btn-go:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(107, 70, 193, 0.4); /* วงแหวนเมื่อ focus สำหรับ accessibility */
+}
+
+.btn-go i {
+  font-size: 0.9rem;
+}
 
 /* =========================================
    Responsive Design

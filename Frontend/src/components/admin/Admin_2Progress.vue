@@ -163,9 +163,6 @@ const getTotalWeight = (pIndex) => {
 const addGap = (pIndex) => form.value.projects[pIndex].gaps.push({ detail: '', weight: 0, status: 'processing_gap' })
 const removeGap = (pIndex, gIndex) => form.value.projects[pIndex].gaps.splice(gIndex, 1)
 
-const addIssue = (pIndex) => form.value.projects[pIndex].issues.push({ problem: '', solution: '' })
-const removeIssue = (pIndex, iIndex) => form.value.projects[pIndex].issues.splice(iIndex, 1)
-
 // --- หน้า 2: บันทึกความก้าวหน้าเงียบๆ แล้วไปหน้า 3 ---
 const handleNext = async () => {
   let hasError = false;
