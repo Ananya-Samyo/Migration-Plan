@@ -164,41 +164,78 @@ const addGap = () => projectData.value.gaps.push({ detail: '', weight: 0, status
 const removeGap = (index) => projectData.value.gaps.splice(index, 1)
 
 const handleSave = async () => {
-  if (totalWeight.value > 100) return Swal.fire('เตือน', 'น้ำหนัก GAP รวมเกิน 100%', 'warning')
+  // 1. ตรวจสอบเงื่อนไขพื้นฐานก่อน (เช่น น้ำหนักรวม)
+  if (totalWeight.value > 100) {
+    return Swal.fire('เตือน', 'น้ำหนัก GAP รวมเกิน 100%', 'warning');
+  }
+
+  // 2. เปิด Popup ของ SweetAlert2 เพื่อให้กรอกเหตุผลและแนบไฟล์
+  const { value: formValues } = await Swal.fire({
+    title: 'ยืนยันการบันทึกข้อมูล',
+    html: `
+      <div style="text-align: left;">
+        <label class="fw-bold">ระบุเหตุผลในการแก้ไข <span style="color:red">*</span></label>
+        <textarea id="swal-reason" class="swal2-textarea" placeholder="ระบุเหตุผล..." style="margin: 10px 0; width: 90%;"></textarea>
+        
+        <label class="fw-bold">แนบหลักฐานการแก้ไข (ถ้ามี)</label>
+        <input type="file" id="swal-file" class="swal2-file" style="margin: 10px 0; width: 90%;">
+      </div>
+    `,
+    focusConfirm: false,
+    showCancelButton: true,
+    confirmButtonText: 'ยืนยันการบันทึก',
+    cancelButtonText: 'ยกเลิก',
+    preConfirm: () => {
+      const reason = document.getElementById('swal-reason').value;
+      const file = document.getElementById('swal-file').files[0];
+      
+      if (!reason) {
+        Swal.showValidationMessage('กรุณาระบุเหตุผลในการแก้ไข');
+        return false;
+      }
+      return { reason: reason, file: file };
+    }
+  });
+
+  // ถ้าผู้ใช้กดยกเลิก
+  if (!formValues) return;
 
   try {
-    // แสดง Loading
-    Swal.fire({ 
-      title: 'กำลังบันทึก...', 
-      allowOutsideClick: false, 
-      didOpen: () => Swal.showLoading() 
-    })
+    // แสดง Loading ระหว่างส่งข้อมูล
+    Swal.fire({
+      title: 'กำลังบันทึก...',
+      allowOutsideClick: false,
+      didOpen: () => Swal.showLoading()
+    });
+
+    // 3. เตรียมข้อมูลแบบ FormData เพื่อส่งไฟล์
+    const formData = new FormData();
+    formData.append('scopeName', form.value.scopeName);
+    formData.append('project', JSON.stringify(projectData.value));
+    formData.append('editReason', formValues.reason); 
+    if (formValues.file) {
+      formData.append('evidenceFile', formValues.file); 
+    }
 
     const res = await fetch(`${BASE_API}/api/admin/update-all-in-one`, {
       method: 'POST',
-      headers: { 
-        'Content-Type': 'application/json', 
-        'Authorization': `Bearer ${localStorage.getItem('token')}` 
+      headers: {
+        // ห้ามตั้ง Content-Type เป็น application/json เพราะเราส่ง FormData
+        'Authorization': `Bearer ${localStorage.getItem('token')}`
       },
-      body: JSON.stringify({
-        scopeName: form.value.scopeName,
-        project: projectData.value
-      })
-    })
+      body: formData
+    });
 
-    // 🌟 จุดสำคัญ: ถ้า API ตอบกลับมา Error (เช่น 400, 500)
     if (!res.ok) {
-      const errorData = await res.json()
-      throw new Error(errorData.message || 'บันทึกล้มเหลว')
+      const errorData = await res.json();
+      throw new Error(errorData.message || 'บันทึกล้มเหลว');
     }
 
-    // ถ้าสำเร็จ
-    Swal.fire('สำเร็จ', 'บันทึกข้อมูลเรียบร้อย', 'success').then(() => router.back())
+    Swal.fire('สำเร็จ', 'บันทึกข้อมูลและหลักฐานเรียบร้อย', 'success').then(() => router.back());
 
   } catch (err) {
-    console.error(err)
-    // 🌟 ต้องมีจุดปิด Loading ตรงนี้ถ้าเกิด Error
-    Swal.fire('Error', err.message || 'บันทึกล้มเหลว', 'error')
+    console.error(err);
+    Swal.fire('Error', err.message || 'บันทึกล้มเหลว', 'error');
   }
-}
+};
 </script>

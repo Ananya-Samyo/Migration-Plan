@@ -1,7 +1,24 @@
 import { Router } from 'express'
 import db from '../db.js'
+import multer from 'multer';
+import path from 'path';
+import fs from 'fs';
 
 const router = Router()
+
+// --- ตั้งค่าการเก็บไฟล์หลักฐาน ---
+const storage = multer.diskStorage({
+    destination: function (req, file, cb) {
+        const dir = 'uploads/evidence';
+        if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true }); // สร้างโฟลเดอร์ถ้ายังไม่มี
+        cb(null, dir);
+    },
+    filename: function (req, file, cb) {
+        // ตั้งชื่อไฟล์: timestamp-ชื่อไฟล์เดิม
+        cb(null, Date.now() + '-' + file.originalname);
+    }
+});
+const upload = multer({ storage: storage });
 
 // 1. GET ข้อมูลเพื่อนำไปแสดงในหน้าแก้ไข
 router.get('/edit-detail/:id', async (req, res) => {
@@ -51,24 +68,25 @@ router.get('/edit-detail/:id', async (req, res) => {
 });
 
 // 2. POST Update All-in-one (บันทึกข้อมูลทั้งหมด)
-router.post('/update-all-in-one', async (req, res) => {
-    const { project, scopeName } = req.body;
+router.post('/update-all-in-one', upload.single('evidenceFile'), async (req, res) => {
+    
+    const project = JSON.parse(req.body.project); 
+    const { scopeName, editReason } = req.body; 
     let connection;
 
     try {
         connection = await db.getConnection();
         await connection.beginTransaction();
 
-        // 1. ค้นหา coordinator_id จากโครงการนี้ก่อน
+        // 1. ค้นหา coordinator_id
         const [scopeRow] = await connection.query(
             `SELECT s.coordinator_id FROM scopes s 
              JOIN project_plans p ON s.scope_id = p.scope_id 
              WHERE p.project_plan_id = ?`, [project.id]
         );
-
         const coordinatorId = scopeRow[0]?.coordinator_id;
 
-        // 2. อัปเดตข้อมูลในตาราง users (ชื่อ, อีเมล, เบอร์ ของผู้รายงาน)
+        // 2. อัปเดตข้อมูลผู้รายงาน (ตาราง users)
         if (coordinatorId) {
             await connection.query(
                 `UPDATE users SET user_name = ?, email = ?, phone_number = ? WHERE user_id = ?`,
@@ -76,7 +94,7 @@ router.post('/update-all-in-one', async (req, res) => {
             );
         }
 
-        // 3. อัปเดตตาราง scopes (ชื่อขอบเขต และ กอง) - เหมือนที่แก้ไปก่อนหน้า
+        // 3. อัปเดตตาราง scopes (ชื่อขอบเขต และ กอง)
         await connection.query(`
             UPDATE scopes s
             JOIN project_plans p ON s.scope_id = p.scope_id
@@ -84,14 +102,28 @@ router.post('/update-all-in-one', async (req, res) => {
             WHERE p.project_plan_id = ?`,
             [scopeName, project.department_id, project.id]);
 
-        // 4. อัปเดตตาราง project_plans
+        // 4. อัปเดตตาราง project_plans (ชื่อแผนงาน, วันที่)
         await connection.query(`
             UPDATE project_plans 
             SET project_plan_name = ?, start_date = ?, end_date = ?
             WHERE project_plan_id = ?`,
             [project.projectName, project.startDate, project.endDate, project.id]);
 
-        // --- ส่วนที่ 3: จัดการ GAP Analysis (เหมือนเดิม) ---
+        // 5. บันทึกเหตุผลการแก้ไข (ลงตาราง edit_reasons)
+        await connection.query(
+            `INSERT INTO edit_reasons (ref_type, ref_id, reason_text) VALUES (?, ?, ?)`,
+            ['project_plan', project.id, editReason]
+        );
+
+        // 6. บันทึกข้อมูลไฟล์หลักฐาน (ลงตาราง attachments ถ้ามีการแนบไฟล์)
+        if (req.file) {
+            await connection.query(
+                `INSERT INTO attachments (ref_type, ref_id, file_path, file_type) VALUES (?, ?, ?, ?)`,
+                ['project_plan', project.id, req.file.path, req.file.mimetype]
+            );
+        }
+
+        // 7. จัดการ GAP Analysis (ลบและ Insert ใหม่)
         await connection.query('DELETE FROM operational_details WHERE project_plan_id = ?', [project.id]);
 
         for (const gap of project.gaps) {
@@ -105,7 +137,8 @@ router.post('/update-all-in-one', async (req, res) => {
         }
 
         await connection.commit();
-        res.json({ message: 'บันทึกข้อมูลสำเร็จ' });
+        res.json({ message: 'บันทึกข้อมูลและหลักฐานสำเร็จ' });
+
     } catch (err) {
         if (connection) await connection.rollback();
         console.error("❌ Database Error:", err.message);
