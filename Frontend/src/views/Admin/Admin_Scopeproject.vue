@@ -31,10 +31,10 @@
             <table class="scope-table">
                 <thead>
                     <tr>
-                        <th>ขอบเขตงาน</th>
-                        <th>หน่วยงาน</th>
-                        <th>ผู้รายงาน</th>
-                        <th>ความก้าวหน้า</th>
+                        <th class="text-left">ขอบเขตงาน</th>
+                        <th class="text-left">หน่วยงาน</th>
+                        <th class="text-left">ผู้รายงาน</th>
+                        <th class="text-left">ความก้าวหน้า</th>
                     </tr>
                 </thead>
 
@@ -75,15 +75,15 @@
                                             <tbody>
                                                 <tr v-for="plan in scope.plans" :key="plan.id || plan.project_plan_id"
                                                     class="plan-row">
-                                                    <td class="plan-name"
+                                                    <td class="plan-name text-center"
                                                         @click="goToProjectDetail(plan.id || plan.project_plan_id)"
                                                         style="cursor: pointer">
                                                         {{ plan.name || plan.plan_name }}
                                                     </td>
 
-                                                    <td>{{ plan.detail }}</td>
+                                                    <td class="text-center">{{ plan.detail }}</td>
 
-                                                    <td>
+                                                    <td class="text-center">
                                                         <div v-if="plan.gaps && plan.gaps.length > 0">
                                                             <ul style="list-style: none; padding: 0; margin: 0;">
                                                                 <li v-for="(gap, i) in plan.gaps" :key="i">
