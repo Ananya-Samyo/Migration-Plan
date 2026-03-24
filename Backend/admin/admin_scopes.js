@@ -147,23 +147,57 @@ router.post('/scopes', verifyToken, isAdmin, async (req, res) => {
 // ================= Scopes : GET LIST (With Pagination) =================
 router.get('/scopes', verifyToken, canViewBasic, async (req, res) => {
   try {
-    // 1. รับค่า page และ limit จาก Frontend (ถ้าไม่ส่งมา ให้ใช้ค่า Default)
-    const page = parseInt(req.query.page) || 1
-    const limit = parseInt(req.query.limit) || 10
-    const offset = (page - 1) * limit
+    // 1. รับค่าจาก Frontend
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const offset = (page - 1) * limit;
 
-    // 2. หาจำนวน Scope ทั้งหมดก่อน (เพื่อคำนวณ Total Pages)
-    const [countResult] = await db.query(`SELECT COUNT(*) as total FROM scopes`)
-    const totalItems = countResult[0].total
-    const totalPages = Math.ceil(totalItems / limit)
+    // รับค่าสำหรับการค้นหาและกรอง
+    const { search, department } = req.query;
 
-    // 3. ดึงเฉพาะ scope_id ของหน้านั้นๆ (เรียงล่าสุดก่อน)
-    const [scopeIdsResult] = await db.query(
-      `SELECT scope_id FROM scopes ORDER BY scope_id DESC LIMIT ? OFFSET ?`,
-      [limit, offset]
-    )
+    // 2. สร้างเงื่อนไข WHERE แบบ Dynamic
+    let whereClauses = [];
+    let queryParams = [];
 
-    // ถ้าไม่มีข้อมูลในหน้านี้เลย ให้ส่งอาเรย์ว่างกลับไป
+    if (search) {
+      // ค้นหาในชื่อขอบเขตงาน หรือ ชื่อผู้รายงาน
+      whereClauses.push(`(s.scope_name LIKE ? OR u.user_name LIKE ?)`);
+      queryParams.push(`%${search}%`, `%${search}%`);
+    }
+
+    if (department) {
+      // กรองตามชื่อหน่วยงาน
+      whereClauses.push(`d.department_name = ?`);
+      queryParams.push(department);
+    }
+
+    const whereSql = whereClauses.length > 0 ? `WHERE ${whereClauses.join(' AND ')}` : '';
+
+    // 3. หาจำนวน Scope ทั้งหมด (ตามเงื่อนไขที่ค้นหา) เพื่อทำ Pagination
+    const countSql = `
+      SELECT COUNT(DISTINCT s.scope_id) as total 
+      FROM scopes s
+      LEFT JOIN departments d ON s.department_id = d.department_id
+      LEFT JOIN users u ON s.coordinator_id = u.user_id
+      ${whereSql}
+    `;
+    const [countResult] = await db.query(countSql, queryParams);
+    const totalItems = countResult[0].total;
+    const totalPages = Math.ceil(totalItems / limit);
+
+    // 4. ดึงเฉพาะ scope_id ของหน้านั้นๆ (เรียงล่าสุดก่อน และติดเงื่อนไขการค้นหา)
+    const selectIdsSql = `
+      SELECT DISTINCT s.scope_id 
+      FROM scopes s
+      LEFT JOIN departments d ON s.department_id = d.department_id
+      LEFT JOIN users u ON s.coordinator_id = u.user_id
+      ${whereSql}
+      ORDER BY s.scope_id DESC 
+      LIMIT ? OFFSET ?
+    `;
+    const [scopeIdsResult] = await db.query(selectIdsSql, [...queryParams, limit, offset]);
+
+    // ถ้าไม่มีข้อมูลเลย ให้ส่งอาเรย์ว่างกลับไป
     if (scopeIdsResult.length === 0) {
       return res.json({
         data: [],
@@ -172,33 +206,34 @@ router.get('/scopes', verifyToken, canViewBasic, async (req, res) => {
           totalPages: totalPages,
           totalItems: totalItems
         }
-      })
+      });
     }
 
-    const scopeIds = scopeIdsResult.map(row => row.scope_id)
+    const scopeIds = scopeIdsResult.map(row => row.scope_id);
 
+    // 5. ดึงข้อมูลรายละเอียดทั้งหมดของ Scope IDs ที่ได้มา
     const [rows] = await db.query(`
-    SELECT 
-        s.scope_id, 
-        s.scope_name, 
-        d.department_name, 
-        u.user_name AS coordinator,
-        pp.project_plan_id,
-        pp.project_plan_name,
-        pp.progress_percent AS plan_progress,
-        pp.details AS plan_details,
-        od.detail AS gap_detail 
-    FROM scopes s
-    LEFT JOIN departments d ON s.department_id = d.department_id
-    LEFT JOIN users u ON s.coordinator_id = u.user_id
-    LEFT JOIN project_plans pp ON s.scope_id = pp.scope_id
-    LEFT JOIN operational_details od ON pp.project_plan_id = od.project_plan_id
-    WHERE s.scope_id IN (?) 
-    ORDER BY s.scope_id DESC, pp.project_plan_id
-`, [scopeIds])
+      SELECT 
+          s.scope_id, 
+          s.scope_name, 
+          d.department_name, 
+          u.user_name AS coordinator,
+          pp.project_plan_id,
+          pp.project_plan_name,
+          pp.progress_percent AS plan_progress,
+          pp.details AS plan_details,
+          od.detail AS gap_detail 
+      FROM scopes s
+      LEFT JOIN departments d ON s.department_id = d.department_id
+      LEFT JOIN users u ON s.coordinator_id = u.user_id
+      LEFT JOIN project_plans pp ON s.scope_id = pp.scope_id
+      LEFT JOIN operational_details od ON pp.project_plan_id = od.project_plan_id
+      WHERE s.scope_id IN (?) 
+      ORDER BY s.scope_id DESC, pp.project_plan_id
+    `, [scopeIds]);
 
-    const map = {}
-
+    // 6. แปลงข้อมูลให้อยู่ในรูปแบบ Nested JSON (แผนงานอยู่ข้างในขอบเขตงาน)
+    const map = {};
     for (const r of rows) {
       if (!map[r.scope_id]) {
         map[r.scope_id] = {
@@ -209,14 +244,13 @@ router.get('/scopes', verifyToken, canViewBasic, async (req, res) => {
           progress_percent: 0,
           plansMap: {},
           plans: []
-        }
+        };
       }
 
       const currentScope = map[r.scope_id];
 
       if (r.project_plan_id) {
         const planId = String(r.project_plan_id);
-
         if (!currentScope.plansMap[planId]) {
           currentScope.plansMap[planId] = {
             id: r.project_plan_id,
@@ -237,6 +271,7 @@ router.get('/scopes', verifyToken, canViewBasic, async (req, res) => {
       }
     }
 
+    // 7. คำนวณความก้าวหน้าเฉลี่ย (Average Progress) ของแต่ละ Scope
     const resultData = Object.values(map).map(scope => {
       delete scope.plansMap; 
 
@@ -249,10 +284,10 @@ router.get('/scopes', verifyToken, canViewBasic, async (req, res) => {
       return scope;
     });
 
-    // เรียงลำดับ resultData ให้ตรงกับ scopeIds อีกครั้ง (เพื่อให้มั่นใจว่า Scope ล่าสุดอยู่บนสุด)
-    const sortedResult = scopeIds.map(id => resultData.find(item => item.id === id)).filter(Boolean)
+    // เรียงลำดับกลับให้ตรงกับ scopeIds ที่ดึงมาตอนแรก (DESC)
+    const sortedResult = scopeIds.map(id => resultData.find(item => item.id === id)).filter(Boolean);
 
-    // 6. ส่งข้อมูลกลับพร้อม Metadata
+    // 8. ส่งข้อมูลกลับ
     res.json({
       data: sortedResult,
       meta: {
@@ -260,11 +295,11 @@ router.get('/scopes', verifyToken, canViewBasic, async (req, res) => {
         totalPages: totalPages,
         totalItems: totalItems
       }
-    })
+    });
 
   } catch (err) {
-    console.error('GET scopes error:', err)
-    res.status(500).json({ message: 'Server error' })
+    console.error('GET scopes error:', err);
+    res.status(500).json({ message: 'Server error' });
   }
-})
+});
 export default router

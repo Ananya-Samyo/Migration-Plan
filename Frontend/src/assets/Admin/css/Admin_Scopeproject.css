@@ -323,3 +323,92 @@
     font-size: 11px;
   }
 }
+
+/* =================================
+   เพิ่ม Class ตัวช่วยจัดตำแหน่ง (Helper)
+   ================================= */
+.text-center { text-align: center !important; }
+.text-left { text-align: left !important; }
+.text-right { text-align: right !important; }
+
+/* =================================
+   ปรับปรุง Header (ส่วนค้นหาและ Dropdown)
+   ================================= */
+.page-header {
+    flex-wrap: wrap; /* ให้ขึ้นบรรทัดใหม่ได้ถ้าที่พึ่งพอ */
+    gap: 15px;
+}
+
+.header-actions {
+    flex-wrap: wrap; /* รองรับมือถือ */
+}
+
+@media (max-width: 768px) {
+    .page-header {
+        flex-direction: column;
+        align-items: flex-start !important;
+    }
+
+    .header-actions {
+        width: 100%;
+        flex-direction: column;
+        align-items: stretch !important; 
+        gap: 10px;
+    }
+
+    .header-actions > div {
+        width: 100%;
+    }
+
+    .filter-select {
+        flex-grow: 1; 
+    }
+
+    .search-box {
+        width: 100%;
+    }
+
+    .search-box input {
+        flex-grow: 1; 
+        width: auto !important;
+    }
+
+    .progress-wrapper {
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+        width: 100px;
+    }
+}
+
+/* =================================
+   ปรับปรุงตาราง (Table Adjustments)
+   ================================= */
+.table-wrapper {
+    width: 100%;
+    overflow-x: auto; 
+    -webkit-overflow-scrolling: touch;
+    margin-bottom: 1rem;
+}
+
+.scope-table th, .scope-table td {
+    white-space: nowrap; 
+}
+
+.detail-table td {
+    white-space: normal; 
+    min-width: 150px;
+}
+
+@media (max-width: 480px) {
+    .pagination-controls {
+        justify-content: center;
+        flex-wrap: wrap;
+        gap: 10px;
+    }
+    
+    .btn-page {
+        padding: 6px 10px;
+        font-size: 12px;
+    }
+}

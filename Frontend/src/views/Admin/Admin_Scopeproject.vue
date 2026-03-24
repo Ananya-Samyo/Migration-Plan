@@ -16,13 +16,26 @@
                     </select>
                 </div>
 
-                <div class="search-box" style="display: flex;">
-                    <input v-model="searchQuery" type="text" placeholder="ค้นหา ขอบเขตงาน, ผู้รายงาน..."
-                        @keyup.enter="applyFilter"
-                        style="padding: 8px 12px; border-radius: 4px 0 0 4px; border: 1px solid #ccc; width: 250px; outline: none;" />
+                <div class="search-box" style="display: flex; gap: 5px;">
+                    <div style="position: relative; display: flex;">
+                        <input v-model="searchQuery" type="text" placeholder="ค้นหา ขอบเขตงาน, ผู้รายงาน..."
+                            @keyup.enter="applyFilter"
+                            style="padding: 8px 12px; border-radius: 4px 0 0 4px; border: 1px solid #ccc; width: 250px; outline: none;" />
+
+                        <span v-if="searchQuery" @click="resetFilter"
+                            style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); cursor: pointer; color: #ccc;">
+                            ✖
+                        </span>
+                    </div>
+
                     <button @click="applyFilter"
                         style="padding: 8px 16px; border: none; background: #4b2e83; color: white; border-radius: 0 4px 4px 0; cursor: pointer; font-weight: bold;">
                         ค้นหา
+                    </button>
+
+                    <button v-if="searchQuery || selectedDepartment" @click="resetFilter"
+                        style="padding: 8px 12px; border: 1px solid #ccc; background: white; color: #666; border-radius: 4px; cursor: pointer; font-size: 14px;">
+                        ล้างค่า
                     </button>
                 </div>
             </div>
@@ -39,7 +52,13 @@
                 </thead>
 
                 <tbody>
-                    <template v-if="scopes && scopes.length > 0">
+                    <tr v-if="isLoading">
+                        <td colspan="4" style="text-align: center; padding: 40px; color: #4b2e83;">
+                            <div class="loader-spinner"></div> กำลังโหลดข้อมูล...
+                        </td>
+                    </tr>
+
+                    <template v-else-if="scopes && scopes.length > 0">
                         <template v-for="(scope, index) in scopes" :key="scope.scope_id || index">
                             <tr :id="'scope-row-' + (scope.scope_id || scope.id)" class="scope-row"
                                 :class="{ 'is-expanded': String(expandedRow) === String(scope.scope_id || scope.id) }"
@@ -60,78 +79,25 @@
 
                             <tr v-if="String(expandedRow) === String(scope.scope_id || scope.id)">
                                 <td colspan="4">
-                                    <div class="detail-box">
-                                        <table class="detail-table">
-                                            <thead>
-                                                <tr>
-                                                    <th>ชื่อแผนงาน</th>
-                                                    <th>รายละเอียดการดำเนินงาน</th>
-                                                    <th>ผลการวิเคราะห์ช่องว่าง (GAP Analysis)</th>
-                                                    <th>ความคืบหน้า</th>
-                                                    <th>การจัดการ</th>
-                                                </tr>
-                                            </thead>
-
-                                            <tbody>
-                                                <tr v-for="plan in scope.plans" :key="plan.id || plan.project_plan_id"
-                                                    class="plan-row">
-                                                    <td class="plan-name text-center"
-                                                        @click="goToProjectDetail(plan.id || plan.project_plan_id)"
-                                                        style="cursor: pointer">
-                                                        {{ plan.name || plan.plan_name }}
-                                                    </td>
-
-                                                    <td class="text-center">{{ plan.detail }}</td>
-
-                                                    <td class="text-center">
-                                                        <div v-if="plan.gaps && plan.gaps.length > 0">
-                                                            <ul style="list-style: none; padding: 0; margin: 0;">
-                                                                <li v-for="(gap, i) in plan.gaps" :key="i">
-                                                                    {{ typeof gap === 'object' ? gap.detail : gap }}
-                                                                </li>
-                                                            </ul>
-                                                        </div>
-                                                        <span v-else style="color: #ccc;">-</span>
-                                                    </td>
-
-                                                    <td>
-                                                        <div class="progress-wrapper">
-                                                            <div class="progress-container small">
-                                                                <div class="progress-bar"
-                                                                    :class="progressClass(plan.progress)"
-                                                                    :style="{ width: plan.progress + '%' }"></div>
-                                                            </div>
-                                                            <span class="progress-text">
-                                                                {{ plan.progress }}%
-                                                            </span>
-                                                        </div>
-                                                    </td>
-
-                                                    <td>
-                                                        <div class="action-buttons">
-                                                            <button class="btn-progress"
-                                                                @click.stop="goToProgress(plan.id || plan.project_plan_id)">
-                                                                ความก้าวหน้า
-                                                            </button>
-
-                                                            <button class="btn-evaluate"
-                                                                @click.stop="goToEvaluation(plan.id || plan.project_plan_id)">
-                                                                การประเมินผล
-                                                            </button>
-                                                        </div>
-                                                    </td>
-                                                </tr>
-                                            </tbody>
-                                        </table>
-                                    </div>
                                 </td>
                             </tr>
                         </template>
                     </template>
 
                     <tr v-else>
-                        <td colspan="4" style="text-align: center; padding: 20px; color: #888;">
-                            ไม่พบข้อมูล
+                        <td colspan="4" style="text-align: center; padding: 50px; background: #fafafa;">
+                            <div style="display: flex; flex-direction: column; align-items: center; gap: 12px;">
+                                <span style="font-size: 48px; filter: grayscale(1);">🔍</span>
+                                <p style="margin: 0; font-size: 18px; font-weight: bold; color: #4b2e83;">
+                                    ไม่พบข้อมูลที่ท่านค้นหา</p>
+                                <p style="margin: 0; font-size: 14px; color: #666;">
+                                    กรุณาลองเปลี่ยนคำค้นหา หรือเลือกหน่วยงานอื่น
+                                </p>
+                                <button @click="resetFilter"
+                                    style="margin-top: 10px; padding: 5px 15px; border: 1px solid #4b2e83; background: none; color: #4b2e83; border-radius: 4px; cursor: pointer;">
+                                    ล้างการค้นหา
+                                </button>
+                            </div>
                         </td>
                     </tr>
                 </tbody>
@@ -191,14 +157,6 @@ const fetchDepartments = async () => {
 }
 
 /* ===============================
-    ฟังก์ชันกดค้นหา / เปลี่ยน Dropdown
-================================ */
-const applyFilter = () => {
-    expandedRow.value = null
-    fetchScopes(1)
-}
-
-/* ===============================
     ฟังก์ชันกางแถวอัตโนมัติ
 ================================ */
 const handleAutoExpand = () => {
@@ -239,9 +197,6 @@ const toggleRow = (id) => {
     expandedRow.value = String(expandedRow.value) === String(id) ? null : id
 }
 
-/* ===============================
-    ฟังก์ชันดึงข้อมูลจาก API (อัปเดตเพื่อรองรับ Filter)
-================================ */
 const fetchScopes = async (page = 1) => {
     try {
         const token = localStorage.getItem('token')
@@ -250,7 +205,7 @@ const fetchScopes = async (page = 1) => {
         const targetScopeId = route.query.scope_id
         const limit = targetScopeId ? 1000 : 10
 
-        // 🌟 ต่อ string URL เพื่อส่ง parameter search และ department
+        // สร้าง URL พร้อม Query Params
         let url = `${API}/api/admin/scopes?page=${page}&limit=${limit}`
         if (searchQuery.value) {
             url += `&search=${encodeURIComponent(searchQuery.value)}`
@@ -264,26 +219,47 @@ const fetchScopes = async (page = 1) => {
         })
 
         const responseData = await res.json()
-        console.log("Check Data:", responseData.data);
-        console.log(responseData.data[0].plans)
 
-        if (responseData.data) {
+        // 1. ตรวจสอบข้อมูลที่ได้รับ
+        if (responseData && responseData.data && responseData.data.length > 0) {
+            // ✅ กรณีมีข้อมูล
             scopes.value = responseData.data
             currentPage.value = responseData.meta?.currentPage || 1
             totalPages.value = responseData.meta?.totalPages || 1
 
-            console.log(`📦 โหลดข้อมูลสำเร็จ: ${scopes.value.length} รายการ`)
+            // ป้องกัน Error ตอน Log: เช็กก่อนว่าตัวที่ 0 มี plans ไหม
+            if (responseData.data[0].plans) {
+                console.log("Plans of first item:", responseData.data[0].plans)
+            }
         } else {
-            // กรณีไม่มีข้อมูล
+            // ❌ กรณีไม่พบข้อมูล (อาเรย์ว่าง)
             scopes.value = []
+            currentPage.value = 1
+            totalPages.value = 0
+            console.log("🔍 ไม่พบข้อมูลที่ตรงตามเงื่อนไข")
         }
+
         await nextTick()
         handleAutoExpand()
 
     } catch (err) {
         console.error('Fetch Error:', err)
+        scopes.value = []
     }
 }
+
+const applyFilter = () => {
+    currentPage.value = 1;
+    fetchScopes(1);
+};
+
+// ฟังก์ชันสำหรับล้างค่าการค้นหาทั้งหมด
+const resetFilter = () => {
+    searchQuery.value = '';
+    selectedDepartment.value = '';
+    currentPage.value = 1;
+    fetchScopes(1);
+};
 
 /* ===============================
     Watcher: ตรวจจับการเปลี่ยนแปลง URL
