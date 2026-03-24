@@ -131,7 +131,6 @@ const totalWeight = computed(() => {
 onMounted(async () => {
   try {
     const token = localStorage.getItem('token')
-    console.log("Current Token:", token)
     // 1. โหลดข้อมูลกอง
     const dRes = await fetch(`${BASE_API}/api/departments`, { headers: { 'Authorization': `Bearer ${token}` } })
     departments.value = await dRes.json()
