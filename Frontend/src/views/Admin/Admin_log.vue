@@ -8,27 +8,18 @@
 
     <div class="filter-bar">
       <div class="date-group">
-  <label>ตั้งแต่วันที่:</label>
-  <input 
-    type="date" 
-    v-model="filters.from" 
-    :max="today" 
-  />
-  <label>ถึง:</label>
-  <input 
-    type="date" 
-    v-model="filters.to" 
-    :max="today"
-    :min="filters.from" 
-  />
-</div>
+        <label>ตั้งแต่วันที่:</label>
+        <input type="date" v-model="filters.from" :max="today" />
+        <label>ถึง:</label>
+        <input type="date" v-model="filters.to" :max="today" :min="filters.from" />
+      </div>
 
       <select v-model="filters.department_id" class="select-dept">
-  <option value="">กองทั้งหมด</option>
-  <option v-for="d in departments" :key="d.department_id" :value="d.department_id">
-    {{ d.department_name }}
-  </option>
-</select>
+        <option value="">กองทั้งหมด</option>
+        <option v-for="d in departments" :key="d.department_id" :value="d.department_id">
+          {{ d.department_name }}
+        </option>
+      </select>
 
       <div class="search-group">
         <input type="text" v-model="filters.keyword" placeholder="ค้นหา scope / แผนงาน / ผู้แก้ไข..." />
@@ -69,33 +60,21 @@
     </table>
 
     <div class="pagination-container" v-if="totalPages > 1">
-  <button 
-    class="btn-page" 
-    :disabled="currentPage === 1" 
-    @click="changePage(currentPage - 1)"
-  >
-    &lt; ย้อนกลับ
-  </button>
+      <button class="btn-page" :disabled="currentPage === 1" @click="changePage(currentPage - 1)">
+        &lt; ย้อนกลับ
+      </button>
 
-  <div class="page-numbers">
-    <span 
-      v-for="page in totalPages" 
-      :key="page" 
-      :class="['page-number', { active: currentPage === page }]"
-      @click="changePage(page)"
-    >
-      {{ page }}
-    </span>
-  </div>
+      <div class="page-numbers">
+        <span v-for="page in totalPages" :key="page" :class="['page-number', { active: currentPage === page }]"
+          @click="changePage(page)">
+          {{ page }}
+        </span>
+      </div>
 
-  <button 
-    class="btn-page" 
-    :disabled="currentPage === totalPages" 
-    @click="changePage(currentPage + 1)"
-  >
-    ถัดไป &gt;
-  </button>
-</div>
+      <button class="btn-page" :disabled="currentPage === totalPages" @click="changePage(currentPage + 1)">
+        ถัดไป &gt;
+      </button>
+    </div>
 
     <div v-if="showModal" class="modal-backdrop" @click.self="showModal = false">
       <div class="modal">
@@ -105,9 +84,16 @@
         </div>
 
         <div class="modal-body">
-          <div class="log-info">
-            <p><strong>แก้ไขโดย:</strong> {{ selectedLog.owner }} ({{ selectedLog.department }})</p>
-            <p><strong>เมื่อ:</strong> {{ formatThaiDate(selectedLog.date) }}</p>
+          <div class="log-info alert alert-success">
+            <p class="mb-1">
+              <strong>แก้ไขโดย:</strong> {{ selectedLog.owner }}
+              ({{ selectedLog.department }} /
+              <span :class="selectedLog.role === 'admin' ? 'fw-bold text-primary' : 'fw-bold text-info'">
+                {{ selectedLog.role === 'admin' ? 'ผู้ดูแลระบบ' : 'ผู้รายงาน' }}
+              </span>
+              )
+            </p>
+            <p class="mb-0"><strong>เมื่อ:</strong> {{ formatThaiDate(selectedLog.date) }}</p>
           </div>
 
           <table class="detail-table">
@@ -271,7 +257,7 @@ const loadLogs = async () => {
 const loadDepartments = async () => {
   try {
     const res = await axios.get(`${API}/api/departments`)
-    console.log("Departments Data:", res.data) 
+    console.log("Departments Data:", res.data)
     departments.value = res.data
   } catch (err) {
     console.error('Error loading departments:', err)
@@ -281,15 +267,22 @@ const loadDepartments = async () => {
 const openDetail = async (log) => {
   try {
     const res = await axios.get(`${API}/api/admin/change-logs/${log.id}`)
+    const data = res.data // ดึงข้อมูลก้อนใหญ่จาก API มาพักไว้ก่อน
+
     selectedLog.value = {
       ...log,
-      changes: res.data.changes ? res.data.changes.map(d => ({
+      role: data.role,
+      department: data.department_name,
+
+      changes: data.changes ? data.changes.map(d => ({
         field: d.field_name,
         before: d.before_value,
         after: d.after_value
       })) : [],
-      attachments: res.data.attachments || []
+
+      attachments: data.attachments || []
     }
+
     showModal.value = true
   } catch (err) {
     console.error('Error loading detail:', err)
