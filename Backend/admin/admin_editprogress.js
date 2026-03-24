@@ -10,7 +10,7 @@ const router = Router()
 const storage = multer.diskStorage({
     destination: function (req, file, cb) {
         const dir = 'uploads/evidence';
-        if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true }); // สร้างโฟลเดอร์ถ้ายังไม่มี
+        if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
         cb(null, dir);
     },
     filename: function (req, file, cb) {
