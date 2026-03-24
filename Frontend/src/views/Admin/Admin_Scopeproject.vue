@@ -96,12 +96,12 @@
                                             <tbody>
                                                 <tr v-for="plan in scope.plans" :key="plan.id || plan.project_plan_id"
                                                     class="plan-row">
-                                                    <td class="plan-name text-center"
+                                                    <td class="plan-name text-left"
                                                         @click="goToProjectDetail(plan.id || plan.project_plan_id)"
                                                         style="cursor: pointer; color: #4b2e83; font-weight: bold; padding: 10px; border: 1px solid #ddd;">
                                                         {{ plan.name || plan.plan_name }}
                                                     </td>
-                                                    <td class="text-center"
+                                                    <td class="text-left"
                                                         style="padding: 10px; border: 1px solid #ddd;">{{ plan.detail }}
                                                     </td>
                                                     <td class="text-center"
