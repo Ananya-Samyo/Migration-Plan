@@ -52,36 +52,54 @@ router.get('/edit-detail/:id', async (req, res) => {
 
 // 2. POST Update All-in-one (บันทึกข้อมูลทั้งหมด)
 router.post('/update-all-in-one', async (req, res) => {
-    const { project, scopeName } = req.body; 
+    const { project, scopeName } = req.body;
     let connection;
 
     try {
-        connection = await db.getConnection(); 
+        connection = await db.getConnection();
         await connection.beginTransaction();
 
+        // 1. ค้นหา coordinator_id จากโครงการนี้ก่อน
+        const [scopeRow] = await connection.query(
+            `SELECT s.coordinator_id FROM scopes s 
+             JOIN project_plans p ON s.scope_id = p.scope_id 
+             WHERE p.project_plan_id = ?`, [project.id]
+        );
+
+        const coordinatorId = scopeRow[0]?.coordinator_id;
+
+        // 2. อัปเดตข้อมูลในตาราง users (ชื่อ, อีเมล, เบอร์ ของผู้รายงาน)
+        if (coordinatorId) {
+            await connection.query(
+                `UPDATE users SET user_name = ?, email = ?, phone_number = ? WHERE user_id = ?`,
+                [project.coordinator.name, project.coordinator.email, project.coordinator.phone_number, coordinatorId]
+            );
+        }
+
+        // 3. อัปเดตตาราง scopes (ชื่อขอบเขต และ กอง) - เหมือนที่แก้ไปก่อนหน้า
         await connection.query(`
             UPDATE scopes s
             JOIN project_plans p ON s.scope_id = p.scope_id
-            SET s.scope_name = ?
-            WHERE p.project_plan_id = ?`, 
-            [scopeName, project.id]);
+            SET s.scope_name = ?, s.department_id = ?
+            WHERE p.project_plan_id = ?`,
+            [scopeName, project.department_id, project.id]);
 
-        // 2. อัปเดตตาราง Project Plans (ชื่อแผนงาน, วันที่, กอง)
+        // 4. อัปเดตตาราง project_plans
         await connection.query(`
             UPDATE project_plans 
-            SET project_plan_name = ?, start_date = ?, end_date = ?, department_id = ?
-            WHERE project_plan_id = ?`, 
-            [project.projectName, project.startDate, project.endDate, project.department_id, project.id]);
+            SET project_plan_name = ?, start_date = ?, end_date = ?
+            WHERE project_plan_id = ?`,
+            [project.projectName, project.startDate, project.endDate, project.id]);
 
-        // 3. จัดการ GAP Analysis (ลบแล้วเพิ่มใหม่เหมือนเดิม)
+        // --- ส่วนที่ 3: จัดการ GAP Analysis (เหมือนเดิม) ---
         await connection.query('DELETE FROM operational_details WHERE project_plan_id = ?', [project.id]);
-        
+
         for (const gap of project.gaps) {
             const [statusRow] = await connection.query('SELECT status_id FROM status WHERE status_code = ?', [gap.status]);
             if (statusRow.length > 0) {
                 await connection.query(`
                     INSERT INTO operational_details (project_plan_id, detail, weight_percent, status_id)
-                    VALUES (?, ?, ?, ?)`, 
+                    VALUES (?, ?, ?, ?)`,
                     [project.id, gap.detail, gap.weight, statusRow[0].status_id]);
             }
         }
@@ -90,6 +108,7 @@ router.post('/update-all-in-one', async (req, res) => {
         res.json({ message: 'บันทึกข้อมูลสำเร็จ' });
     } catch (err) {
         if (connection) await connection.rollback();
+        console.error("❌ Database Error:", err.message);
         res.status(500).json({ error: err.message });
     } finally {
         if (connection) connection.release();

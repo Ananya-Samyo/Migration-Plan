@@ -131,6 +131,7 @@ const totalWeight = computed(() => {
 onMounted(async () => {
   try {
     const token = localStorage.getItem('token')
+    console.log("Current Token:", token)
     // 1. โหลดข้อมูลกอง
     const dRes = await fetch(`${BASE_API}/api/departments`, { headers: { 'Authorization': `Bearer ${token}` } })
     departments.value = await dRes.json()
@@ -167,20 +168,38 @@ const handleSave = async () => {
   if (totalWeight.value > 100) return Swal.fire('เตือน', 'น้ำหนัก GAP รวมเกิน 100%', 'warning')
 
   try {
-    Swal.fire({ title: 'กำลังบันทึก...', allowOutsideClick: false, didOpen: () => Swal.showLoading() })
+    // แสดง Loading
+    Swal.fire({ 
+      title: 'กำลังบันทึก...', 
+      allowOutsideClick: false, 
+      didOpen: () => Swal.showLoading() 
+    })
+
     const res = await fetch(`${BASE_API}/api/admin/update-all-in-one`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('token')}` },
+      headers: { 
+        'Content-Type': 'application/json', 
+        'Authorization': `Bearer ${localStorage.getItem('token')}` 
+      },
       body: JSON.stringify({
         scopeName: form.value.scopeName,
         project: projectData.value
       })
     })
-    if (res.ok) {
-      Swal.fire('สำเร็จ', 'บันทึกข้อมูลเรียบร้อย', 'success').then(() => router.back())
+
+    // 🌟 จุดสำคัญ: ถ้า API ตอบกลับมา Error (เช่น 400, 500)
+    if (!res.ok) {
+      const errorData = await res.json()
+      throw new Error(errorData.message || 'บันทึกล้มเหลว')
     }
+
+    // ถ้าสำเร็จ
+    Swal.fire('สำเร็จ', 'บันทึกข้อมูลเรียบร้อย', 'success').then(() => router.back())
+
   } catch (err) {
-    Swal.fire('Error', 'บันทึกล้มเหลว', 'error')
+    console.error(err)
+    // 🌟 ต้องมีจุดปิด Loading ตรงนี้ถ้าเกิด Error
+    Swal.fire('Error', err.message || 'บันทึกล้มเหลว', 'error')
   }
 }
 </script>
