@@ -79,6 +79,67 @@
 
                             <tr v-if="String(expandedRow) === String(scope.scope_id || scope.id)">
                                 <td colspan="4">
+                                    <div class="detail-box" style="padding: 20px; background: #f9fafb;">
+                                        <table class="detail-table"
+                                            style="width: 100%; border-collapse: collapse; background: white;">
+                                            <thead>
+                                                <tr style="background: #f3f4f6;">
+                                                    <th style="padding: 10px; border: 1px solid #ddd;">ชื่อแผนงาน</th>
+                                                    <th style="padding: 10px; border: 1px solid #ddd;">
+                                                        รายละเอียดการดำเนินงาน</th>
+                                                    <th style="padding: 10px; border: 1px solid #ddd;">
+                                                        ผลการวิเคราะห์ช่องว่าง (GAP Analysis)</th>
+                                                    <th style="padding: 10px; border: 1px solid #ddd;">ความคืบหน้า</th>
+                                                    <th style="padding: 10px; border: 1px solid #ddd;">การจัดการ</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                <tr v-for="plan in scope.plans" :key="plan.id || plan.project_plan_id"
+                                                    class="plan-row">
+                                                    <td class="plan-name text-center"
+                                                        @click="goToProjectDetail(plan.id || plan.project_plan_id)"
+                                                        style="cursor: pointer; color: #4b2e83; font-weight: bold; padding: 10px; border: 1px solid #ddd;">
+                                                        {{ plan.name || plan.plan_name }}
+                                                    </td>
+                                                    <td class="text-center"
+                                                        style="padding: 10px; border: 1px solid #ddd;">{{ plan.detail }}
+                                                    </td>
+                                                    <td class="text-center"
+                                                        style="padding: 10px; border: 1px solid #ddd;">
+                                                        <div v-if="plan.gaps && plan.gaps.length > 0">
+                                                            <ul
+                                                                style="list-style: none; padding: 0; margin: 0; text-align: left;">
+                                                                <li v-for="(gap, i) in plan.gaps" :key="i">
+                                                                    - {{ typeof gap === 'object' ? gap.detail : gap }}
+                                                                </li>
+                                                            </ul>
+                                                        </div>
+                                                        <span v-else style="color: #ccc;">-</span>
+                                                    </td>
+                                                    <td style="padding: 10px; border: 1px solid #ddd;">
+                                                        <div class="progress-wrapper">
+                                                            <div class="progress-container small">
+                                                                <div class="progress-bar"
+                                                                    :class="progressClass(plan.progress)"
+                                                                    :style="{ width: plan.progress + '%' }"></div>
+                                                            </div>
+                                                            <span class="progress-text">{{ plan.progress }}%</span>
+                                                        </div>
+                                                    </td>
+                                                    <td
+                                                        style="padding: 10px; border: 1px solid #ddd; text-align: center;">
+                                                        <div class="action-buttons"
+                                                            style="display: flex; gap: 5px; justify-content: center;">
+                                                            <button class="btn-progress"
+                                                                @click.stop="goToProgress(plan.id || plan.project_plan_id)">ความก้าวหน้า</button>
+                                                            <button class="btn-evaluate"
+                                                                @click.stop="goToEvaluation(plan.id || plan.project_plan_id)">การประเมินผล</button>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
                                 </td>
                             </tr>
                         </template>
