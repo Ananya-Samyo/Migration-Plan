@@ -69,24 +69,65 @@ router.get('/edit-detail/:id', async (req, res) => {
 
 // 2. POST Update All-in-one (บันทึกข้อมูลทั้งหมด)
 router.post('/update-all-in-one', upload.single('evidenceFile'), async (req, res) => {
-    
     const project = JSON.parse(req.body.project); 
     const { scopeName, editReason } = req.body; 
+    
+    const adminId = req.user ? req.user.user_id : null; 
+
     let connection;
 
     try {
         connection = await db.getConnection();
         await connection.beginTransaction();
 
-        // 1. ค้นหา coordinator_id
+        // --- 1. ดึงข้อมูลเดิม (Before) เพื่อใช้ทำ Log เปรียบเทียบ ---
+        const [oldData] = await connection.query(`
+            SELECT p.project_plan_name, p.start_date, p.end_date, s.scope_name, s.department_id, s.scope_id
+            FROM project_plans p
+            JOIN scopes s ON p.scope_id = s.scope_id
+            WHERE p.project_plan_id = ?`, [project.id]);
+
+        if (oldData.length === 0) throw new Error('ไม่พบข้อมูลโครงการที่ต้องการแก้ไข');
+        const before = oldData[0];
+
+        // --- 2. บันทึกหัวข้อการเปลี่ยนแปลง (change_logs) ---
+        const [logResult] = await connection.query(`
+            INSERT INTO change_logs (user_id, scope_id, project_plan_id, department_id, change_type, change_date)
+            VALUES (?, ?, ?, ?, 'update_project', NOW())`,
+            [adminId, before.scope_id, project.id, project.department_id]);
+        
+        const logId = logResult.insertId;
+
+        // ฟังก์ชันช่วยบันทึกรายละเอียดการเปลี่ยนแปลง (เปรียบเทียบค่า)
+        const recordChange = async (fieldName, beforeVal, afterVal) => {
+            let b = beforeVal ? String(beforeVal).trim() : '';
+            let a = afterVal ? String(afterVal).trim() : '';
+
+            // ถ้าเป็นฟิลด์วันที่ ให้จัดการ format ให้เหมือนกันก่อนเทียบ
+            if (fieldName.includes('date') && beforeVal) {
+                b = new Date(beforeVal).toISOString().split('T')[0];
+            }
+
+            if (b !== a) {
+                await connection.query(`
+                    INSERT INTO change_log_details (log_id, field_name, before_value, after_value)
+                    VALUES (?, ?, ?, ?)`, [logId, fieldName, b, a]);
+            }
+        };
+
+        // --- 3. บันทึก Log รายละเอียด (เปรียบเทียบทีละฟิลด์) ---
+        await recordChange('plan_name', before.project_plan_name, project.projectName);
+        await recordChange('scope_name', before.scope_name, scopeName);
+        await recordChange('department_id', before.department_id, project.department_id);
+        await recordChange('start_date', before.start_date, project.startDate);
+        await recordChange('end_date', before.end_date, project.endDate);
+
+        // --- 4. ค้นหา coordinator_id เพื่ออัปเดตข้อมูลผู้รายงาน ---
         const [scopeRow] = await connection.query(
-            `SELECT s.coordinator_id FROM scopes s 
-             JOIN project_plans p ON s.scope_id = p.scope_id 
-             WHERE p.project_plan_id = ?`, [project.id]
+            `SELECT coordinator_id FROM scopes WHERE scope_id = ?`, [before.scope_id]
         );
         const coordinatorId = scopeRow[0]?.coordinator_id;
 
-        // 2. อัปเดตข้อมูลผู้รายงาน (ตาราง users)
         if (coordinatorId) {
             await connection.query(
                 `UPDATE users SET user_name = ?, email = ?, phone_number = ? WHERE user_id = ?`,
@@ -94,28 +135,25 @@ router.post('/update-all-in-one', upload.single('evidenceFile'), async (req, res
             );
         }
 
-        // 3. อัปเดตตาราง scopes (ชื่อขอบเขต และ กอง)
+        // --- 5. อัปเดตตาราง scopes ---
         await connection.query(`
-            UPDATE scopes s
-            JOIN project_plans p ON s.scope_id = p.scope_id
-            SET s.scope_name = ?, s.department_id = ?
-            WHERE p.project_plan_id = ?`,
-            [scopeName, project.department_id, project.id]);
+            UPDATE scopes SET scope_name = ?, department_id = ? WHERE scope_id = ?`,
+            [scopeName, project.department_id, before.scope_id]);
 
-        // 4. อัปเดตตาราง project_plans (ชื่อแผนงาน, วันที่)
+        // --- 6. อัปเดตตาราง project_plans ---
         await connection.query(`
             UPDATE project_plans 
             SET project_plan_name = ?, start_date = ?, end_date = ?
             WHERE project_plan_id = ?`,
             [project.projectName, project.startDate, project.endDate, project.id]);
 
-        // 5. บันทึกเหตุผลการแก้ไข (ลงตาราง edit_reasons)
+        // --- 7. บันทึกเหตุผลการแก้ไข (edit_reasons) ---
         await connection.query(
             `INSERT INTO edit_reasons (ref_type, ref_id, reason_text) VALUES (?, ?, ?)`,
             ['project_plan', project.id, editReason]
         );
 
-        // 6. บันทึกข้อมูลไฟล์หลักฐาน (ลงตาราง attachments ถ้ามีการแนบไฟล์)
+        // --- 8. บันทึกข้อมูลไฟล์หลักฐาน (attachments) ---
         if (req.file) {
             await connection.query(
                 `INSERT INTO attachments (ref_type, ref_id, file_path, file_type) VALUES (?, ?, ?, ?)`,
@@ -123,7 +161,7 @@ router.post('/update-all-in-one', upload.single('evidenceFile'), async (req, res
             );
         }
 
-        // 7. จัดการ GAP Analysis (ลบและ Insert ใหม่)
+        // --- 9. จัดการ GAP Analysis (ลบและ Insert ใหม่) ---
         await connection.query('DELETE FROM operational_details WHERE project_plan_id = ?', [project.id]);
 
         for (const gap of project.gaps) {
@@ -137,7 +175,7 @@ router.post('/update-all-in-one', upload.single('evidenceFile'), async (req, res
         }
 
         await connection.commit();
-        res.json({ message: 'บันทึกข้อมูลและหลักฐานสำเร็จ' });
+        res.json({ message: 'บันทึกข้อมูล หลักฐาน และประวัติการแก้ไขสำเร็จ' });
 
     } catch (err) {
         if (connection) await connection.rollback();
