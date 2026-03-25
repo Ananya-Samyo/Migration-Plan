@@ -69,27 +69,48 @@
         </div>
       </div>
 
-      <div class="gap-list-section">
-        <div class="d-flex justify-content-between align-items-center mb-2">
-          <label class="fw-bold">รายการ GAP Analysis</label>
-          <span :style="{ color: totalWeight > 100 ? '#dc3545' : '#6d28d9' }" class="fw-bold">
-            น้ำหนักรวม: {{ totalWeight }}%
-          </span>
-        </div>
+      <div class="gap-list-section card p-4 border-0 shadow-sm" style="background-color: #faf7ed; border: 1px dashed #e9ce8a !important; border-radius: 15px;">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+      <h3 class="fw-bold mb-0" style="font-size: 1.1rem; color: #475569;">รายการ GAP Analysis</h3>
+      <span :style="{ color: totalWeight > 100 ? '#dc3545' : '#6d28d9' }" class="fw-bold small">
+        น้ำหนักรวม: {{ totalWeight }}%
+      </span>
+    </div>
+  </div>
 
-        <div v-for="(gap, gIndex) in projectData.gaps" :key="gIndex" class="gap-row d-flex gap-2 mb-2">
-          <input v-model="gap.detail" placeholder="รายละเอียด GAP" style="flex: 3;" :disabled="isViewer" />
-          <input type="number" v-model.number="gap.weight" placeholder="%" style="width: 80px;" :disabled="isViewer" />
-          <select v-model="gap.status" style="flex: 1.5;" :disabled="isViewer">
-            <option value="processing_gap">ยังไม่ปิด GAP</option>
-            <option value="complete_gap">ปิด GAP เสร็จแล้ว</option>
-            <option value="acceptable_gap">ไม่สามารถปิด GAP </option>
-          </select>
-          <button v-if="!isViewer" class="btn btn-outline-danger btn-sm" @click="removeGap(gIndex)">✕</button>
-        </div>
+  <div class="d-flex gap-2 mb-2 px-2 text-muted fw-bold" style="font-size: 0.85rem;">
+    <div style="flex: 3;">รายละเอียด GAP</div>
+    <div style="width: 80px;" class="text-center">น้ำหนัก (%)</div>
+    <div style="flex: 1.5;">สถานะหลังการแก้ปัญหา / ปรับปรุงเพื่อปิด GAP</div>
+    <div v-if="!isViewer" style="width: 32px;"></div> </div>
 
-        <button v-if="!isViewer" @click="addGap" class="btn-add-gap mt-2">+ เพิ่มรายการ GAP</button>
-      </div>
+  <div v-for="(gap, gIndex) in projectData.gaps" :key="gIndex" class="gap-row d-flex gap-2 mb-2 align-items-center">
+    <div style="flex: 3;">
+      <input v-model="gap.detail" class="form-control shadow-sm border-0" placeholder="ระบุรายละเอียด GAP..." :disabled="isViewer" style="border-radius: 10px;" />
+    </div>
+
+    <div style="width: 80px;">
+      <input type="number" v-model.number="gap.weight" class="form-control shadow-sm border-0 text-center" placeholder="0" :disabled="isViewer" style="border-radius: 10px;" />
+    </div>
+
+    <div style="flex: 1.5;">
+      <select v-model="gap.status" class="form-select shadow-sm border-0" :disabled="isViewer" style="border-radius: 10px;">
+        <option value="processing_gap">ยังไม่ปิด GAP</option>
+        <option value="complete_gap">ปิด GAP เสร็จแล้ว</option>
+        <option value="acceptable_gap">ไม่สามารถปิด GAP</option>
+      </select>
+    </div>
+
+    <div v-if="!isViewer" style="width: 32px;">
+      <button class="btn btn-link text-danger p-0 border-0" @click="removeGap(gIndex)">✕</button>
+    </div>
+  </div>
+
+  <button v-if="!isViewer" @click="addGap" class="btn btn-white w-100 mt-3 shadow-sm py-2 fw-bold" style="border: 1px solid #e2e8f0; border-radius: 10px; color: #6d28d9;">
+    + เพิ่มรายการ GAP
+  </button>
+</div>
     </div>
 
     <div class="action-bar sticky-bottom p-3 bg-white border-top shadow-lg mt-4"
@@ -103,6 +124,66 @@
         ย้อนกลับ
       </button>
 
+    </div>
+
+    <hr class="my-5 border-dashed">
+
+    <h2 class="section-title text-primary mb-4">
+      3. ข้อมูลการดำเนินงานและปัญหาอุปสรรค (สำหรับเรียกดูเท่านั้น)
+    </h2>
+
+    <div class="operation-section border rounded p-4 mb-4 bg-white shadow-sm">
+
+      <div class="field mb-3">
+        <label class="fw-bold mb-1">สถานะหลังการแก้ปัญหา / ปรับปรุงเพื่อปิด GAP</label>
+        <textarea class="form-control bg-light" rows="3" readonly disabled
+          v-model="projectData.evaluation.actual_outcome" placeholder="ไม่มีข้อมูลรายละเอียดผลการดำเนินงาน"></textarea>
+      </div>
+
+      <div class="row mb-3">
+        <div class="col-md-6">
+          <div class="field">
+            <label class="fw-bold mb-1">สถานะดำเนินงาน</label>
+            <div class="custom-read-only-box">
+              <span v-if="projectData.evaluation.project_status === 'finish'" class="status-text success">
+                ⌛ ดำเนินการเสร็จสิ้น
+              </span>
+              <span v-else class="status-text processing">
+                ⏳ กำลังดำเนินการ
+              </span>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-6">
+          <div class="field">
+            <label class="fw-bold mb-1">ข้อเสนอแนะ / รายละเอียดเพิ่มเติม</label>
+            <input type="text" class="form-control bg-light" readonly disabled
+              :value="projectData.evaluation.recommendation || '-'" />
+          </div>
+        </div>
+      </div>
+
+      <div class="gap-analysis-style-box p-3 rounded" style="background-color: #faf7ed; border: 1px dashed #e9ce8a;">
+        <div class="row">
+          <div class="col-md-6 mb-3">
+            <label class="fw-bold mb-2 text-muted">⚠️ ปัญหาอุปสรรคที่พบ</label>
+            <div v-for="(prob, pIdx) in projectData.problems" :key="'p' + pIdx" class="mb-2">
+              <input type="text" class="form-control bg-white border-0 shadow-sm" readonly disabled
+                :value="prob.problem_detail" />
+            </div>
+            <div v-if="!projectData.problems.length" class="text-muted small ms-2">ไม่มีข้อมูลปัญหาอุปสรรค</div>
+          </div>
+
+          <div class="col-md-6 mb-3">
+            <label class="fw-bold mb-2 text-muted">💡 แนวทางแก้ไข</label>
+            <div v-for="(sol, sIdx) in projectData.solutions" :key="'s' + sIdx" class="mb-2">
+              <input type="text" class="form-control bg-white border-0 shadow-sm" readonly disabled
+                :value="sol.solution_detail" />
+            </div>
+            <div v-if="!projectData.solutions.length" class="text-muted small ms-2">ไม่มีข้อมูลแนวทางแก้ไข</div>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
   <div v-else class="loading-screen text-center p-5">กำลังโหลดข้อมูล...</div>
@@ -130,7 +211,14 @@ const projectData = ref({
   coordinator: { name: '', email: '', phone_number: '' },
   startDate: '',
   endDate: '',
-  gaps: []
+  gaps: [],
+  evaluation: {
+    actual_outcome: '',
+    project_status: 'processing',
+    recommendation: ''
+  },
+  problems: [],
+  solutions: []
 })
 
 const totalWeight = computed(() => {
@@ -169,7 +257,14 @@ onMounted(async () => {
         coordinator: data.coordinator || { name: '', email: '', phone_number: '' },
         startDate: data.start_date ? data.start_date.split('T')[0] : '',
         endDate: data.end_date ? data.end_date.split('T')[0] : '',
-        gaps: data.gaps && data.gaps.length > 0 ? data.gaps : [{ detail: '', weight: 0, status: 'processing_gap' }]
+        gaps: data.gaps && data.gaps.length > 0 ? data.gaps : [{ detail: '', weight: 0, status: 'processing_gap' }],
+        evaluation: {
+          actual_outcome: data.actual_outcome || '',
+          project_status: data.project_status || 'processing',
+          recommendation: data.recommendation || ''
+        },
+        problems: data.problems || [],
+        solutions: data.solutions || []
       }
     }
   } catch (err) {
