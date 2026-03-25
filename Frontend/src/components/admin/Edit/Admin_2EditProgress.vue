@@ -94,7 +94,7 @@
           </div>
 
           <div>
-            <input type="number" step="1" v-model.number="gap.weight"
+            <input type="number" step="1" v-model.number="gap.weight" @input="gap.weight = Math.floor(gap.weight || 0)"
               class="form-control shadow-sm border-0 text-center" placeholder="0" :disabled="isViewer"
               style="border-radius: 10px;" />
           </div>
@@ -122,25 +122,28 @@
 
       <div class="action-bar sticky-bottom p-3 bg-white border-top shadow-lg mt-4"
         style="display: flex; justify-content: center; width: 100%;">
-
         <button v-if="!isViewer" class="btn-primary py-3 px-5" @click="handleSave" style="min-width: 250px;">
           💾 บันทึกข้อมูลการประเมิน
         </button>
-
         <button v-else class="btn-secondary py-3 px-5" @click="router.back()" style="min-width: 250px;">
           ย้อนกลับ
         </button>
-
       </div>
 
       <hr class="my-5 border-dashed">
 
-      <h2 class="section-title text-primary mb-4">
-        3. ข้อมูลการดำเนินงานและปัญหาอุปสรรค (สำหรับเรียกดูเท่านั้น)
+      <h2 
+        class="section-title text-primary mb-4 d-flex justify-content-between align-items-center" 
+        @click="showSection3 = !showSection3" 
+        style="cursor: pointer; user-select: none;"
+      >
+        <span>3. ข้อมูลการดำเนินงานและปัญหาอุปสรรค (สำหรับเรียกดูเท่านั้น)</span>
+        <span class="toggle-icon" :style="{ transform: showSection3 ? 'rotate(180deg)' : 'rotate(0deg)' }">
+          ▼
+        </span>
       </h2>
 
-      <div class="operation-section border rounded p-4 mb-4 bg-white shadow-sm">
-
+      <div v-if="showSection3" class="operation-section border rounded p-4 mb-4 bg-white shadow-sm section-fade-in">
         <div class="field mb-3">
           <label class="fw-bold mb-1">สถานะหลังการแก้ปัญหา / ปรับปรุงเพื่อปิด GAP</label>
           <textarea class="form-control bg-light" rows="3" readonly disabled
@@ -212,6 +215,7 @@ const BASE_API = import.meta.env.VITE_API_BASE_URL
 const isViewer = localStorage.getItem('role') === 'viewer'
 
 const loading = ref(true)
+const showSection3 = ref(false) // สถานะเปิด/ปิด ส่วนที่ 3
 const departments = ref([])
 const form = ref({ scopeName: '' })
 const projectData = ref({
@@ -231,10 +235,7 @@ const projectData = ref({
 })
 
 const totalWeight = computed(() => {
-  return projectData.value.gaps.reduce((sum, g) => {
-    const weight = Math.floor(Number(g.weight || 0));
-    return sum + weight;
-  }, 0)
+  return projectData.value.gaps.reduce((sum, g) => sum + Math.floor(Number(g.weight || 0)), 0)
 })
 
 const formatToBuddhist = (dateStr) => {
@@ -250,11 +251,9 @@ const formatToBuddhist = (dateStr) => {
 onMounted(async () => {
   try {
     const token = localStorage.getItem('token')
-    // 1. โหลดข้อมูลกอง
     const dRes = await fetch(`${BASE_API}/api/departments`, { headers: { 'Authorization': `Bearer ${token}` } })
     departments.value = await dRes.json()
 
-    // 2. โหลดข้อมูลจาก ID (ดึงข้อมูลแผนงาน + ข้อมูลโครงการ)
     const res = await fetch(`${BASE_API}/api/admin/edit-detail/${route.params.id}`, {
       headers: { 'Authorization': `Bearer ${token}` }
     })
@@ -269,11 +268,9 @@ onMounted(async () => {
         coordinator: data.coordinator || { name: '', email: '', phone_number: '' },
         startDate: data.start_date ? data.start_date.split('T')[0] : '',
         endDate: data.end_date ? data.end_date.split('T')[0] : '',
-        gaps: data.gaps && data.gaps.length > 0
-          ? data.gaps.map(g => ({
-            ...g,
-            weight: Math.floor(Number(g.weight || 0)) 
-          }))
+        // บังคับให้เป็นจำนวนเต็มตั้งแต่ตอนโหลดข้อมูล
+        gaps: data.gaps && data.gaps.length > 0 
+          ? data.gaps.map(g => ({ ...g, weight: Math.floor(Number(g.weight || 0)) }))
           : [{ detail: '', weight: 0, status: 'processing_gap' }],
         evaluation: {
           actual_outcome: data.actual_outcome || '',
@@ -295,83 +292,75 @@ const addGap = () => projectData.value.gaps.push({ detail: '', weight: 0, status
 const removeGap = (index) => projectData.value.gaps.splice(index, 1)
 
 const handleSave = async () => {
-  // 1. ตรวจสอบเงื่อนไขพื้นฐานก่อน (เช่น น้ำหนักรวม)
   if (totalWeight.value > 100) {
-    Swal.fire({
-      icon: 'error',
-      title: 'น้ำหนักรวมเกินกำหนด',
-      text: 'กรุณาปรับน้ำหนักรวมของ GAP Analysis ไม่ให้เกิน 100%'
-    });
+    Swal.fire({ icon: 'error', title: 'น้ำหนักรวมเกินกำหนด', text: 'น้ำหนักรวมของ GAP Analysis ต้องไม่เกิน 100%' });
     return;
   }
 
-  // 2. เปิด Popup ของ SweetAlert2 เพื่อให้กรอกเหตุผลและแนบไฟล์
   const { value: formValues } = await Swal.fire({
     title: 'ยืนยันการบันทึกข้อมูล',
     html: `
       <div style="text-align: left;">
         <label class="fw-bold">ระบุเหตุผลในการแก้ไข <span style="color:red">*</span></label>
         <textarea id="swal-reason" class="swal2-textarea" placeholder="ระบุเหตุผล..." style="margin: 10px 0; width: 90%;"></textarea>
-        
         <label class="fw-bold">แนบหลักฐานการแก้ไข (ถ้ามี)</label>
         <input type="file" id="swal-file" class="swal2-file" style="margin: 10px 0; width: 90%;">
       </div>
     `,
-    focusConfirm: false,
     showCancelButton: true,
     confirmButtonText: 'ยืนยันการบันทึก',
-    cancelButtonText: 'ยกเลิก',
     preConfirm: () => {
       const reason = document.getElementById('swal-reason').value;
-      const file = document.getElementById('swal-file').files[0];
-
-      if (!reason) {
-        Swal.showValidationMessage('กรุณาระบุเหตุผลในการแก้ไข');
-        return false;
-      }
-      return { reason: reason, file: file };
+      if (!reason) { Swal.showValidationMessage('กรุณาระบุเหตุผลในการแก้ไข'); return false; }
+      return { reason, file: document.getElementById('swal-file').files[0] };
     }
   });
 
-  // ถ้าผู้ใช้กดยกเลิก
   if (!formValues) return;
 
   try {
-    // แสดง Loading ระหว่างส่งข้อมูล
-    Swal.fire({
-      title: 'กำลังบันทึก...',
-      allowOutsideClick: false,
-      didOpen: () => Swal.showLoading()
-    });
+    Swal.fire({ title: 'กำลังบันทึก...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
 
-    // 3. เตรียมข้อมูลแบบ FormData เพื่อส่งไฟล์
     const formData = new FormData();
     formData.append('scopeName', form.value.scopeName);
     formData.append('project', JSON.stringify(projectData.value));
     formData.append('editReason', formValues.reason);
-    if (formValues.file) {
-      formData.append('evidenceFile', formValues.file);
-    }
+    if (formValues.file) formData.append('evidenceFile', formValues.file);
 
     const res = await fetch(`${BASE_API}/api/admin/update-all-in-one`, {
       method: 'POST',
-      headers: {
-        // ห้ามตั้ง Content-Type เป็น application/json เพราะเราส่ง FormData
-        'Authorization': `Bearer ${localStorage.getItem('token')}`
-      },
+      headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` },
       body: formData
     });
 
-    if (!res.ok) {
-      const errorData = await res.json();
-      throw new Error(errorData.message || 'บันทึกล้มเหลว');
-    }
-
-    Swal.fire('สำเร็จ', 'บันทึกข้อมูลและหลักฐานเรียบร้อย', 'success').then(() => router.back());
-
+    if (!res.ok) throw new Error('บันทึกล้มเหลว');
+    Swal.fire('สำเร็จ', 'บันทึกข้อมูลเรียบร้อย', 'success').then(() => router.back());
   } catch (err) {
-    console.error(err);
-    Swal.fire('Error', err.message || 'บันทึกล้มเหลว', 'error');
+    Swal.fire('Error', err.message, 'error');
   }
 };
 </script>
+
+<style scoped>
+.toggle-icon {
+  font-size: 0.9rem;
+  transition: transform 0.3s ease;
+  color: #0d6efd;
+}
+
+.section-title:hover {
+  background-color: #f8f9fa;
+  border-radius: 8px;
+  padding-left: 10px;
+  transition: all 0.2s;
+}
+
+.section-fade-in {
+  animation: fadeInDown 0.4s ease-out;
+}
+
+@keyframes fadeInDown {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+</style>
