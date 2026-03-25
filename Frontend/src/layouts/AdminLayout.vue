@@ -75,9 +75,9 @@
 import { ref, computed, onMounted } from 'vue'
 import './../assets/Admin/css/AdminLayout.css'
 
-const isCollapsed = ref(false)
+const isCollapsed = ref(window.innerWidth <= 768);
 const userName = ref('กำลังโหลด...')
-const rawRole = ref('') // ใช้สำหรับเช็คสิทธิ์ (เก็บค่า 'admin', 'viewer' ฯลฯ)
+const rawRole = ref('') 
 
 // ใช้ Computed เพื่อแปลง Role เป็นภาษาไทยสำหรับแสดงผลเท่านั้น
 const userRoleDisplay = computed(() => {
@@ -117,6 +117,16 @@ onMounted(() => {
     }
   }
 })
+
+onMounted(() => {
+  window.addEventListener('resize', () => {
+    if (window.innerWidth <= 768) {
+      isCollapsed.value = true; // จอเล็กให้ซ่อนอัตโนมัติ
+    } else {
+      isCollapsed.value = false; // จอใหญ่ให้กางออก
+    }
+  });
+});
 
 const currentYear = computed(() => new Date().getFullYear())
 

@@ -270,3 +270,39 @@
     width: 100% !important;
   }
 }
+
+/* ==========================================================================
+   RESPONSIVE MOBILE (หน้าจอมือถือและแท็บเล็ต)
+   ========================================================================== */
+@media (max-width: 768px) {
+  .topbar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    z-index: 10000 !important; 
+    background: #f5f3ff;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+  }
+
+  .main {
+    margin-left: 0 !important;
+    width: 100vw !important;
+    padding-top: 80px !important; 
+  }
+
+  .sidebar {
+    position: fixed !important;
+    top: 80px !important; 
+    height: calc(100vh - 80px) !important;
+    z-index: 9999 !important; 
+    transform: translateX(0);
+    transition: transform 0.3s ease;
+  }
+
+  .sidebar.collapsed {
+    transform: translateX(-100%) !important;
+    width: 250px !important;
+    padding: 0 !important;
+  }
+}
