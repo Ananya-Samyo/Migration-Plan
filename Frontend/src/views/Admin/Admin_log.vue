@@ -254,6 +254,17 @@ const loadLogs = async () => {
   }
 }
 
+const fieldTranslation = {
+  project_plan_name: 'ชื่อโครงการ/แผนงาน',
+  plan_name: 'ชื่อโครงการ/แผนงาน',
+  scope_name: 'ชื่อขอบเขตงาน',
+  department_id: 'หน่วยงาน/กอง',
+  start_date: 'วันที่เริ่มต้น',
+  end_date: 'วันที่สิ้นสุด',
+  coordinator_name: 'ชื่อผู้ประสานงาน',
+  // เพิ่มฟิลด์อื่นๆ ตามที่มีใน Database ของคุณ
+};
+
 const loadDepartments = async () => {
   try {
     const res = await axios.get(`${API}/api/departments`)

@@ -52,18 +52,27 @@
       <div class="grid-2 mb-4">
         <div class="field">
           <label>วันที่เริ่มต้นแผน</label>
-          <input type="date" v-model="projectData.startDate" :disabled="isViewer" />
+          <div class="custom-date-picker" @click="$refs.startDateInput.showPicker()">
+            <span class="date-text">{{ formatToBuddhist(projectData.startDate) }}</span>
+            <input ref="startDateInput" type="date" v-model="projectData.startDate" class="hidden-date-input"
+              :disabled="isViewer" />
+          </div>
         </div>
+
         <div class="field">
           <label>วันที่สิ้นสุดแผน</label>
-          <input type="date" v-model="projectData.endDate" :disabled="isViewer" />
+          <div class="custom-date-picker" @click="$refs.endDateInput.showPicker()">
+            <span class="date-text">{{ formatToBuddhist(projectData.endDate) }}</span>
+            <input ref="endDateInput" type="date" v-model="projectData.endDate" class="hidden-date-input"
+              :disabled="isViewer" />
+          </div>
         </div>
       </div>
 
       <div class="gap-list-section">
         <div class="d-flex justify-content-between align-items-center mb-2">
           <label class="fw-bold">รายการ GAP Analysis</label>
-          <span :class="totalWeight > 100 ? 'text-danger' : 'text-primary'" class="fw-bold">
+          <span :style="{ color: totalWeight > 100 ? '#dc3545' : '#6d28d9' }" class="fw-bold">
             น้ำหนักรวม: {{ totalWeight }}%
           </span>
         </div>
@@ -72,9 +81,9 @@
           <input v-model="gap.detail" placeholder="รายละเอียด GAP" style="flex: 3;" :disabled="isViewer" />
           <input type="number" v-model.number="gap.weight" placeholder="%" style="width: 80px;" :disabled="isViewer" />
           <select v-model="gap.status" style="flex: 1.5;" :disabled="isViewer">
-            <option value="processing_gap">กำลังดำเนินการ</option>
-            <option value="complete_gap">เสร็จสิ้น</option>
-            <option value="acceptable_gap">ยอมรับได้</option>
+            <option value="processing_gap">ยังไม่ปิด GAP</option>
+            <option value="complete_gap">ปิด GAP เสร็จแล้ว</option>
+            <option value="acceptable_gap">ไม่สามารถปิด GAP </option>
           </select>
           <button v-if="!isViewer" class="btn btn-outline-danger btn-sm" @click="removeGap(gIndex)">✕</button>
         </div>
@@ -128,6 +137,16 @@ const totalWeight = computed(() => {
   return projectData.value.gaps.reduce((sum, g) => sum + Number(g.weight || 0), 0)
 })
 
+const formatToBuddhist = (dateStr) => {
+  if (!dateStr) return 'เลือกวันที่';
+  const date = new Date(dateStr);
+  return date.toLocaleDateString('th-TH', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric'
+  });
+};
+
 onMounted(async () => {
   try {
     const token = localStorage.getItem('token')
@@ -166,7 +185,12 @@ const removeGap = (index) => projectData.value.gaps.splice(index, 1)
 const handleSave = async () => {
   // 1. ตรวจสอบเงื่อนไขพื้นฐานก่อน (เช่น น้ำหนักรวม)
   if (totalWeight.value > 100) {
-    return Swal.fire('เตือน', 'น้ำหนัก GAP รวมเกิน 100%', 'warning');
+    Swal.fire({
+      icon: 'error',
+      title: 'น้ำหนักรวมเกินกำหนด',
+      text: 'กรุณาปรับน้ำหนักรวมของ GAP Analysis ไม่ให้เกิน 100%'
+    });
+    return;
   }
 
   // 2. เปิด Popup ของ SweetAlert2 เพื่อให้กรอกเหตุผลและแนบไฟล์
@@ -188,7 +212,7 @@ const handleSave = async () => {
     preConfirm: () => {
       const reason = document.getElementById('swal-reason').value;
       const file = document.getElementById('swal-file').files[0];
-      
+
       if (!reason) {
         Swal.showValidationMessage('กรุณาระบุเหตุผลในการแก้ไข');
         return false;
@@ -212,9 +236,9 @@ const handleSave = async () => {
     const formData = new FormData();
     formData.append('scopeName', form.value.scopeName);
     formData.append('project', JSON.stringify(projectData.value));
-    formData.append('editReason', formValues.reason); 
+    formData.append('editReason', formValues.reason);
     if (formValues.file) {
-      formData.append('evidenceFile', formValues.file); 
+      formData.append('evidenceFile', formValues.file);
     }
 
     const res = await fetch(`${BASE_API}/api/admin/update-all-in-one`, {
