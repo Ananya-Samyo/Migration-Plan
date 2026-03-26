@@ -65,10 +65,15 @@ const masterData = ref({
 const goToStep2 = (payload) => {
     const id = typeof payload === 'object' ? payload.id : payload;
     
-    console.log("ได้รับ Project ID จาก Step 1:", id);
     if (id) {
         masterData.value.projectId = id;
+        
+        if (payload.projects) {
+            masterData.value.step1.projects = payload.projects;
+            console.log("✅ อัปเดต Project IDs เข้า MasterData เรียบร้อย:", payload.projects);
+        }
     }
+    
     currentStep.value = 2;
 }
 

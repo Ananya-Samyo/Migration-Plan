@@ -10,7 +10,7 @@ router.use(isAdmin);
 // ฟังก์ชันช่วยเหลือสำหรับ หา/สร้าง ผู้ใช้งาน
 async function getOrCreateUser(conn, userObj, roleStr, deptId) {
     if (!userObj || !userObj.email || !userObj.name) return null;
-    
+
     // ค้นหาจาก Email ก่อน
     const [rows] = await conn.query(`SELECT user_id FROM users WHERE email = ?`, [userObj.email]);
     if (rows.length > 0) return rows[0].user_id;
@@ -26,7 +26,7 @@ async function getOrCreateUser(conn, userObj, roleStr, deptId) {
 // ================= POST: บันทึกข้อมูลแผนงาน (Step 1) =================
 router.post('/projects', async (req, res) => {
     const { scopeName, projects } = req.body;
-    
+
     if (!scopeName || !projects || projects.length === 0) {
         return res.status(400).json({ success: false, message: 'ข้อมูลไม่ครบถ้วน' });
     }
@@ -38,7 +38,7 @@ router.post('/projects', async (req, res) => {
         // 1. ดึง department_id และวันที่จากแผนงานแรกมาเป็นของ scope หลัก
         const firstProject = projects[0];
         const primaryDeptId = firstProject.department_id || null;
-        
+
         // 🌟 ดึงวันที่มาด้วย (ถ้า Frontend ส่งมาในชื่อ startDate, endDate)
         const scopeStartDate = firstProject.startDate || null;
         const scopeEndDate = firstProject.endDate || null;
@@ -54,11 +54,13 @@ router.post('/projects', async (req, res) => {
 
         let isFirstProject = true;
 
+        const savedProjects = [];
+
         // 3. วนลูปสร้าง Project Plans ทีละแผนงาน
         for (const proj of projects) {
             const deptId = proj.department_id || null;
-            const projStartDate = proj.startDate || null; 
-            const projEndDate = proj.endDate || null;     
+            const projStartDate = proj.startDate || null;
+            const projEndDate = proj.endDate || null;
 
             const [planResult] = await conn.query(
                 `INSERT INTO project_plans (scope_id, project_plan_name, status_id, progress_percent, start_date, end_date) 
@@ -66,6 +68,11 @@ router.post('/projects', async (req, res) => {
                 [scopeId, proj.projectName, projStartDate, projEndDate]
             );
             const planId = planResult.insertId;
+
+            savedProjects.push({
+                projectName: proj.projectName,
+                project_plan_id: planId
+            });
 
             // 3.2 จัดการ Coordinator (ผู้ประสานงานหลัก)
             if (proj.coordinator) {
@@ -112,8 +119,13 @@ router.post('/projects', async (req, res) => {
 
         // Commit ข้อมูลทั้งหมดลง Database
         await conn.commit();
-        
-        res.json({ success: true, message: 'บันทึกสำเร็จ', id: scopeId });
+
+        res.json({
+            success: true,
+            message: 'บันทึกสำเร็จ',
+            scopeId: scopeId,
+            projects: savedProjects
+        });
 
     } catch (error) {
         await conn.rollback();

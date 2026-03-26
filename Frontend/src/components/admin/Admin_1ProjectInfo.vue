@@ -212,7 +212,6 @@ const handleNext = async () => {
   }
 
   try {
-    // โชว์ Loading แบบไม่มีปุ่มกด
     Swal.fire({ title: 'กำลังบันทึกข้อมูลส่วนที่ 1...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
 
     const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/admin/projects`, {
@@ -227,12 +226,35 @@ const handleNext = async () => {
     const result = await res.json();
 
     if (res.ok && result.success) {
-      Swal.close(); // ปิด Loading ทันที
-      emit('next', result.id); // เปลี่ยนหน้าพร้อมส่ง ID ไปให้หน้า 2
+      
+      // 🌟 แก้ไขจุดที่ 2: แมป ID โดยหาจากชื่อโปรเจกต์ให้ตรงกัน (ปลอดภัยกว่า)
+      if (result.projects && result.projects.length > 0) {
+        form.value.projects = form.value.projects.map((p) => {
+          // หาโปรเจกต์จาก Backend ที่ชื่อตรงกัน
+          const matchedProject = result.projects.find(rp => rp.projectName === p.projectName);
+          
+          return {
+            ...p,
+            // ถ้าเจอตัวที่ตรงกัน ก็เอา ID มาใส่ ถ้าไม่เจอก็ปล่อยผ่าน
+            project_plan_id: matchedProject ? matchedProject.project_plan_id : p.project_plan_id 
+          };
+        });
+      }
+
+      emit('update:modelValue', { ...form.value });
+
+      Swal.close();
+
+      emit('next', { 
+        id: result.scopeId, // 🌟 แก้ไขจุดที่ 1: เปลี่ยนจาก scope_id เป็น scopeId ให้ตรงกับ Backend
+        projects: form.value.projects 
+      });
+      
     } else {
       throw new Error(result.message || 'บันทึกไม่สำเร็จ');
     }
   } catch (error) {
+    Swal.close(); // อย่าลืมปิด Loading ถ้าเกิด Error ด้วยครับ
     Swal.fire('Error', error.message, 'error');
   }
 }

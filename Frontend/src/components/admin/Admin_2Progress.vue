@@ -122,32 +122,30 @@ const toggleAccordion = (index) => {
 }
 
 onMounted(() => {
-  // 1. ดึงแผนงานจากหน้า 1 (นี่คือจุดที่แก้ให้ไปดึงจาก step1)
   const step1Projects = props.masterData?.step1?.projects || [];
-
-  // 2. ดึงข้อมูลหน้า 2 ที่อาจจะเคยกรอกไว้แล้ว (เพื่อป้องกันข้อมูลหายเวลากดย้อนกลับ)
   const step2Projects = props.modelValue?.projects || [];
 
   if (step2Projects.length > 0) {
-    // ถ้าเคยกรอกหน้า 2 ไว้แล้ว ให้ใช้ข้อมูลหน้า 2
     form.value.projects = JSON.parse(JSON.stringify(step2Projects));
   } else if (step1Projects.length > 0) {
-    // ถ้าเพิ่งเข้ามาครั้งแรก ให้เอาข้อมูลจากหน้า 1 มาตั้งต้น
-    form.value.projects = JSON.parse(JSON.stringify(step1Projects));
+    // 🚩 แก้ไขจุดนี้: มั่นใจว่าเอา ID จากหน้า 1 มาด้วย
+    form.value.projects = step1Projects.map(p => ({
+      ...p, // กระจายข้อมูลเดิมทั้งหมด (รวมถึง id หรือ project_plan_id)
+      // บังคับกำหนดค่าเริ่มต้นถ้ายังไม่มี
+      startDate: p.startDate || '',
+      endDate: p.endDate || '',
+      progress: p.progress || 0,
+      gaps: (p.gaps && p.gaps.length > 0)
+        ? JSON.parse(JSON.stringify(p.gaps))
+        : [{ detail: '', weight: 0, status: 'processing_gap' }],
+      issues: (p.issues && p.issues.length > 0)
+        ? JSON.parse(JSON.stringify(p.issues))
+        : [{ problem: '', solution: '' }]
+    }));
   }
 
-  // เตรียมโครงสร้างฟอร์มให้พร้อมใช้งาน
-  form.value.projects.forEach(project => {
-    if (!project.startDate) project.startDate = '';
-    if (!project.endDate) project.endDate = '';
-    if (!project.progress) project.progress = 0;
-    if (!project.gaps || project.gaps.length === 0) {
-      project.gaps = [{ detail: '', weight: 0, status: 'processing_gap' }];
-    }
-    if (!project.issues || project.issues.length === 0) {
-      project.issues = [{ problem: '', solution: '' }];
-    }
-  });
+  // Check อีกรอบเพื่อความชัวร์ (เอาไว้ Debug)
+  console.log("🛠️ ตรวจสอบข้อมูลใน Step 2 หลังจากโหลด:", form.value.projects);
 })
 
 // คอยส่งข้อมูลกลับไปเก็บใน masterData.step2 ของหน้าหลัก
@@ -166,8 +164,8 @@ const removeGap = (pIndex, gIndex) => form.value.projects[pIndex].gaps.splice(gI
 // --- หน้า 2: บันทึกความก้าวหน้าเงียบๆ แล้วไปหน้า 3 ---
 const handleNext = async () => {
   let hasError = false;
-  
-  // 1. ตรวจสอบเงื่อนไขน้ำหนักรวมก่อนส่ง
+
+  // 1. ตรวจสอบเงื่อนไขน้ำหนักรวม
   form.value.projects.forEach((project, index) => {
     const totalW = project.gaps?.reduce((sum, g) => sum + Number(g.weight || 0), 0) || 0;
     if (totalW > 100) {
@@ -178,15 +176,15 @@ const handleNext = async () => {
 
   if (hasError) return;
 
-  try {
-    // โชว์ Loading
-    Swal.fire({ 
-      title: 'กำลังบันทึกข้อมูลส่วนที่ 2...', 
-      allowOutsideClick: false, 
-      didOpen: () => Swal.showLoading() 
-    });
+  // 🚩 Log ดูเพื่อความมั่นใจก่อนส่ง
+  console.log("📤 ข้อมูลที่จะส่งไป Backend:", form.value.projects);
 
-    const currentProject = form.value.projects[0]; 
+  try {
+    Swal.fire({
+      title: 'กำลังบันทึก...',
+      allowOutsideClick: false,
+      didOpen: () => Swal.showLoading()
+    });
 
     const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/admin/update-progress`, {
       method: 'POST',
@@ -195,23 +193,34 @@ const handleNext = async () => {
         'Authorization': `Bearer ${localStorage.getItem('token')}`
       },
       body: JSON.stringify({
-        projectId: props.projectId,           
-        startDate: currentProject.startDate,  
-        endDate: currentProject.endDate,        
-        progress: currentProject.progress || 0, 
-        gaps: currentProject.gaps,              
-        issues: currentProject.issues           
+        projects: props.masterData.step1.projects.map((p, index) => {
+          const pid = p.project_plan_id || p.id || p.project_id;
+
+          if (!pid) {
+            console.error(`โปรเจกต์ลำดับที่ ${index} ไม่มี ID! ข้อมูลที่มีคือ:`, p);
+          }
+
+          return {
+            project_plan_id: pid,
+            projectName: p.projectName || "Unnamed Project",
+            startDate: p.startDate,
+            endDate: p.endDate,
+            progress: p.progress ?? 0,
+            gaps: p.gaps || [],
+            issues: p.issues || []
+          };
+        }) || []
       })
     });
 
     const result = await res.json();
 
     if (!res.ok) {
-      throw new Error(result.message || 'เกิดข้อผิดพลาดในการบันทึกข้อมูล');
+      throw new Error(result.message || 'เกิดข้อผิดพลาดในการบันทึก');
     }
 
-    Swal.close(); 
-    emit('next'); 
+    Swal.close();
+    emit('next'); // ไปหน้า 3
 
   } catch (error) {
     console.error("❌ Save Error:", error);

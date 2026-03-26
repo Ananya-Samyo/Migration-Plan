@@ -53,71 +53,81 @@ router.post('/update-progress', verifyToken, isAdmin, async (req, res) => {
   try {
     await conn.beginTransaction();
 
-    const { projectId, startDate, endDate, progress, gaps, issues } = req.body;
+    // 1. รับค่าเป็น projects (Array) ตามที่ส่งมาจากหน้าบ้าน
+    const { projects } = req.body;
 
-    // ตรวจสอบค่าเบื้องต้น
-    if (!projectId || projectId === 'undefined') {
-      throw new Error('ไม่พบ Project ID (ได้รับค่า: ' + projectId + ')');
+    if (!projects || !Array.isArray(projects)) {
+      throw new Error('รูปแบบข้อมูลไม่ถูกต้อง (Expected an array of projects)');
     }
 
-    // 1. อัปเดตตาราง project_plans (ระดับแผนงานย่อย)
-    await conn.query(`
-      UPDATE project_plans 
-      SET start_date = ?, end_date = ?, progress_percent = ?
-      WHERE project_plan_id = ?
-    `, [startDate || null, endDate || null, progress || 0, projectId]);
+    // 2. วนลูปจัดการทีละแผนงาน (Project Plan)
+    for (const project of projects) {
+      // ดึง ID ของแผนงานย่อยมาใช้ในแต่ละรอบของ Loop
+      const pid = project.project_plan_id;
+      
+      if (!pid) {
+        console.error("Skipping: No project_plan_id found for a project");
+        continue; 
+      }
 
-    // 🌟 2. อัปเดตตาราง scopes (ระดับขอบเขตงานหลัก) 
-    // เพื่อให้ข้อมูลวันที่ไปแสดงผลในหน้าสรุปขอบเขตงาน (ช่องปีที่ทำ)
-    await conn.query(`
-      UPDATE scopes 
-      SET start_date = ?, end_date = ?
-      WHERE scope_id = (SELECT scope_id FROM project_plans WHERE project_plan_id = ? LIMIT 1)
-    `, [startDate || null, endDate || null, projectId]);
+      // --- อัปเดตตาราง project_plans ---
+      await conn.query(`
+        UPDATE project_plans 
+        SET start_date = ?, end_date = ?, progress_percent = ?
+        WHERE project_plan_id = ?
+      `, [project.startDate || null, project.endDate || null, project.progress || 0, pid]);
 
-   // 3. จัดการ GAPs (ตาราง operational_details)
-    await conn.query(`DELETE FROM operational_details WHERE project_plan_id = ?`, [projectId]);
+      // --- อัปเดตตาราง scopes (สำหรับหน้าสรุป) ---
+      await conn.query(`
+        UPDATE scopes 
+        SET start_date = ?, end_date = ?
+        WHERE scope_id = (SELECT scope_id FROM project_plans WHERE project_plan_id = ? LIMIT 1)
+      `, [project.startDate || null, project.endDate || null, pid]);
 
-    if (gaps && gaps.length > 0) {
-      for (const gap of gaps) {
-        console.log("Saving GAP:", gap);
+      // --- 3. จัดการ GAPs (ตาราง operational_details) ---
+      // ลบอันเก่าของแผนงานนี้ออกก่อน
+      await conn.query(`DELETE FROM operational_details WHERE project_plan_id = ?`, [pid]);
 
-        const gapDetail = gap.detail || gap.text;
-        if (gapDetail && gapDetail.trim() !== "") {
-          await conn.query(`
-            INSERT INTO operational_details (project_plan_id, detail, weight_percent, progress_percent, status_id)
-            VALUES (?, ?, ?, 0, (SELECT status_id FROM status WHERE status_code = ? LIMIT 1))
-          `, [
-            projectId,
-            gapDetail,
-            gap.weight || 0,
-            gap.status || 'processing_gap' 
-          ]);
+      if (project.gaps && project.gaps.length > 0) {
+        for (const gap of project.gaps) {
+          // ตรวจสอบชื่อ Field ให้ตรงกับที่ Vue ส่งมา (detail)
+          const gapDetail = gap.detail; 
+          if (gapDetail && gapDetail.trim() !== "") {
+            await conn.query(`
+              INSERT INTO operational_details (project_plan_id, detail, weight_percent, progress_percent, status_id)
+              VALUES (?, ?, ?, 0, (SELECT status_id FROM status WHERE status_code = ? LIMIT 1))
+            `, [
+              pid,
+              gapDetail,
+              gap.weight || 0,
+              gap.status || 'processing_gap'
+            ]);
+          }
         }
       }
-    }
 
-    // 4. จัดการ Issues/Solutions
-    await conn.query(`DELETE FROM problems WHERE project_plan_id = ?`, [projectId]);
-    await conn.query(`DELETE FROM solutions WHERE project_plan_id = ?`, [projectId]);
+      // --- 4. จัดการ Issues/Solutions (problems & solutions) ---
+      await conn.query(`DELETE FROM problems WHERE project_plan_id = ?`, [pid]);
+      await conn.query(`DELETE FROM solutions WHERE project_plan_id = ?`, [pid]);
 
-    if (issues && issues.length > 0) {
-      for (const iss of issues) {
-        if (iss.problem && iss.problem.trim() !== "") {
-          await conn.query(`INSERT INTO problems (project_plan_id, problem_detail) VALUES (?, ?)`, [projectId, iss.problem]);
-          if (iss.solution && iss.solution.trim() !== "") {
-            await conn.query(`INSERT INTO solutions (project_plan_id, solution_detail) VALUES (?, ?)`, [projectId, iss.solution]);
+      if (project.issues && project.issues.length > 0) {
+        for (const iss of project.issues) {
+          if (iss.problem && iss.problem.trim() !== "") {
+            await conn.query(`INSERT INTO problems (project_plan_id, problem_detail) VALUES (?, ?)`, [pid, iss.problem]);
+            if (iss.solution && iss.solution.trim() !== "") {
+              await conn.query(`INSERT INTO solutions (project_plan_id, solution_detail) VALUES (?, ?)`, [pid, iss.solution]);
+            }
           }
         }
       }
     }
 
     await conn.commit();
-    res.json({ success: true, message: 'บันทึกข้อมูลสำเร็จ ทั้งในระดับแผนงานและขอบเขตงาน' });
+    res.json({ success: true, message: 'บันทึกข้อมูลทุกแผนงานสำเร็จ' });
 
   } catch (err) {
     if (conn) await conn.rollback();
-    console.error("❌ Backend Error Log:", err);
+    console.error("❌ Backend Error:", err);
     res.status(500).json({ success: false, message: "Server Error: " + err.message });
   } finally {
     if (conn) conn.release();

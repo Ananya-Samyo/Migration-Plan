@@ -196,9 +196,16 @@ const saveEvaluation = async () => {
     return 'กำลังดำเนินการ';
   };
 
-  const gapsHtml = (s2.projects?.[0]?.gaps && s2.projects[0].gaps.length > 0) 
-    ? s2.projects[0].gaps.map(g => `<li style="margin-bottom: 4px;">${g.detail || '-'} (น้ำหนัก: ${g.weight || 0}%, สถานะ: ${getStatusLabel(g.status)})</li>`).join('')
-    : '<li>- ไม่มีข้อมูลวิเคราะห์ช่องว่าง -</li>';
+  const gapsHtml = (s2.projects && s2.projects.length > 0) 
+    ? s2.projects.map((p, pIdx) => `
+        <div style="margin-bottom:8px;">
+          <b>แผนงานที่ ${pIdx + 1}:</b>
+          <ul style="margin:0;">
+            ${p.gaps.map(g => `<li>${g.detail || '-'} (${g.weight}%)</li>`).join('')}
+          </ul>
+        </div>
+      `).join('')
+    : '<li>- ไม่มีข้อมูล GAP -</li>';
 
   const issuesHtml = (s2.projects?.[0]?.issues && s2.projects[0].issues.length > 0)
     ? s2.projects[0].issues.map(iss => `<li style="margin-bottom: 8px;"><b>ปัญหา:</b> ${iss.problem || '-'}<br/><b>แนวทางแก้ไข:</b> ${iss.solution || '-'}</li>`).join('')
@@ -212,12 +219,11 @@ const saveEvaluation = async () => {
     cancelButtonText: 'กลับไปแก้ไข',
     html: `
       <div style="text-align: left; font-family: 'Sarabun', sans-serif; padding: 5px; font-size: 15px; color: #333;">
-        <p style="text-align: center; font-weight: bold; margin-bottom: 20px; color: #1e293b;">
+        <p style="text-align: center; font-weight: bold; margin-bottom: 200px; color: #1e293b;">
           กรุณาตรวจสอบความถูกต้องของข้อมูล ก่อนยืนยันการบันทึกเข้าสู่ระบบ
         </p>
         
         <div style="display: grid; gap: 15px;">
-          
           <div style="border: 1px solid #cbd5e1; padding: 15px; border-radius: 8px; background: #f8fafc;">
             <div style="font-weight: bold; font-size: 16px; margin-bottom: 10px; color: #4b2e83; border-bottom: 1px solid #cbd5e1; padding-bottom: 5px;">
               ส่วนที่ ๑: ข้อมูลทั่วไปของแผนงาน
@@ -243,10 +249,8 @@ const saveEvaluation = async () => {
                 <td><b>${s2.projects?.[0]?.progress || 0}%</b></td>
               </tr>
             </table>
-            
             <div style="margin-bottom: 5px; font-weight: bold;">รายการวิเคราะห์ช่องว่าง (GAP):</div>
             <ul style="margin: 0 0 15px 20px; padding: 0;">${gapsHtml}</ul>
-
             <div style="margin-bottom: 5px; font-weight: bold;">ปัญหาอุปสรรคและแนวทางแก้ไข:</div>
             <ul style="margin: 0 0 0 20px; padding: 0;">${issuesHtml}</ul>
           </div>
@@ -261,7 +265,6 @@ const saveEvaluation = async () => {
               <tr><td style="padding: 4px 0; vertical-align: top;"><b>ผลที่ได้รับจริง:</b></td><td style="white-space: pre-wrap; background: #fff; padding: 8px; border: 1px solid #e2e8f0; border-radius: 4px;">${s3.actualResult || '-'}</td></tr>
             </table>
           </div>
-          
         </div>
       </div>
     `
@@ -307,10 +310,26 @@ const saveEvaluation = async () => {
     didOpen: () => Swal.showLoading() 
   });
 
-  try {
-    const fd = new FormData();
+  // 🚩 จุดที่แก้ไข: ดึงค่า ID ที่ถูกต้อง และสร้าง FormData เพียงชุดเดียว
+  const actualProjectId = props.projectId || s1.id || s1.scope_id || props.masterData?.projectId;
 
-    fd.append('projectId', props.projectId);
+  console.log("🔍 ตรวจสอบ ID ก่อนส่งไป Backend:", actualProjectId);
+
+  if (!actualProjectId || actualProjectId === 'undefined' || actualProjectId === 'null') {
+    return Swal.fire({
+      icon: 'error',
+      title: 'ไม่พบ ID โครงการ',
+      text: 'ระบบไม่พบรหัสโครงการหลัก กรุณาย้อนกลับไปหน้าแรกแล้วกดถัดไปใหม่อีกครั้ง'
+    });
+  }
+
+  try {
+    const fd = new FormData(); // สร้าง FormData ครั้งเดียว
+
+    // ใช้ค่า actualProjectId ที่ตรวจสอบแล้ว
+    fd.append('projectId', actualProjectId);
+
+    console.log("Data in Step 3 before saving:", s2.projects);
 
     // Append ข้อมูลทั้งหมดลงใน fd 
     fd.append('step1', JSON.stringify(s1));

@@ -82,44 +82,99 @@ router.post('/complete-workflow', verifyToken, isAdmin, upload.array('attachment
     connection = await db.getConnection();
     await connection.beginTransaction();
 
-    // 🟢 1. ตรวจสอบข้อมูลที่รับมาก่อน (ช่วยให้รู้ว่าหน้าบ้านส่งอะไรมาบ้าง)
-    console.log("📦 ข้อมูลที่ได้รับจาก Frontend:", req.body);
-
-    // แกะกล่องข้อมูลที่ส่งมาจาก Frontend
     const step1 = JSON.parse(req.body.step1 || '{}');
     const step2 = JSON.parse(req.body.step2 || '{}');
     const step3 = JSON.parse(req.body.step3 || '{}');
     
-    // 🟢 2. ดึง Project ID และดักจับกรณีค่าเป็นตัวหนังสือ 'undefined' หรือ 'null'
     let projectId = req.body.projectId || step1.id; 
-    if (projectId === 'undefined' || projectId === 'null') {
-        projectId = null;
-    }
-    
-    if (!projectId) throw new Error("ไม่พบรหัสโครงการ (Project ID) กรุณากลับไปเริ่มใหม่");
+    if (projectId === 'undefined' || projectId === 'null') projectId = null;
+    if (!projectId) throw new Error("ไม่พบรหัสโครงการ (Project ID)");
 
-    // 3. บันทึกข้อมูลลงตาราง plan_evaluations
+    console.log("🔍 ตรวจสอบ Step 2 Data:", JSON.stringify(step2, null, 2));
+
+if (step2.projects && Array.isArray(step2.projects)) {
+    for (const p of step2.projects) {
+        // ดึง ID ที่ส่งมาจาก Frontend (ต้องเป็นตัวเลข ID จริงๆ จาก DB)
+        const pid = p.project_plan_id || p.id || p.projectPlanId;
+        
+        console.log(`🚀 กำลังประมวลผล Project ID: ${pid}`);
+
+        if (!pid || pid === 'undefined') {
+            console.error("❌ ข้ามโครงการเนื่องจากไม่พบ ID:", p.projectName);
+            continue;
+        }
+
+        // 1. อัปเดตข้อมูลพื้นฐานใน project_plans
+        await connection.query(`
+            UPDATE project_plans 
+            SET start_date = ?, end_date = ?, progress_percent = ? 
+            WHERE project_plan_id = ?
+        `, [p.startDate || null, p.endDate || null, p.progress || 0, pid]);
+
+        // 2. ลบ GAP เก่าของแผนงานนี้ทิ้งก่อนเพื่อบันทึกใหม่ (ป้องกันข้อมูลซ้ำ)
+        await connection.query(`DELETE FROM operational_details WHERE project_plan_id = ?`, [pid]);
+
+        // 3. บันทึก GAP ใหม่
+        if (p.gaps && p.gaps.length > 0) {
+            console.log(`📦 พบ GAP ${p.gaps.length} รายการ สำหรับ ID: ${pid}`);
+            for (const gap of p.gaps) {
+                if (gap.detail && gap.detail.trim() !== "") {
+                    // ใช้ Subquery หา status_id จาก status_code (เช่น processing_gap)
+                    // หากหาไม่เจอ ให้ Default เป็น id 1 (ตามตาราง status ของคุณ)
+                    await connection.query(`
+                        INSERT INTO operational_details (project_plan_id, detail, weight_percent, progress_percent, status_id)
+                        VALUES (?, ?, ?, 0, 
+                            COALESCE(
+                                (SELECT status_id FROM status WHERE status_code = ? LIMIT 1),
+                                1
+                            )
+                        )
+                    `, [
+                        pid, 
+                        gap.detail, 
+                        gap.weight || 0, 
+                        gap.status || 'processing_gap'
+                    ]);
+                }
+            }
+        }
+
+        // 4. บันทึกปัญหา (Problems) ที่มาจากหน้า 2 (ถ้ามี)
+        if (p.issues && p.issues.length > 0) {
+            // ลบปัญหาเก่าออกก่อน
+            await connection.query(`DELETE FROM problems WHERE project_plan_id = ?`, [pid]);
+            for (const iss of p.issues) {
+                if (iss.problem && iss.problem.trim() !== "") {
+                    await connection.query(`
+                        INSERT INTO problems (project_plan_id, problem_detail) 
+                        VALUES (?, ?)
+                    `, [pid, iss.problem]);
+                }
+            }
+        }
+    }
+}
+// --- 🟢 จบส่วนที่ปรับปรุงใหม่ ---
+    // 3. บันทึกข้อมูลลงตาราง plan_evaluations (หน้า 3)
     const [evalRes] = await connection.query(`
       INSERT INTO plan_evaluations 
       (project_plan_id, scope_id, objective, before_plan, expected_outcome, actual_outcome, recommendation, project_status, evaluation_status)
-      VALUES (?, (SELECT scope_id FROM project_plans WHERE project_plan_id = ?), ?, ?, ?, ?, ?, ?, ?)
+      VALUES (?, (SELECT scope_id FROM project_plans WHERE project_plan_id = ? LIMIT 1), ?, ?, ?, ?, ?, ?, ?)
     `, [
       projectId, projectId,
-      JSON.stringify(step3.objective || []), 
-      JSON.stringify(step3.beforePlan || []), 
-      JSON.stringify(step3.expectedResult || []), 
+      JSON.stringify(step3.items?.map(i => i.objective) || []), 
+      JSON.stringify(step3.items?.map(i => i.beforeImprove) || []), 
+      JSON.stringify(step3.items?.map(i => i.expectedAfter) || []), 
       step3.actualResult,
       step3.suggestion, step3.projectStatus, step3.evaluation
     ]);
 
-    // 4. บันทึกปัญหา (ถ้ามีการกรอกมาในหน้า 3) ลงตาราง problems
+    // 4. บันทึกปัญหาหน้า 3 (ถ้ามี)
     if (step3.problem) {
-      await connection.query(`
-        INSERT INTO problems (project_plan_id, problem_detail) VALUES (?, ?)
-      `, [projectId, step3.problem]);
+      await connection.query(`INSERT INTO problems (project_plan_id, problem_detail) VALUES (?, ?)`, [projectId, step3.problem]);
     }
 
-    // 5. จัดการไฟล์แนบ (ถ้ามี) บันทึกลงตาราง attachments
+    // 5. จัดการไฟล์แนบ
     if (req.files && req.files.length > 0) {
       for (const file of req.files) {
         await connection.query(`
@@ -129,9 +184,7 @@ router.post('/complete-workflow', verifyToken, isAdmin, upload.array('attachment
       }
     }
 
-    // --- 6. จัดเตรียมข้อมูลและตรวจสอบอีเมลก่อนส่ง ---
-    
-    // 🟢 แก้ไขเส้นทางการดึงอีเมลให้เจาะเข้าไปใน projects[0] (อนุโลมให้ใช้อีเมลของคนแรกเป็นหลัก)
+    // --- 6. ส่งอีเมล (โค้ดเดิมของคุณ) ---
     let userEmail = step1.projects?.[0]?.coordinator?.email;
     
     if (!userEmail || userEmail === 'undefined' || userEmail === 'null' || userEmail.trim() === '') {
@@ -212,14 +265,13 @@ router.post('/complete-workflow', verifyToken, isAdmin, upload.array('attachment
         console.log(`⚠️ ข้ามการส่งอีเมล: เนื่องจากหา Email ผู้รับไม่พบ หรืออีเมลไม่ถูกต้อง (ค่าที่ได้คือ: ${userEmail})`);
     }
 
-    // 🟢 7. ยืนยันการบันทึกฐานข้อมูล (ทำงานเสมอ ไม่ว่าเมลจะถูกส่งหรือไม่ก็ตาม)
     await connection.commit(); 
-    res.json({ success: true, message: 'บันทึกข้อมูลสำเร็จ!' });
+    res.json({ success: true, message: 'บันทึกข้อมูลสำเร็จครบถ้วน!' });
 
   } catch (error) {
-    if (connection) await connection.rollback(); // ถ้ายกเลิก ให้ย้อนกลับข้อมูลที่ทำมาทั้งหมด
+    if (connection) await connection.rollback();
     console.error('Workflow Error:', error);
-    res.status(500).json({ success: false, message: error.message || 'เกิดข้อผิดพลาดในการบันทึกข้อมูล' });
+    res.status(500).json({ success: false, message: error.message });
   } finally {
     if (connection) connection.release();
   }

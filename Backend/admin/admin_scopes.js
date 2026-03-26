@@ -20,7 +20,6 @@ router.post('/scopes', verifyToken, isAdmin, async (req, res) => {
     const coordinator = projects[0].coordinator
     let coordinatorId;
 
-    // เช็คว่ามี Email นี้ในระบบหรือยัง
     const [[existingCoord]] = await conn.query(
       `SELECT user_id FROM users WHERE email = ?`,
       [coordinator.email]
@@ -44,35 +43,38 @@ router.post('/scopes', verifyToken, isAdmin, async (req, res) => {
       `INSERT INTO scopes
         (scope_name, department_id, coordinator_id, status_id)
        VALUES (?, ?, ?, 1)`,
-      [
-        scopeName,
-        projects[0].department_id,
-        coordinatorId
-      ]
+      [scopeName, projects[0].department_id, coordinatorId]
     )
 
     const scopeId = scopeResult.insertId
 
     /* -----------------------------
-       3. CREATE PROJECT PLANS
+       3. CREATE PROJECT PLANS (แก้ไขจุดนี้ให้เก็บ ID)
     ----------------------------- */
+    const savedProjects = []; // 🚩 ตัวแปรสำหรับเก็บ ID ที่สร้างใหม่
+
     for (const project of projects) {
       // 3.1 Insert Project Plan
       const [projectResult] = await conn.query(
         `INSERT INTO project_plans
-         (scope_id, project_plan_name,  status_id)
+         (scope_id, project_plan_name, status_id)
          VALUES (?, ?, 1)`,
         [scopeId, project.projectName]
       )
 
-      const projectPlanId = projectResult.insertId
+      const projectPlanId = projectResult.insertId;
+
+      // 🚩 เก็บ ID กลับไปบอก Frontend
+      savedProjects.push({
+        project_plan_id: projectPlanId,
+        projectName: project.projectName
+      });
 
       /* -----------------------------
           4. TEAM MEMBERS
       ----------------------------- */
       for (const member of project.teamMembers) {
         let memberUserId;
-
         const [[existingMember]] = await conn.query(
           `SELECT user_id FROM users WHERE email = ?`,
           [member.email]
@@ -83,7 +85,7 @@ router.post('/scopes', verifyToken, isAdmin, async (req, res) => {
         } else {
           const [userResult] = await conn.query(
             `INSERT INTO users (user_name, email, role)
-               VALUES (?, ?, 'user')`,
+             VALUES (?, ?, 'user')`,
             [member.name, member.email]
           )
           memberUserId = userResult.insertId;
@@ -106,13 +108,7 @@ router.post('/scopes', verifyToken, isAdmin, async (req, res) => {
             `INSERT INTO operational_details
               (project_plan_id, detail, weight_percent, progress_percent, status_id)
               VALUES (?, ?, ?, ?, ?)`,
-            [
-              projectPlanId,
-              gap.detail,
-              0, // weight เริ่มต้น
-              0, // progress เริ่มต้น
-              1  // status_id = 1
-            ]
+            [projectPlanId, gap.detail, 0, 0, 1]
           )
         }
       }
@@ -120,7 +116,7 @@ router.post('/scopes', verifyToken, isAdmin, async (req, res) => {
 
     await conn.commit()
 
-    // ส่งอีเมลแจ้งเตือน
+    // 6. ส่งอีเมล (เหมือนเดิม)
     if (email?.recipients?.length) {
       try {
         await sendMail({
@@ -133,14 +129,20 @@ router.post('/scopes', verifyToken, isAdmin, async (req, res) => {
       }
     }
 
-    res.json({ message: 'created', scope_id: scopeId })
+    // 🚀 7. ส่งค่ากลับพร้อมรายการ Projects ที่มี ID แล้ว
+    res.json({ 
+      success: true, // เพิ่ม success flag เพื่อให้ Frontend เช็คง่ายขึ้น
+      message: 'created', 
+      scope_id: scopeId,
+      projects: savedProjects // 🚩 คืนค่า ID ของทุกแผนงานกลับไป
+    })
 
   } catch (err) {
-    await conn.rollback()
+    if (conn) await conn.rollback()
     console.error('CREATE SCOPE error:', err)
     res.status(500).json({ message: 'Server error' })
   } finally {
-    conn.release()
+    if (conn) conn.release()
   }
 })
 
