@@ -235,33 +235,34 @@
             <tbody>
               <template v-if="filteredTasksForModal && filteredTasksForModal.length > 0">
                 <tr v-for="(item, index) in filteredTasksForModal" :key="index" style="vertical-align: middle;">
-                  
+
                   <td style="vertical-align: middle;">
                     {{ item.title }}
                   </td>
-                  
+
                   <td style="text-align: center; vertical-align: middle;">
                     {{ Math.round(item.progress || 0) }}%
                   </td>
-                  
+
                   <td style="text-align: center; vertical-align: middle;">
                     <span :class="['urgency-badge', getUrgency(item.endDate).class]">
                       {{ getUrgency(item.endDate).label }}
                     </span>
                   </td>
-                  
+
                   <td style="text-align: center; vertical-align: middle;">
                     <button @click="goToScopePage(item.id)" class="btn-go">
                       ไปที่ขอบเขตงาน &#10140;
                     </button>
                   </td>
-                  
+
                 </tr>
               </template>
 
               <template v-else>
                 <tr>
-                  <td colspan="4" style="text-align: center; padding: 40px 20px; color: #94a3b8; vertical-align: middle;">
+                  <td colspan="4"
+                    style="text-align: center; padding: 40px 20px; color: #94a3b8; vertical-align: middle;">
                     <div style="display: flex; flex-direction: column; align-items: center; gap: 10px;">
                       <span style="font-size: 2rem;">📭</span>
                       <span style="font-size: 1rem; font-weight: 500;">ไม่มีข้อมูลรายการในหมวดหมู่นี้</span>
@@ -285,15 +286,11 @@
         <div class="modal-body">
           <div class="search-box mb-3">
             <span class="search-icon">🔍</span>
-            <input 
-              v-model="searchQuery" 
-              type="text" 
-              placeholder="ค้นหาชื่อแผนงาน หรือ กองที่รับผิดชอบ..." 
-              class="form-control"
-            />
+            <input v-model="searchQuery" type="text" placeholder="ค้นหาชื่อแผนงาน หรือ กองที่รับผิดชอบ..."
+              class="form-control" />
           </div>
 
-         <div class="table-responsive">
+          <div class="table-responsive">
             <table class="custom-table">
               <thead>
                 <tr>
@@ -307,13 +304,19 @@
               </thead>
               <tbody>
                 <tr v-if="paginatedData.length === 0">
-                  <td colspan="6" class="empty-state">ไม่พบข้อมูลที่ค้นหา</td>
+                  <td colspan="6" class="empty-state-container">
+                    <div class="empty-state-content">
+                      <span class="empty-icon">📭</span>
+                      <p class="empty-text">ไม่พบข้อมูลในหมวดหมู่นี้</p>
+                      <span class="empty-subtext">ลองเลือกช่วงเวลาอื่น หรือตรวจสอบสถานะงานอีกครั้ง</span>
+                    </div>
+                  </td>
                 </tr>
                 <tr v-for="(item, index) in paginatedData" :key="item.id">
                   <td class="text-center">{{ (currentPage - 1) * itemsPerPage + index + 1 }}</td>
-                  
+
                   <td>{{ item.title || item.name || 'ไม่มีชื่อแผนงาน' }}</td>
-                  
+
                   <td class="text-center">
                     {{ Math.round(item.progress || 0) }} %
                   </td>
@@ -323,13 +326,14 @@
                       {{ getUrgency(item.endDate || item.end_date).label }}
                     </span>
                   </td>
-                  
+
                   <td class="text-center">
                     <span class="badge" :class="getBadgeClass(item.status)">
-                      {{ item.status === 'closed' ? 'ปิด GAP แล้ว' : (item.status === 'acceptable' ? 'ยอมรับได้' : 'ยังไม่ปิด GAP') }}
+                      {{ item.status === 'closed' ? 'ปิด GAP แล้ว' : (item.status === 'acceptable' ? 'ยอมรับได้' :
+                      'ยังไม่ปิด GAP') }}
                     </span>
                   </td>
-                  
+
                   <td class="text-center">
                     <button class="btn-detail" @click="goToScopePage(item.id)">
                       📄 รายละเอียด
@@ -342,18 +346,18 @@
         </div>
 
         <div class="custom-task-pagination" v-if="totalPages > 1">
-      <button class="custom-page-btn" @click="prevPage" :disabled="currentPage === 1">
-        &lt; ก่อนหน้า
-      </button>
+          <button class="custom-page-btn" @click="prevPage" :disabled="currentPage === 1">
+            &lt; ก่อนหน้า
+          </button>
 
-      <span class="custom-page-info">
-        หน้า {{ currentPage }} จาก {{ totalPages }}
-      </span>
+          <span class="custom-page-info">
+            หน้า {{ currentPage }} จาก {{ totalPages }}
+          </span>
 
-      <button class="custom-page-btn" @click="nextPage" :disabled="currentPage === totalPages">
-        ถัดไป &gt;
-      </button>
-    </div>
+          <button class="custom-page-btn" @click="nextPage" :disabled="currentPage === totalPages">
+            ถัดไป &gt;
+          </button>
+        </div>
       </div>
     </div>
 
@@ -411,7 +415,7 @@ const filteredTasksForModal = ref([])
 // ==========================================
 const isModalOpen = ref(false)
 const modalTitle = ref('')
-const modalDataList = ref([]) 
+const modalDataList = ref([])
 const searchQuery = ref('')
 const currentPage = ref(1)
 const itemsPerPage = 10
@@ -461,8 +465,8 @@ const getBadgeClass = (status) => {
 
 // นำมาแทนที่ handleCardClick เดิม
 const handleCardClick = (type) => {
-  searchQuery.value = '' 
-  currentPage.value = 1  
+  searchQuery.value = ''
+  currentPage.value = 1
 
   const titles = {
     warning: 'ขอบเขตงานทั้งหมด',
