@@ -87,7 +87,7 @@
       <div class="right-column">
         <div class="panel table-area">
           <div class="panel-header">
-            <h3>📋 รายการงานล่าสุด</h3>
+            <h3>📋 รายการงานทั้งหมด</h3>
             <span class="badge">{{ total }} รายการ</span>
           </div>
           <div class="panel-body scrollable">
@@ -241,7 +241,7 @@
                   </td>
                   
                   <td style="text-align: center; vertical-align: middle;">
-                    {{ item.progress || 0 }}%
+                    {{ Math.round(item.progress || 0) }}%
                   </td>
                   
                   <td style="text-align: center; vertical-align: middle;">
@@ -272,6 +272,88 @@
             </tbody>
           </table>
         </div>
+      </div>
+    </div>
+
+    <div v-if="isModalOpen" class="custom-modal-overlay" @click.self="closeModal">
+      <div class="custom-modal-content">
+        <div class="modal-header">
+          <h2>{{ modalTitle }}</h2>
+          <button class="close-btn" @click="closeModal">✖</button>
+        </div>
+
+        <div class="modal-body">
+          <div class="search-box mb-3">
+            <span class="search-icon">🔍</span>
+            <input 
+              v-model="searchQuery" 
+              type="text" 
+              placeholder="ค้นหาชื่อแผนงาน หรือ กองที่รับผิดชอบ..." 
+              class="form-control"
+            />
+          </div>
+
+         <div class="table-responsive">
+            <table class="custom-table">
+              <thead>
+                <tr>
+                  <th width="5%" class="text-center">ลำดับ</th>
+                  <th width="35%">ชื่อแผนงาน</th>
+                  <th width="15%" class="text-center">ความคืบหน้า</th>
+                  <th width="15%" class="text-center">ความเร่งด่วน</th>
+                  <th width="15%" class="text-center">สถานะ</th>
+                  <th width="15%" class="text-center">จัดการ</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-if="paginatedData.length === 0">
+                  <td colspan="6" class="empty-state">ไม่พบข้อมูลที่ค้นหา</td>
+                </tr>
+                <tr v-for="(item, index) in paginatedData" :key="item.id">
+                  <td class="text-center">{{ (currentPage - 1) * itemsPerPage + index + 1 }}</td>
+                  
+                  <td>{{ item.title || item.name || 'ไม่มีชื่อแผนงาน' }}</td>
+                  
+                  <td class="text-center">
+                    {{ Math.round(item.progress || 0) }} %
+                  </td>
+
+                  <td class="text-center">
+                    <span :class="['urgency-badge', getUrgency(item.endDate || item.end_date).class]">
+                      {{ getUrgency(item.endDate || item.end_date).label }}
+                    </span>
+                  </td>
+                  
+                  <td class="text-center">
+                    <span class="badge" :class="getBadgeClass(item.status)">
+                      {{ item.status === 'closed' ? 'ปิด GAP แล้ว' : (item.status === 'acceptable' ? 'ยอมรับได้' : 'ยังไม่ปิด GAP') }}
+                    </span>
+                  </td>
+                  
+                  <td class="text-center">
+                    <button class="btn-detail" @click="goToScopePage(item.id)">
+                      📄 รายละเอียด
+                    </button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="custom-task-pagination" v-if="totalPages > 1">
+      <button class="custom-page-btn" @click="prevPage" :disabled="currentPage === 1">
+        &lt; ก่อนหน้า
+      </button>
+
+      <span class="custom-page-info">
+        หน้า {{ currentPage }} จาก {{ totalPages }}
+      </span>
+
+      <button class="custom-page-btn" @click="nextPage" :disabled="currentPage === totalPages">
+        ถัดไป &gt;
+      </button>
+    </div>
       </div>
     </div>
 
@@ -322,11 +404,66 @@ const currentExportDate = computed(() => {
 })
 
 // เพิ่ม State เหล่านี้ในหน้า Dashboard หลัก
-const isModalOpen = ref(false)
-const modalTitle = ref('')
 const filteredTasksForModal = ref([])
 
+// ==========================================
+// ตัวแปรและฟังก์ชันสำหรับ Modal ค้นหา & แบ่งหน้า
+// ==========================================
+const isModalOpen = ref(false)
+const modalTitle = ref('')
+const modalDataList = ref([]) 
+const searchQuery = ref('')
+const currentPage = ref(1)
+const itemsPerPage = 10
+
+const filteredData = computed(() => {
+  if (!searchQuery.value) return modalDataList.value
+  const query = searchQuery.value.toLowerCase()
+  return modalDataList.value.filter(item => {
+    const name = (item.title || item.name || '').toLowerCase()
+    const dept = (item.department_name || '').toLowerCase()
+    return name.includes(query) || dept.includes(query)
+  })
+})
+
+const totalPages = computed(() => {
+  return Math.ceil(filteredData.value.length / itemsPerPage) || 1
+})
+
+const paginatedData = computed(() => {
+  const start = (currentPage.value - 1) * itemsPerPage
+  const end = start + itemsPerPage
+  return filteredData.value.slice(start, end)
+})
+
+const prevPage = () => {
+  if (currentPage.value > 1) {
+    currentPage.value--
+  }
+}
+
+const nextPage = () => {
+  if (currentPage.value < totalPages.value) {
+    currentPage.value++
+  }
+}
+// =====================================
+
+const closeModal = () => {
+  isModalOpen.value = false
+}
+
+const getBadgeClass = (status) => {
+  if (status === 'closed') return 'badge-success'
+  if (status === 'acceptable') return 'badge-warning'
+  return 'badge-danger'
+}
+
+// นำมาแทนที่ handleCardClick เดิม
 const handleCardClick = (type) => {
+  searchQuery.value = '' 
+  currentPage.value = 1  
+
   const titles = {
     warning: 'ขอบเขตงานทั้งหมด',
     primary: 'รายการที่ยังไม่ปิด GAP',
@@ -336,13 +473,13 @@ const handleCardClick = (type) => {
   modalTitle.value = titles[type] || 'รายละเอียด'
 
   if (type === 'warning') {
-    filteredTasksForModal.value = [...tasks.value]
+    modalDataList.value = [...tasks.value]
   } else if (type === 'primary') {
-    filteredTasksForModal.value = tasks.value.filter(t => t.status !== 'closed' && t.status !== 'acceptable')
+    modalDataList.value = tasks.value.filter(t => t.status !== 'closed' && t.status !== 'acceptable')
   } else if (type === 'success') {
-    filteredTasksForModal.value = tasks.value.filter(t => t.status === 'closed')
+    modalDataList.value = tasks.value.filter(t => t.status === 'closed')
   } else if (type === 'danger') {
-    filteredTasksForModal.value = tasks.value.filter(t => t.status === 'acceptable')
+    modalDataList.value = tasks.value.filter(t => t.status === 'acceptable')
   }
 
   isModalOpen.value = true

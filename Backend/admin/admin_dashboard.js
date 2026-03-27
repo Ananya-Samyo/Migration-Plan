@@ -50,8 +50,7 @@ router.get('/dashboard/tasks', async (req, res) => {
       FROM scopes s
       JOIN status st ON s.status_id = st.status_id
       WHERE (? IS NULL OR DATE(s.created_at) BETWEEN ? AND ?)
-      ORDER BY s.created_at DESC          
-      LIMIT 6                                
+      ORDER BY s.created_at DESC                                         
     `, params)
 
     res.json(rows)

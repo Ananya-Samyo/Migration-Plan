@@ -51,16 +51,16 @@
       </table>
     </div>
 
-    <div class="pagination" v-if="totalPages > 1">
-      <button class="page-btn" @click="prevPage" :disabled="currentPage === 1">
+    <div class="custom-task-pagination" v-if="totalPages > 1">
+      <button class="custom-page-btn" @click="prevPage" :disabled="currentPage === 1">
         &lt; ก่อนหน้า
       </button>
 
-      <span class="page-info">
+      <span class="custom-page-info">
         หน้า {{ currentPage }} จาก {{ totalPages }}
       </span>
 
-      <button class="page-btn" @click="nextPage" :disabled="currentPage === totalPages">
+      <button class="custom-page-btn" @click="nextPage" :disabled="currentPage === totalPages">
         ถัดไป &gt;
       </button>
     </div>
@@ -115,7 +115,7 @@ const sortedTasks = computed(() => {
    ✅ PAGINATION LOGIC (เพิ่มใหม่)
 ================================ */
 const currentPage = ref(1)
-const itemsPerPage = 3 // กำหนดจำนวนแถวต่อหน้าตรงนี้
+const itemsPerPage = 3 
 
 // คำนวณจำนวนหน้าทั้งหมด
 const totalPages = computed(() => {
