@@ -101,7 +101,17 @@
 
         <div class="form-group">
           <label>เบอร์โทรศัพท์</label>
-          <input v-model="form.phone_number" type="text" placeholder="กรอกหมายเลขโทรศัพท์" />
+          <input 
+            v-model="form.phone_number" 
+            type="text" 
+            placeholder="กรอกหมายเลขโทรศัพท์" 
+            @input="onPhoneType" 
+          />
+
+          <span v-if="phoneError"
+            style="color: #ff4d4f; font-size: 13px; margin-top: 5px; display: block; font-weight: bold;">
+            * {{ phoneError }}
+          </span>
         </div>
 
         <div class="form-group">
@@ -140,6 +150,8 @@ const totalPages = ref(1)
 
 const filterRole = ref('')
 
+const phoneError = ref('');
+
 const emailError = ref('')
 const originalEmail = ref('')
 let emailTimeout = null
@@ -156,6 +168,19 @@ const onEmailType = () => {
     checkEmailDuplicate()
   }, 500)
 }
+
+const onPhoneType = () => {
+  const phoneValue = form.value.phone_number;
+  
+  // ตรวจสอบว่ามีตัวที่ไม่ใช่ตัวเลขหรือไม่
+  if (phoneValue && !/^\d*$/.test(phoneValue)) {
+    phoneError.value = 'กรุณากรอกเฉพาะตัวเลขเท่านั้น';
+  } else if (phoneValue && phoneValue.length > 10) {
+    phoneError.value = 'เบอร์โทรศัพท์ไม่ควรเกิน 10 หลัก';
+  } else {
+    phoneError.value = ''; 
+  }
+};
 
 // Form Structure
 const form = ref({
@@ -270,6 +295,12 @@ const checkEmailDuplicate = async () => {
 
 // บันทึกข้อมูล (Create / Update)
 const saveAdmin = async () => {
+
+  if (emailError.value || phoneError.value) {
+    alert('กรุณาแก้ไขข้อมูลให้ถูกต้องก่อนบันทึก');
+    return;
+  }
+  
   if (emailError.value) {
     Swal.fire('ข้อผิดพลาด', 'กรุณาแก้ไขอีเมลที่ซ้ำซ้อนก่อนบันทึก', 'warning')
     return

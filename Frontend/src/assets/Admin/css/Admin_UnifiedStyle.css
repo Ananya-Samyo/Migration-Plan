@@ -287,6 +287,7 @@ input:focus, select:focus, textarea:focus {
   padding: 35px;
   box-shadow: var(--shadow-md);
   border: 1px solid var(--border-color);
+  border-left: 5px solid #8B5CF6;
 }
 
 /* 3. การ์ดแผนงานย่อย (Project Card) */

@@ -16,7 +16,7 @@
               {{ task.title }}
             </td>
 
-            <td data-label="สถานะ">
+            <td data-label="สถานะ" class="text-center">
               <span class="status" :style="{
                 backgroundColor: statusColor(task.status).bg,
                 color: statusColor(task.status).text
@@ -115,7 +115,7 @@ const sortedTasks = computed(() => {
    ✅ PAGINATION LOGIC (เพิ่มใหม่)
 ================================ */
 const currentPage = ref(1)
-const itemsPerPage = 3 
+const itemsPerPage = 3
 
 // คำนวณจำนวนหน้าทั้งหมด
 const totalPages = computed(() => {
