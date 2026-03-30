@@ -238,3 +238,134 @@ input:disabled, select:disabled {
   color: #6b7280;
   cursor: not-allowed;
 }
+
+/* จัดการ Layout ของกล่อง Label */
+.custom-radio {
+    display: flex;
+    align-items: center;
+    gap: 8px; /* ระยะห่างระหว่างปุ่มกลมกับข้อความ */
+    cursor: pointer;
+    position: relative;
+    user-select: none;
+}
+
+/* ซ่อนปุ่ม Radio ดั้งเดิมของ Browser */
+.custom-radio input[type="radio"] {
+    position: absolute;
+    opacity: 0;
+    cursor: pointer;
+    height: 0;
+    width: 0;
+}
+
+/* สร้างวงกลม Custom ขึ้นมาใหม่ */
+.custom-radio .radio-mark {
+    width: 20px;
+    height: 20px;
+    border: 2px solid #cbd5e1; /* สีขอบตอนที่ยังไม่ถูกเลือก (สีเทาอ่อน) */
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease-in-out;
+}
+
+/* สร้างจุดวงกลมด้านใน (ซ่อนไว้ก่อน) */
+.custom-radio .radio-mark::after {
+    content: "";
+    width: 10px;
+    height: 10px;
+    background-color: transparent;
+    border-radius: 50%;
+    transition: background-color 0.2s ease-in-out;
+}
+
+.custom-radio input[type="radio"]:checked ~ .radio-mark {
+    border-color: #6f42c1;
+}
+
+.custom-radio input[type="radio"]:checked ~ .radio-mark::after {
+    background-color: #6f42c1; /* จุดด้านในเป็นสีม่วง */
+}
+
+.custom-radio input[type="radio"]:checked ~ .radio-text {
+    color: #6f42c1;
+    font-weight: 600; 
+}
+
+.custom-radio input[type="radio"]:disabled ~ .radio-mark {
+    background-color: #f1f5f9;
+    border-color: #e2e8f0;
+    cursor: not-allowed;
+}
+
+.custom-radio input[type="radio"]:disabled ~ .radio-text {
+    color: #94a3b8;
+    cursor: not-allowed;
+}
+
+/* 1. บังคับให้ 2 ตัวเลือก เรียงซ้าย-ขวา (แนวนอน) */
+.radio-group-inline {
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    gap: 30px !important; /* ระยะห่างระหว่าง "ข้อความ" กับ "ตัวเลข" */
+    margin-top: 10px;
+    margin-bottom: 16px;
+}
+
+/* 2. บังคับให้ วงกลม กับ ข้อความ อยู่บรรทัดเดียวกัน */
+.custom-radio {
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    gap: 8px !important; /* ระยะห่างระหว่างวงกลมกับตัวหนังสือ */
+    cursor: pointer;
+    margin: 0 !important; /* ล้างค่า margin เผื่อถูกดันลงมา */
+    font-weight: normal;
+}
+
+/* 3. ซ่อนปุ่ม Radio ดั้งเดิม */
+.custom-radio input[type="radio"] {
+    position: absolute !important;
+    opacity: 0 !important;
+    width: 0 !important;
+    height: 0 !important;
+}
+
+/* 4. ออกแบบวงกลมด้านนอก */
+.custom-radio .radio-mark {
+    width: 18px;
+    height: 18px;
+    border: 2px solid #cbd5e1;
+    border-radius: 50%;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    flex-shrink: 0; /* ป้องกันวงกลมเบี้ยว */
+    transition: all 0.2s ease-in-out;
+}
+
+/* 5. ออกแบบจุดด้านใน (ตอนยังไม่เลือกจะโปร่งใส) */
+.custom-radio .radio-mark::after {
+    content: "";
+    width: 10px;
+    height: 10px;
+    background-color: transparent;
+    border-radius: 50%;
+    transition: background-color 0.2s ease-in-out;
+}
+
+/* 6. สีตอนถูกเลือก (สีม่วงเข้าธีม) */
+.custom-radio input[type="radio"]:checked ~ .radio-mark {
+    border-color: #6f42c1 !important; /* สีขอบม่วง */
+}
+
+.custom-radio input[type="radio"]:checked ~ .radio-mark::after {
+    background-color: #6f42c1 !important; /* สีจุดตรงกลางม่วง */
+}
+
+.custom-radio input[type="radio"]:checked ~ .radio-text {
+    color: #6f42c1 !important;
+    font-weight: bold !important;
+}
