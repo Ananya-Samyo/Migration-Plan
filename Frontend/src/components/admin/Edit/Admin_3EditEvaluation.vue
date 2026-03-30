@@ -62,7 +62,7 @@
                 <input v-model="item.before_number" type="number" step="0.01" placeholder="ตัวเลข" class="modern-input short-input" :disabled="isViewer" />
                 
                 <select v-model="item.before_unit" class="modern-input short-input" :disabled="isViewer">
-                  <option value="" disabled>เลือกหน่วย</option>
+                  <option value="">-- ไม่ระบุ --</option>
                   <option value="ชั่วโมง">ชั่วโมง</option>
                   <option value="นาที">นาที</option>
                   <option value="วัน">วัน</option>
@@ -78,6 +78,7 @@
                 <span class="slash-divider">/</span>
                 
                 <select v-model="item.before_per" class="modern-input short-input" :disabled="isViewer">
+                  <option value="">-- ไม่ระบุ --</option>
                   <option value="ครั้ง">ครั้ง</option>
                   <option value="วัน">วัน</option>
                   <option value="เดือน">เดือน</option>
@@ -97,7 +98,7 @@
                 <input v-model="item.expected_number" type="number" step="0.01" placeholder="ตัวเลข" class="modern-input short-input" :disabled="isViewer" />
                 
                 <select v-model="item.before_unit" class="modern-input short-input readonly-input" disabled>
-                  <option value="" disabled>เลือกหน่วย</option>
+                  <option value="">-- ไม่ระบุ --</option> 
                   <option value="ชั่วโมง">ชั่วโมง</option>
                   <option value="นาที">นาที</option>
                   <option value="วัน">วัน</option>
@@ -110,9 +111,10 @@
                   <option value="%">%</option>
                 </select>
 
-                <span class="slash-divider">/</span>
+                <span v-if="item.before_unit && item.before_per" class="slash-divider">/</span>
 
                 <select v-model="item.before_per" class="modern-input short-input readonly-input" disabled>
+                  <option value="">-- ไม่ระบุ --</option> 
                   <option value="ครั้ง">ครั้ง</option>
                   <option value="วัน">วัน</option>
                   <option value="เดือน">เดือน</option>
@@ -130,18 +132,18 @@
               <span class="fw-bold me-2">ผลลัพธ์ที่คาดหวัง:</span>
               
               <span v-if="Number(item.before_number) > Number(item.expected_number)" class="text-success fw-bold">
-                ลดลง {{ (Number(item.before_number) - Number(item.expected_number)).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 }) }} {{ item.before_unit }} / {{ item.before_per }}
+                ลดลง {{ (Number(item.before_number) - Number(item.expected_number)).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 }) }} {{ [item.before_unit, item.before_per].filter(Boolean).join(' / ') }}
               </span>
 
               <span v-else-if="Number(item.expected_number) > Number(item.before_number)" class="text-primary fw-bold">
-                เพิ่มขึ้น {{ (Number(item.expected_number) - Number(item.before_number)).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 }) }} {{ item.before_unit }} / {{ item.before_per }}
+                เพิ่มขึ้น {{ (Number(item.expected_number) - Number(item.before_number)).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 }) }} {{ [item.before_unit, item.before_per].filter(Boolean).join(' / ') }}
               </span>
 
               <span v-else class="text-secondary fw-bold">
                 ไม่มีการเปลี่ยนแปลง
               </span>
             </div>
-
+            
             </div>
 
           </div>
@@ -250,7 +252,7 @@ onMounted(async () => {
                         before_text: bpParts[0] || (bpParts.length === 1 ? e.before_plan : ''),
                         before_number: bpParts[1] || '',
                         before_unit: bpParts[2] || '',
-                        before_per: bpParts[3] || 'ครั้ง',
+                        before_per: bpParts[3] || '',
                         expected_text: eoParts[0] || (eoParts.length === 1 ? e.expected_outcome : ''),
                         expected_number: eoParts[1] || ''
                     }
@@ -274,7 +276,7 @@ const addItem = () => {
         before_text: '',
         before_number: '',
         before_unit: '',
-        before_per: 'ครั้ง',
+        before_per: '',
         expected_text: '',
         expected_number: ''
     })
