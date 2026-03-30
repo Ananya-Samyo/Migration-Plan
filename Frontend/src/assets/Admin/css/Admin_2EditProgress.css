@@ -196,3 +196,45 @@ input:disabled, select:disabled {
         flex-direction: column;
     }
 }
+
+.modern-input {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-family: inherit;
+  font-size: 14px;
+  transition: border-color 0.2s;
+}
+
+.modern-input:focus {
+  outline: none;
+  border-color: #6366f1; /* สีม่วงๆ ให้เข้ากับธีม */
+  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.1);
+}
+
+.mb-2 {
+  margin-bottom: 12px;
+}
+
+.inline-input-group {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.short-input {
+  width: 140px;
+}
+
+.slash-divider {
+  font-size: 1.2rem;
+  color: #6b7280;
+  font-weight: 500;
+}
+
+.readonly-input {
+  background-color: #f3f4f6;
+  color: #6b7280;
+  cursor: not-allowed;
+}

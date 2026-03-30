@@ -10,7 +10,6 @@ router.get('/evaluation/:id', async (req, res) => {
     const projectPlanId = req.params.id;
 
     try {
-        // 1. ดึงข้อมูลพื้นฐาน โดย JOIN 3 ตาราง (project_plans -> scopes -> users)
         const [projectInfo] = await pool.query(
             `SELECT 
                 s.scope_id, 
@@ -42,7 +41,7 @@ router.get('/evaluation/:id', async (req, res) => {
         // กรณีที่ยังไม่เคยประเมินเลย
         if (evalRows.length === 0) {
             return res.status(200).json({ 
-                scope_id: scopeId,                // ส่งกลับไปเพื่อใช้ตอนบันทึก
+                scope_id: scopeId,               
                 scope_name: scopeName,            
                 coordinator_name: coordinatorName,  
                 project_status: 'processing',
@@ -57,9 +56,26 @@ router.get('/evaluation/:id', async (req, res) => {
 
         // กรณีเคยมีข้อมูลประเมินแล้ว
         const dbData = evalRows[0];
-        const objectives = typeof dbData.objective === 'string' ? JSON.parse(dbData.objective || '[]') : (dbData.objective || []);
-        const beforePlans = typeof dbData.before_plan === 'string' ? JSON.parse(dbData.before_plan || '[]') : (dbData.before_plan || []);
-        const expectedOutcomes = typeof dbData.expected_outcome === 'string' ? JSON.parse(dbData.expected_outcome || '[]') : (dbData.expected_outcome || []);
+
+        // ✅ เพิ่มฟังก์ชัน SafeParse ช่วยดักจับ Error เวลาข้อมูลไม่ใช่ JSON
+        const safeParse = (data) => {
+            if (!data) return []; // ถ้าเป็นค่าว่าง (null, undefined, '') ให้คืนค่า Array ว่าง
+            if (typeof data !== 'string') return Array.isArray(data) ? data : [data];
+            
+            try {
+                // ลองแปลงเป็น JSON
+                const parsed = JSON.parse(data);
+                return Array.isArray(parsed) ? parsed : [parsed];
+            } catch (e) {
+                // ถ้า Parse ไม่ได้ (แสดงว่าเป็นข้อความธรรมดา) ให้จับใส่ Array เลย เพื่อไม่ให้ระบบพัง
+                return [data];
+            }
+        };
+
+        // ✅ เรียกใช้ safeParse แทนการใช้ JSON.parse ตรงๆ แบบเดิม
+        const objectives = safeParse(dbData.objective);
+        const beforePlans = safeParse(dbData.before_plan);
+        const expectedOutcomes = safeParse(dbData.expected_outcome);
 
         const evaluationsArray = [];
         const maxLength = Math.max(objectives.length, beforePlans.length, expectedOutcomes.length, 1);
