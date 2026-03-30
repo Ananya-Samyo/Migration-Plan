@@ -33,9 +33,9 @@
               <div style="position: relative; width: 100%; display: flex; align-items: center;">
                 <span style="position: absolute; left: 10px; z-index: 5;">📅</span>
 
-                <input type="text" :value="toThaiDate(project.startDate)" placeholder="เลือกวันที่เริ่มต้น" readonly
+                <input type="text" :value="toThaiDate(project.start_date)" placeholder="เลือกวันที่เริ่มต้น" readonly
                   style="width: 100%; cursor: pointer; background-color: #fff; padding-left: 35px;" /> <input
-                  type="date" v-model="project.startDate" :disabled="isViewer"
+                  type="date" v-model="project.start_date" :disabled="isViewer"
                   @click="$event.target.showPicker && $event.target.showPicker()"
                   style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; z-index: 10;" />
               </div>
@@ -46,9 +46,9 @@
               <div style="position: relative; width: 100%; display: flex; align-items: center;">
                 <span style="position: absolute; left: 10px; z-index: 5;">📅</span>
 
-                <input type="text" :value="toThaiDate(project.endDate)" placeholder="เลือกวันที่สิ้นสุด" readonly
+                <input type="text" :value="toThaiDate(project.end_date)" placeholder="เลือกวันที่สิ้นสุด" readonly
                   style="width: 100%; cursor: pointer; background-color: #fff; padding-left: 35px;" /> <input
-                  type="date" v-model="project.endDate" :disabled="isViewer"
+                  type="date" v-model="project.end_date" :disabled="isViewer"
                   @click="$event.target.showPicker && $event.target.showPicker()"
                   style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; z-index: 10;" />
               </div>
@@ -130,10 +130,10 @@ onMounted(() => {
   } else if (step1Projects.length > 0) {
     // 🚩 แก้ไขจุดนี้: มั่นใจว่าเอา ID จากหน้า 1 มาด้วย
     form.value.projects = step1Projects.map(p => ({
-      ...p, // กระจายข้อมูลเดิมทั้งหมด (รวมถึง id หรือ project_plan_id)
-      // บังคับกำหนดค่าเริ่มต้นถ้ายังไม่มี
-      startDate: p.startDate || '',
-      endDate: p.endDate || '',
+      ...p,
+      start_date: p.start_date || p.startDate || '',
+      end_date: p.end_date || p.endDate || '',
+
       progress: p.progress || 0,
       gaps: (p.gaps && p.gaps.length > 0)
         ? JSON.parse(JSON.stringify(p.gaps))
@@ -193,23 +193,18 @@ const handleNext = async () => {
         'Authorization': `Bearer ${localStorage.getItem('token')}`
       },
       body: JSON.stringify({
-        projects: props.masterData.step1.projects.map((p, index) => {
-          const pid = p.project_plan_id || p.id || p.project_id;
-
-          if (!pid) {
-            console.error(`โปรเจกต์ลำดับที่ ${index} ไม่มี ID! ข้อมูลที่มีคือ:`, p);
-          }
-
-          return {
-            project_plan_id: pid,
-            projectName: p.projectName || "Unnamed Project",
-            startDate: p.startDate,
-            endDate: p.endDate,
-            progress: p.progress ?? 0,
-            gaps: p.gaps || [],
-            issues: p.issues || []
-          };
-        }) || []
+  projects: form.value.projects.map((p) => ({
+    project_plan_id: p.project_plan_id || p.id,
+    projectName: p.projectName,
+    // ส่งไปทั้งสองชื่อเพื่อความชัวร์
+    start_date: p.start_date, 
+    end_date: p.end_date,
+    startDate: p.start_date, 
+    endDate: p.end_date,
+    progress: p.progress ?? 0,
+    gaps: p.gaps || [],
+    issues: p.issues || []
+  })) || []
       })
     });
 

@@ -59,15 +59,16 @@ router.post('/projects', async (req, res) => {
         // 3. วนลูปสร้าง Project Plans ทีละแผนงาน
         for (const proj of projects) {
             const deptId = proj.department_id || null;
-            const projStartDate = proj.startDate || null;
-            const projEndDate = proj.endDate || null;
+            const projStartDate = proj.start_date || proj.startDate || null;
+            const projEndDate = proj.end_date || proj.endDate || null;
 
-            const [planResult] = await conn.query(
-                `INSERT INTO project_plans (scope_id, project_plan_name, status_id, progress_percent, start_date, end_date) 
-                 VALUES (?, ?, 1, 0, ?, ?)`,
-                [scopeId, proj.projectName, projStartDate, projEndDate]
-            );
-            const planId = planResult.insertId;
+            const [planIns] = await conn.query(
+        `INSERT INTO project_plans (scope_id, project_plan_name, start_date, end_date, progress_percent, status) 
+         VALUES (?, ?, ?, ?, 0, 'open')`,
+        [scopeId, proj.projectName, projStartDate, projEndDate] 
+    );
+    
+    const planId = planIns.insertId;
 
             savedProjects.push({
                 projectName: proj.projectName,

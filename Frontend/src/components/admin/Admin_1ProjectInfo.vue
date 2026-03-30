@@ -9,12 +9,12 @@
     <div class="card" style="margin-bottom: 20px; border-left: 5px solid #3498db;">
       <div class="field">
         <label style="font-weight: bold;">ชื่อขอบเขตงาน / โครงการหลัก</label>
-        <input v-model="form.scopeName" type="text" placeholder="ระบุชื่อขอบเขตงานหลักที่นี่..." class="input-main" />
+        <input v-model="form.scopeName" type="text" placeholder="ระบุชื่อขอบเขตงาน" class="input-main" />
       </div>
     </div>
 
     <div v-for="(project, pIndex) in form.projects" :key="pIndex" class="card" style="margin-bottom: 20px;">
-      
+
       <div class="field" style="margin-bottom: 20px;">
         <div class="grid-2">
           <div>
@@ -22,7 +22,7 @@
             <input v-model="project.projectName" type="text" placeholder="ระบุชื่อแผนงาน..." />
           </div>
           <div>
-            <label style="font-weight: bold;">แผนก/หน่วยงาน</label>
+            <label style="font-weight: bold;">หน่วยงานเจ้าของขอบเขตงาน</label>
             <select v-model="project.department_id">
               <option value="">-- เลือกแผนก --</option>
               <option v-for="dept in departments" :key="dept.department_id" :value="dept.department_id">
@@ -45,7 +45,7 @@
             <span>คัดลอกรายชื่อจากแผนงานที่ 1</span>
           </label>
         </div>
-        
+
         <div class="grid-3">
           <input v-model="project.coordinator.name" type="text" placeholder="ชื่อ-สกุล" />
           <input v-model="project.coordinator.email" type="email" placeholder="อีเมล"
@@ -55,8 +55,8 @@
             <input v-model="project.coordinator.phone_number" type="text" placeholder="เบอร์โทรศัพท์" maxlength="10"
               @input="validatePhoneNumber($event.target.value, 'coordinator', pIndex)"
               :class="{ 'border-red-500': phoneErrors[`p${pIndex}-coord`] }" class="border rounded px-3 py-2" />
-            
-            <span v-if="phoneErrors[`p${pIndex}-coord`]" 
+
+            <span v-if="phoneErrors[`p${pIndex}-coord`]"
               style="color: #ff4d4f; font-size: 13px; margin-top: 5px; display: block; font-weight: bold;">
               * {{ phoneErrors[`p${pIndex}-coord`] }}
             </span>
@@ -77,13 +77,13 @@
           <div class="grid-team">
             <input v-model="member.name" type="text" :placeholder="`ชื่อ-สกุลคนที่ ${mIndex + 1}`" />
             <input v-model="member.email" type="email" placeholder="อีเมล" @blur="checkUserEmail(member)" />
-            
+
             <div class="flex flex-col gap-1">
               <input v-model="member.phone_number" type="text" placeholder="เบอร์โทรศัพท์" maxlength="10"
                 @input="validatePhoneNumber($event.target.value, 'teamMember', pIndex, mIndex)"
                 :class="{ 'border-red-500': phoneErrors[`p${pIndex}-m${mIndex}`] }" class="border rounded px-3 py-2" />
-              
-              <span v-if="phoneErrors[`p${pIndex}-m${mIndex}`]" 
+
+              <span v-if="phoneErrors[`p${pIndex}-m${mIndex}`]"
                 style="color: #ff4d4f; font-size: 13px; margin-top: 5px; display: block; font-weight: bold;">
                 * {{ phoneErrors[`p${pIndex}-m${mIndex}`] }}
               </span>
@@ -107,7 +107,7 @@
         </div>
       </div>
 
-      <button v-if="form.projects.length > 1" @click="removeProject(pIndex)" 
+      <button v-if="form.projects.length > 1" @click="removeProject(pIndex)"
         style="margin-top: 15px; color: #ff4d4f; border: none; background: none; cursor: pointer; font-size: 14px;">
         🗑️ ลบแผนงานนี้
       </button>
@@ -189,6 +189,8 @@ const addProject = () => {
   form.value.projects.push({
     projectName: '',
     department_id: '',
+    startDate: '',
+    endDate: '',
     coordinator: { name: '', email: '', phone_number: '' },
     teamMembers: [{ name: '', email: '', phone_number: '' }],
     gaps: [{ detail: '' }],

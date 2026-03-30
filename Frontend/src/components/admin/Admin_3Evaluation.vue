@@ -159,6 +159,8 @@ const saveEvaluation = async () => {
   const s2 = props.masterData?.step2 || {};
   const s3 = evaluation.value;
 
+  console.log("เช็คข้อมูลก่อน Save Step 3:", s2.projects);
+
   // 1. ตรวจสอบข้อมูลหาย
   let missingFields = [];
   if (!s1.scopeName) missingFields.push("ชื่อขอบเขตงาน (Step 1)");
