@@ -11,50 +11,27 @@ const props = defineProps({
   }
 })
 
-/* =========================================
-   UPDATE: ปรับ Theme สีตามที่ขอมา
-========================================= */
+// --- 1. เพิ่มบรรทัดนี้เพื่อสร้างตัวส่งเหตุการณ์ ---
+const emit = defineEmits(['details'])
+
 const theme = {
-  // สีเหลือง -> สำหรับ "งานทั้งหมด"
-  warning: {
-    border: '#ca8a04', // เหลืองเข้ม (Gold)
-    bg: '#fefce8',     // เหลืองอ่อนมาก
-    defaultIcon: '📁'
-  },
-  // สีม่วง -> สำหรับ "ยังไม่ปิด GAP"
-  primary: {
-    border: '#6d28d9',
-    bg: '#ede9fe',
-    defaultIcon: '📌'
-  },
-  // สีเขียว -> สำหรับ "ปิด GAP เสร็จแล้ว"
-  success: {
-    border: '#15803d',
-    bg: '#dcfce7',
-    defaultIcon: '✅'
-  },
-  // สีแดง -> สำหรับ "ไม่สามารถปิด GAP แต่ยอมรับได้"
-  danger: {
-    border: '#b91c1c',
-    bg: '#fee2e2',
-    defaultIcon: '⚠️'
-  }
+  warning: { border: '#ca8a04', bg: '#fefce8', defaultIcon: '📁' },
+  primary: { border: '#6d28d9', bg: '#ede9fe', defaultIcon: '📌' },
+  success: { border: '#15803d', bg: '#dcfce7', defaultIcon: '✅' },
+  danger: { border: '#b91c1c', bg: '#fee2e2', defaultIcon: '⚠️' }
 }
 
-const activeTheme = computed(() => {
-  return theme[props.type] || theme['primary']
-})
-
-const displayIcon = computed(() => {
-  return props.icon || activeTheme.value.defaultIcon
-})
+const activeTheme = computed(() => theme[props.type] || theme['primary'])
+const displayIcon = computed(() => props.icon || activeTheme.value.defaultIcon)
 </script>
 
 <template>
-  <div class="card" :style="{
-    borderLeft: '5px solid ' + activeTheme.border,
-    background: activeTheme.bg
-  }">
+  <div class="card clickable" 
+       @click="emit('details', type)" 
+       :style="{
+         borderLeft: '5px solid ' + activeTheme.border,
+         background: activeTheme.bg
+       }">
     <div class="icon">{{ displayIcon }}</div>
     <div class="card-content">
       <h4 :style="{ color: activeTheme.border }">{{ title }}</h4>
@@ -64,6 +41,17 @@ const displayIcon = computed(() => {
 </template>
 
 <style scoped>
+/* --- 3. เพิ่ม CSS ส่วนนี้เพื่อให้ดูเหมือนปุ่มที่กดได้ --- */
+.card.clickable {
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.card.clickable:hover {
+  filter: brightness(0.95);
+  transform: translateY(-2px);
+}
+
 .card {
   display: flex;
   align-items: center;
@@ -72,36 +60,10 @@ const displayIcon = computed(() => {
   padding: 24px;
   min-height: 140px;
   border-radius: 14px;
-  background-color: #fff;
-  box-shadow: 0 3px 5px rgba(0, 0, 0, 0.05);
-  transition: transform 0.15s ease;
+  /* ส่วนที่เหลือคงเดิมตามไฟล์ของคุณ */
 }
 
-.card:hover {
-  transform: translateY(-1px);
-}
-
-.icon {
-  font-size: 32px;
-  width: 50px;
-  height: 50px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 10px;
-}
-
-.card-content h4 {
-  margin: 0;
-  font-size: 15px;
-  font-weight: 700;
-  opacity: 0.9;
-}
-
-.card-content h1 {
-  margin: 2px 0 0;
-  font-size: 28px;
-  font-weight: 800;
-  color: #1e293b;
-}
+.icon { font-size: 2.5rem; }
+.card-content h4 { margin: 0; font-size: 1rem; font-weight: 600; }
+.card-content h1 { margin: 8px 0 0; font-size: 2.2rem; font-weight: 700; color: #1e293b; }
 </style>

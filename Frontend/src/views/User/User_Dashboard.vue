@@ -45,10 +45,17 @@
     </header>
 
     <section class="summary-grid">
-      <SummaryCard title="ขอบเขตงานทั้งหมด" :value="total" type="primary" icon="📁" />
-      <SummaryCard title="ปิด GAP เสร็จแล้ว" :value="closedCount" type="success" icon="✅" />
-      <SummaryCard title="ยังไม่ปิด GAP" :value="openCount" type="warning" icon="📌" />
-      <SummaryCard title="ไม่สามารถปิด GAP แต่ยอมรับได้" :value="acceptableCount" type="danger" icon="⚠️" />
+      <SummaryCard title="ขอบเขตงานทั้งหมด" :value="total" type="warning" icon="📁"
+        @details="handleCardClick('warning', tasks)" />
+
+      <SummaryCard title="ยังไม่ปิด GAP" :value="openCount" type="primary" icon="📌"
+        @details="handleCardClick('primary', tasks)" />
+
+      <SummaryCard title="ปิด GAP เสร็จแล้ว" :value="closedCount" type="success" icon="✅"
+        @details="handleCardClick('success', tasks)" />
+
+      <SummaryCard title="ไม่สามารถปิด GAP แต่ยอมรับได้" :value="acceptableCount" type="danger" icon="⚠️"
+        @details="handleCardClick('danger', tasks)" />
     </section>
 
     <div class="overall-progress-bar">
@@ -71,12 +78,8 @@
           <h3>📈 สัดส่วนสถานะ</h3>
         </div>
         <div class="panel-body">
-          <StatusChart 
-            :open="openCount" 
-            :closed="closedCount" 
-            :acceptable="acceptableCount" 
-            :selectedDate="selectedDate" 
-          />
+          <StatusChart :open="openCount" :closed="closedCount" :acceptable="acceptableCount"
+            :selectedDate="selectedDate" />
         </div>
       </div>
 
@@ -105,12 +108,81 @@
     </div>
 
     <div class="pdf-export-container" ref="pdfTemplate" style="position: absolute; left: -9999px;">
+    </div>
+  </div>
+
+  <div v-if="isModalOpen" class="custom-modal-overlay" @click.self="closeModal">
+    <div class="custom-modal-content">
+      <div class="modal-header">
+        <h2>{{ modalTitle }}</h2>
+        <button class="close-btn" @click="closeModal">✖</button>
       </div>
+
+      <div class="modal-body">
+        <div class="search-box mb-3">
+          <span class="search-icon">🔍</span>
+          <input v-model="searchQuery" type="text" placeholder="ค้นหาชื่อแผนงาน หรือ กองที่รับผิดชอบ..."
+            class="form-control" />
+        </div>
+
+        <div class="table-responsive">
+          <table class="custom-table">
+            <thead>
+              <tr>
+                <th width="5%" class="text-center">ลำดับ</th>
+                <th width="35%">ชื่อแผนงาน</th>
+                <th width="15%" class="text-center">ความคืบหน้า</th>
+                <th width="15%" class="text-center">ความเร่งด่วน</th>
+                <th width="15%" class="text-center">สถานะ</th>
+                <th width="15%" class="text-center">จัดการ</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-if="paginatedData.length === 0">
+                <td colspan="6" class="empty-state-container">
+                  <div class="empty-state-content">
+                    <span class="empty-icon">📭</span>
+                    <p class="empty-text">ไม่พบข้อมูลในหมวดหมู่นี้</p>
+                  </div>
+                </td>
+              </tr>
+              <tr v-for="(item, index) in paginatedData" :key="item.id">
+                <td class="text-center">{{ (currentPage - 1) * itemsPerPage + index + 1 }}</td>
+                <td>{{ item.title || item.name || 'ไม่มีชื่อแผนงาน' }}</td>
+                <td class="text-center">{{ Math.round(item.progress || 0) }} %</td>
+                <td class="text-center">
+                  <span :class="['urgency-badge', getUrgency(item.endDate || item.end_date).class]">
+                    {{ getUrgency(item.endDate || item.end_date).label }}
+                  </span>
+                </td>
+                <td class="text-center">
+                  <span class="badge" :class="getBadgeClass(item.status)">
+                    {{ item.status === 'closed' ? 'ปิด GAP แล้ว' : (item.status === 'acceptable' ? 'ยอมรับได้' :
+                    'ยังไม่ปิด GAP') }}
+                  </span>
+                </td>
+                <td class="text-center">
+                  <button class="btn-detail" @click="goToScopePage(item.id)">📄 รายละเอียด</button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="custom-task-pagination" v-if="totalPages > 1">
+        <button class="custom-page-btn" @click="prevPage" :disabled="currentPage === 1">&lt; ก่อนหน้า</button>
+        <span class="custom-page-info">หน้า {{ currentPage }} จาก {{ totalPages }}</span>
+        <button class="custom-page-btn" @click="nextPage" :disabled="currentPage === totalPages">ถัดไป &gt;</button>
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
+
 import '../../assets/Admin/css/Admin_Dashboard.css'
 
 import SummaryCard from '@/components/user/u_SummaryCard.vue'
@@ -119,6 +191,8 @@ import StatusChart from '@/components/user/u_StatusChart.vue'
 import LineChart from '@/components/user/u_LineChart.vue'
 
 const API = import.meta.env.VITE_API_BASE_URL
+
+const router = useRouter()
 
 /* ===============================
     STATE & DATE LOGIC
@@ -132,12 +206,87 @@ const isOpen = ref(false)
 const dateMode = ref('all')
 const selectedDate = ref({ start: '', end: '' })
 
+const isModalOpen = ref(false)
+const modalTitle = ref('')
+const modalDataList = ref([])
+const searchQuery = ref('')
+const currentPage = ref(1)
+const itemsPerPage = 10
+
 const formatDateISO = (d) => d.toISOString().slice(0, 10)
 
 const currentExportDate = computed(() => {
   const d = new Date()
   return `${d.getDate()} ${d.toLocaleDateString('th-TH', { month: 'long' })} ${d.getFullYear() + 543}`
 })
+
+// --- Logic การค้นหาและแบ่งหน้า ---
+const filteredData = computed(() => {
+  if (!searchQuery.value) return modalDataList.value
+  const query = searchQuery.value.toLowerCase()
+  return modalDataList.value.filter(item => {
+    const name = (item.title || item.name || '').toLowerCase()
+    const dept = (item.department_name || '').toLowerCase()
+    return name.includes(query) || dept.includes(query)
+  })
+})
+
+const totalPages = computed(() => Math.ceil(filteredData.value.length / itemsPerPage) || 1)
+
+const paginatedData = computed(() => {
+  const start = (currentPage.value - 1) * itemsPerPage
+  return filteredData.value.slice(start, start + itemsPerPage)
+})
+
+// --- Functions ---
+const closeModal = () => { isModalOpen.value = false }
+const prevPage = () => { if (currentPage.value > 1) currentPage.value-- }
+const nextPage = () => { if (currentPage.value < totalPages.value) currentPage.value++ }
+
+const getBadgeClass = (status) => {
+  if (status === 'closed') return 'badge-success'
+  if (status === 'acceptable') return 'badge-warning'
+  return 'badge-danger'
+}
+
+const getUrgency = (endDate) => {
+  if (!endDate) return { label: 'ไม่ระบุ', class: 'gray' }
+  const today = new Date()
+  const target = new Date(endDate)
+  const diffDays = Math.ceil((target - today) / (1000 * 60 * 60 * 24))
+  if (diffDays < 0) return { label: 'เลยกำหนด', class: 'urgent-critical' }
+  if (diffDays <= 7) return { label: 'ด่วนมาก', class: 'urgent-high' }
+  if (diffDays <= 30) return { label: 'เร่งด่วน', class: 'urgent-medium' }
+  return { label: 'ปกติ', class: 'urgent-low' }
+}
+
+const handleCardClick = (type, allTasks) => {
+  if (!allTasks || allTasks.length === 0) return; 
+  
+  searchQuery.value = ''
+  currentPage.value = 1
+  
+  const titles = {
+    warning: 'ขอบเขตงานทั้งหมด',
+    primary: 'รายการที่ยังไม่ปิด GAP',
+    success: 'รายการที่ปิด GAP เสร็จแล้ว',
+    danger: 'รายการที่ไม่สามารถปิด GAP แต่ยอมรับได้'
+  }
+  modalTitle.value = titles[type] || 'รายละเอียด'
+
+  // กรองข้อมูล
+  if (type === 'warning') modalDataList.value = [...allTasks]
+  else if (type === 'primary') modalDataList.value = allTasks.filter(t => t.status !== 'closed' && t.status !== 'acceptable')
+  else if (type === 'success') modalDataList.value = allTasks.filter(t => t.status === 'closed')
+  else if (type === 'danger') modalDataList.value = allTasks.filter(t => t.status === 'acceptable')
+
+  isModalOpen.value = true
+}
+
+const goToScopePage = (scopeId) => {
+  isModalOpen.value = false
+  router.push({ path: '/user/user_scopeproject', query: { scope_id: scopeId } })
+}
 
 /* ===============================
     COMPUTED PROPERTIES
@@ -170,15 +319,15 @@ const buddhistDateText = computed(() => {
 const fetchDashboard = async () => {
   const userId = localStorage.getItem('user_id') // ดึง User ID เหมือนใน User_Dashboard
   const token = localStorage.getItem('token')
-  
+
   if (!userId || !token) {
     console.error('Missing userId or token')
     return
   }
 
-  const headers = { 
-    'Content-Type': 'application/json', 
-    'Authorization': `Bearer ${token}` 
+  const headers = {
+    'Content-Type': 'application/json',
+    'Authorization': `Bearer ${token}`
   }
 
   try {
@@ -192,8 +341,8 @@ const fetchDashboard = async () => {
     ])
 
     if (summaryRes.status === 401) {
-       console.error("Token หมดอายุ")
-       return
+      console.error("Token หมดอายุ")
+      return
     }
 
     const summaryData = await summaryRes.json()
