@@ -1,5 +1,5 @@
 <template>
-    <div class="main-wrapper" v-if="!loading">
+    <div class="main-wrapper" v-if="!loading && projectData && projectData.coordinator">
         <header class="top-bar">
             <div class="left-head">
                 <h1 class="page-title">แก้ไขการประเมินผลประโยชน์</h1>
@@ -12,32 +12,48 @@
         </header>
 
         <div class="content-wrapper">
-            <div class="card header-card">
-                <h2 class="section-title mb-4">1. ข้อมูลทั่วไปและสถานะโครงการ</h2>
-                <div class="grid-3">
-                    <div class="form-group">
-                        <label>ชื่อขอบเขตงาน (Scope)</label>
-                        <input v-model="form.scopeName" readonly class="input-readonly form-control bg-light" />
+            <div class="card project-card">
+                <h2 class="section-title mb-4">รายละเอียดแผนงาน</h2>
+
+                <div class="field mb-3">
+                    <label class="fw-bold">ชื่อขอบเขตงาน</label>
+                    <input v-model="form.scopeName" type="text" class="form-control bg-light" />
+                </div>
+
+                <div class="project-info-container border rounded p-3 mb-4 bg-white">
+                    <div class="grid-2">
+                        <div class="field">
+                            <label>ชื่อแผนงาน</label>
+                            <input v-model="projectData.projectName" type="text" :disabled="isViewer" />
+                        </div>
+                        <div class="field">
+                            <label>กองที่รับผิดชอบ</label>
+                            <select v-model="projectData.department_id" :disabled="isViewer">
+                                <option value="">-- เลือกกอง --</option>
+                                <option v-for="d in departments" :key="d.department_id" :value="d.department_id">
+                                    {{ d.department_name }}
+                                </option>
+                            </select>
+                        </div>
                     </div>
 
-                    <div class="form-group">
-                        <label>ผู้รับผิดชอบโครงการ</label>
-                        <input v-model="form.owner" readonly class="input-readonly form-control bg-light" />
-                    </div>
-
-                    <div class="form-group">
-                        <label>สถานะแผนงาน (project_status)</label>
-                        <select v-model="evaluationData.project_status" :disabled="isViewer" class="form-control">
-                            <option value="processing">กำลังดำเนินการ</option>
-                            <option value="finish">เสร็จสิ้นโครงการ</option>
-                        </select>
+                    <div class="field mt-3">
+                        <label>ผู้ประสานงานหลัก (Coordinator)</label>
+                        <div class="grid-3">
+                            <input v-model="projectData.coordinator.name" placeholder="ชื่อ-สกุล"
+                                :disabled="isViewer" />
+                            <input v-model="projectData.coordinator.email" placeholder="อีเมล" @blur="checkUserEmail"
+                                :disabled="isViewer" />
+                            <input v-model="projectData.coordinator.phone_number" placeholder="เบอร์โทร"
+                                :disabled="isViewer" />
+                        </div>
                     </div>
                 </div>
             </div>
 
             <section class="card mt-4">
                 <div class="card-header flex-between">
-                    <h2 class="section-title text-success mb-0">2. ผลที่คาดว่าจะได้รับ (Expected Benefits)</h2>
+                    <h2 class="section-title text-success mb-0">ผลที่คาดว่าจะได้รับจากการทำ Low Level</h2>
                     <button v-if="!isViewer" type="button" class="btn-purple-sm" @click="addItem">+ เพิ่มรายการ</button>
                 </div>
 
@@ -170,7 +186,7 @@
             </section>
 
             <section class="card mt-4">
-                <h2 class="section-title text-info mb-4">3. สรุปผลการประเมิน</h2>
+                <h2 class="section-title text-info mb-4">ผลการดำเนินการจริง</h2>
                 <div class="grid-2 gap-3">
 
                     <div class="form-group col-span-2">
@@ -277,6 +293,70 @@
                         </select>
                     </div>
 
+                    <div class="form-group col-span-2" v-if="evaluationData.evaluation_status === 'fail'">
+                        <label class="fw-bold text-danger"
+                            style="display: flex; align-items: center; gap: 6px; position: relative;">
+                            ระบุปัญหาอุปสรรค
+
+                            <span class="tooltip-trigger" style="cursor: help; display: flex; align-items: center;">
+                                <svg style="width: 16px; height: 16px; fill: #17a2b8;"
+                                    xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+                                    <path
+                                        d="M256 512A256 256 0 1 0 256 0a256 256 0 1 0 0 512zM216 336h24V272H216c-13.3 0-24-10.7-24-24s10.7-24 24-24h48c13.3 0 24 10.7 24 24v88h8c13.3 0 24 10.7 24 24s-10.7 24-24 24H216c-13.3 0-24-10.7-24-24s10.7-24 24-24zm40-208a32 32 0 1 1 0 64 32 32 0 1 1 0-64z" />
+                                </svg>
+
+                                <div class="custom-tooltip">
+                                    <div class="tooltip-header">
+                                        การพิจารณาปัญหาในการดำเนินงานและความต้องการการสนับสนุนจากคณะกรรมการ DTG</div>
+                                    <ul class="tooltip-list">
+                                        <li><strong>1. ปัญหาที่ต้องการบูรณาการร่วมกันระหว่างหน่วยงาน</strong>
+                                            <ul>
+                                                <li>แผนงานที่เกี่ยวข้องตั้งแต่ 2 สายงาน
+                                                    และไม่สามารถหาข้อตกลงระหว่างหน่วยงานเองได้</li>
+                                                <li>การเปลี่ยนแปลงในแผนงานที่ต้องการการตัดสินใจจากคณะกรรมการ DTG</li>
+                                                <li>แผนงานที่อยู่ในความรับผิดชอบของสายงานหนึ่ง
+                                                    ที่สามารถหาข้อตกลงระหว่างหน่วยงานภายในได้</li>
+                                                <li>แผนงานที่เกี่ยวข้องตั้งแต่ 2 สายงาน
+                                                    แต่สามารถหาข้อตกลงระหว่างหน่วยงานเองได้</li>
+                                            </ul>
+                                        </li>
+                                        <li><strong>2. ปัญหาด้านงบประมาณและทรัพยากร</strong>
+                                            <ul>
+                                                <li>ความต้องการด้านงบประมาณหรือทรัพยากรที่ไม่สามารถจัดหาได้เองหรือไม่เพียงพอ
+                                                    เช่น ไม่มีคนพัฒนาระบบ, ต้องรอคิวในการพัฒนานาน เป็นต้น</li>
+                                                <li>ขาดแคลนทรัพยากรที่ต้องเบิก/ขอยืมจากสายงานอื่น</li>
+                                                <li>ปัญหาด้านงบประมาณหรือทรัพยากรที่สามารถแก้ไขได้เอง
+                                                    โดยการบริหารจัดการงบประมาณ/ทรัพยากรภายในสายงาน
+                                                    หรือสามารถขอปรับเปลี่ยนงบประมาณ/ทรัพยากรเองได้</li>
+                                            </ul>
+                                        </li>
+                                        <li><strong>3. ปัญหาที่กระทบต่อวัตถุประสงค์หลักของโครงการ</strong>
+                                            <ul>
+                                                <li>ปัญหาที่กระทบต่อวัตถุประสงค์หลักขององค์กรในแผนยุทธศาสตร์
+                                                    และมีความเร่งด่วนต้องดำเนินงาน</li>
+                                                <li>ความล่าช้าที่จะส่งผลให้ไม่สามารถบรรลุเป้าหมายธุรกิจได้</li>
+                                                <li>การเปลี่ยนแปลงขอบเขตของโครงการ (Scope Change)
+                                                    ที่มีผลกระทบกับงบประมาณ เวลา หรือคุณค่า (Value)</li>
+                                                <li>การเปลี่ยนแปลงระยะเวลาหรือลำดับการดำเนินงานของแผนงาน</li>
+                                            </ul>
+                                        </li>
+                                        <li><strong>4. ปัญหาความเสี่ยงระดับสูง</strong>
+                                            <ul>
+                                                <li>ความเสี่ยงที่อาจทำให้โครงการล้มเหลวหรือกระทบต่อภาพลักษณ์องค์กร</li>
+                                                <li>ความเสี่ยงด้านกฎหมาย ความปลอดภัย หรือการกำกับดูแล (compliance)</li>
+                                                <li>ความเสี่ยงของแผนงานที่สามารถบริหารจัดการได้เองในสายงาน</li>
+                                            </ul>
+                                        </li>
+                                    </ul>
+                                </div>
+                            </span>
+                        </label>
+
+                        <textarea v-model="evaluationData.problem" class="form-control"
+                            placeholder="โปรดระบุปัญหาหรืออุปสรรคที่ทำให้ไม่เป็นไปตามเป้าหมาย..." rows="2"
+                            :disabled="isViewer"></textarea>
+                    </div>
+
                     <div class="form-group col-span-2">
                         <label class="fw-bold">ข้อเสนอแนะ (recommendation)</label>
                         <textarea v-model="evaluationData.recommendation" class="form-control"
@@ -334,45 +414,55 @@ const evaluationData = ref({
     items: []
 })
 
-// 👇 เพิ่มโค้ด watch ตรงนี้ 👇
-watch(() => evaluationData.value.actual_number, (newValue) => {
-    // 1. ถ้าไม่ได้กรอกตัวเลข หรือไม่มีข้อมูล items ให้ข้ามไป
-    if (!newValue || newValue === '' || evaluationData.value.items.length === 0) return;
+const projectData = ref({
+    projectName: '',
+    department_name: '',
+    department_id: '',
+    coordinator: {
+        name: '',
+        email: '',
+        phone_number: ''
+    }
+})
 
-    // 2. ดึงค่ามาเป็นตัวเลขเพื่อคำนวณ
-    const actualNum = Number(newValue);
-    const beforeNum = Number(evaluationData.value.items[0].before_number);
-    const expectedNum = Number(evaluationData.value.items[0].expected_number);
+const departments = ref([])
 
-    // ถ้าค่าเป้าหมายหรือก่อนปรับปรุงยังไม่ถูกกรอก ให้ข้ามไป
-    if (isNaN(expectedNum) || isNaN(beforeNum)) return;
+watch(
+    [
+        () => evaluationData.value.actual_number,
+        () => evaluationData.value.items[0]?.before_number,
+        () => evaluationData.value.items[0]?.expected_number
+    ],
+    ([newActual, newBefore, newExpected]) => {
+        if (!newActual || !newBefore || !newExpected) return;
 
-    // 3. วิเคราะห์ว่าเป็นเป้าหมายแบบ "ต้องการให้ลดลง" หรือ "ต้องการให้เพิ่มขึ้น"
-    const isDecreaseGoal = expectedNum < beforeNum; 
-    const isIncreaseGoal = expectedNum > beforeNum; 
+        const actualNum = Number(newActual);
+        const beforeNum = Number(newBefore);
+        const expectedNum = Number(newExpected);
 
-    // 4. ตัดสินผลลัพธ์
-    if (isDecreaseGoal) {
-        // กรณีเป้าหมายลดลง: ของจริงต้อง "น้อยกว่าหรือเท่ากับ" เป้าหมายถึงจะผ่าน
-        if (actualNum <= expectedNum) {
-            evaluationData.value.evaluation_status = 'pass';
+        if (isNaN(actualNum) || isNaN(beforeNum) || isNaN(expectedNum)) return;
+
+        const isDecreaseGoal = expectedNum < beforeNum;
+
+        if (isDecreaseGoal) {
+            evaluationData.value.evaluation_status = (actualNum <= expectedNum) ? 'pass' : 'fail';
         } else {
-            evaluationData.value.evaluation_status = 'fail';
-        }
-    } else if (isIncreaseGoal) {
-        // กรณีเป้าหมายเพิ่มขึ้น: ของจริงต้อง "มากกว่าหรือเท่ากับ" เป้าหมายถึงจะผ่าน
-        if (actualNum >= expectedNum) {
-            evaluationData.value.evaluation_status = 'pass';
-        } else {
-            evaluationData.value.evaluation_status = 'fail';
+            evaluationData.value.evaluation_status = (actualNum >= expectedNum) ? 'pass' : 'fail';
         }
     }
-});
+);
 
 onMounted(async () => {
     try {
         const token = localStorage.getItem('token')
         const projectId = route.params.id
+
+        const deptRes = await fetch(`${BASE_API}/api/departments`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        })
+        if (deptRes.ok) {
+            departments.value = await deptRes.json()
+        }
 
         const res = await fetch(`${BASE_API}/api/admin/evaluation/${projectId}`, {
             headers: { 'Authorization': `Bearer ${token}` }
@@ -385,6 +475,13 @@ onMounted(async () => {
             form.value.owner = data.coordinator_name || ''
             evaluationData.value.project_status = data.project_status || 'processing'
             evaluationData.value.evaluation_status = data.evaluation_status || ''
+            projectData.value.projectName = data.project_name || data.scope_name || ''
+            projectData.value.department_id = data.department_id || ''
+            projectData.value.coordinator = {
+                name: data.coordinator_name || '',
+                email: data.coordinator_email || '',
+                phone_number: data.coordinator_phone || ''
+            }
 
             // 👇 เริ่มส่วนที่แยกประเภท ผลลัพธ์จริง (actual_outcome) 👇
             const actualStr = data.actual_outcome || ''
@@ -399,28 +496,25 @@ onMounted(async () => {
                 evaluationData.value.actual_type = 'text'
                 evaluationData.value.actual_text = actualStr
             }
-            // 👆 จบส่วนที่แยกประเภท 👆
 
             evaluationData.value.recommendation = data.recommendation || ''
 
-            // จัดการชุดข้อมูล Evaluations (ลบส่วนที่ซ้ำซ้อนออกแล้ว)
             if (data.evaluations && data.evaluations.length > 0) {
                 evaluationData.value.items = data.evaluations.map(e => {
-                    // แยกข้อมูลที่ถูกเชื่อมด้วย || กลับมาใส่แต่ละช่อง
-                    const bpParts = (e.before_plan || '').split('||')
-                    const eoParts = (e.expected_outcome || '').split('||')
+                    const bpParts = (e.before_plan || '').split('||');
+                    const eoParts = (e.expected_outcome || '').split('||');
 
                     return {
                         evaluation_id: e.evaluation_id,
                         objective: e.objective || '',
-                        before_text: bpParts[0] || (bpParts.length === 1 ? e.before_plan : ''),
+                        before_text: bpParts[0] || '',
                         before_number: bpParts[1] || '',
                         before_unit: bpParts[2] || '',
                         before_per: bpParts[3] || '',
-                        expected_text: eoParts[0] || (eoParts.length === 1 ? e.expected_outcome : ''),
-                        expected_number: eoParts[1] || ''
+                        expected_text: eoParts[0] || '',
+                        expected_number: eoParts[1] || '',
                     }
-                })
+                });
             } else {
                 addItem() // กรณีไม่มีข้อมูลเลย ให้สร้างช่องว่าง 1 ชุด
             }
@@ -467,6 +561,7 @@ const handleSave = async () => {
             evaluation_status: evaluationData.value.evaluation_status,
             actual_outcome: finalActualOutcome,
             recommendation: evaluationData.value.recommendation,
+            problem: evaluationData.value.problem,
 
             evaluations: evaluationData.value.items.map(item => ({
                 evaluation_id: item.evaluation_id,

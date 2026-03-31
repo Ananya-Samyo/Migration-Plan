@@ -52,7 +52,7 @@
                 </thead>
 
                 <tbody>
-                    <tr v-if="isLoading">
+                    <tr v-if="loading">
                         <td colspan="4" style="text-align: center; padding: 40px; color: #4b2e83;">
                             <div class="loader-spinner"></div> กำลังโหลดข้อมูล...
                         </td>
@@ -186,6 +186,8 @@ const API = import.meta.env.VITE_API_BASE_URL
 const router = useRouter()
 const route = useRoute()
 
+const loading = ref(true)
+
 // ตัวแปรเดิม
 const scopes = ref([])
 const expandedRow = ref(null)
@@ -306,6 +308,8 @@ const fetchScopes = async (page = 1) => {
     } catch (err) {
         console.error('Fetch Error:', err)
         scopes.value = []
+    } finally {
+        loading.value = false 
     }
 }
 

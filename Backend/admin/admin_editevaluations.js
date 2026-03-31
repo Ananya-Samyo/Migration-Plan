@@ -12,91 +12,88 @@ router.get('/evaluation/:id', async (req, res) => {
     try {
         const [projectInfo] = await pool.query(
             `SELECT 
-                s.scope_id, 
-                s.scope_name, 
-                u.user_name AS coordinator_name 
-             FROM project_plans p 
-             LEFT JOIN scopes s ON p.scope_id = s.scope_id 
-             LEFT JOIN users u ON s.coordinator_id = u.user_id 
-             WHERE p.project_plan_id = ?`,
+        s.scope_id, 
+        s.scope_name, 
+        p.project_plan_name,       
+        u.user_name AS coordinator_name,
+        u.email, 
+        u.phone_number,
+        d.department_id,     
+        d.department_name
+     FROM project_plans p 
+     LEFT JOIN scopes s ON p.scope_id = s.scope_id 
+     LEFT JOIN users u ON s.coordinator_id = u.user_id 
+     LEFT JOIN departments d ON u.department_id = d.department_id
+     WHERE p.project_plan_id = ?`,
             [projectPlanId]
         );
 
-        let scopeId = null;
-        let scopeName = '';
-        let coordinatorName = '';
-
-        if (projectInfo.length > 0) {
-            scopeId = projectInfo[0].scope_id;
-            scopeName = projectInfo[0].scope_name || '';
-            coordinatorName = projectInfo[0].coordinator_name || '';
+        // เช็คก่อนว่าพบโครงการไหม ป้องกัน Error [0]
+        if (projectInfo.length === 0) {
+            return res.status(404).json({ message: 'ไม่พบข้อมูลโครงการ' });
         }
 
-        // 2. ดึงข้อมูลการประเมินจากตาราง plan_evaluations
+        const info = projectInfo[0];
+
+        // 2. ดึงข้อมูลการประเมิน
         const [evalRows] = await pool.query(
             `SELECT * FROM plan_evaluations WHERE project_plan_id = ? LIMIT 1`,
             [projectPlanId]
         );
 
-        // กรณีที่ยังไม่เคยประเมินเลย
-        if (evalRows.length === 0) {
-            return res.status(200).json({ 
-                scope_id: scopeId,               
-                scope_name: scopeName,            
-                coordinator_name: coordinatorName,  
-                project_status: 'processing',
-                evaluation_status: '',
-                actual_outcome: '',
-                recommendation: '',
-                evaluations: [
-                    { evaluation_id: null, objective: '', before_plan: '', expected_outcome: '' }
-                ]
-            });
-        }
-
-        // กรณีเคยมีข้อมูลประเมินแล้ว
-        const dbData = evalRows[0];
-
-        // ✅ เพิ่มฟังก์ชัน SafeParse ช่วยดักจับ Error เวลาข้อมูลไม่ใช่ JSON
         const safeParse = (data) => {
-            if (!data) return []; // ถ้าเป็นค่าว่าง (null, undefined, '') ให้คืนค่า Array ว่าง
+            if (!data) return [];
             if (typeof data !== 'string') return Array.isArray(data) ? data : [data];
-            
             try {
-                // ลองแปลงเป็น JSON
                 const parsed = JSON.parse(data);
                 return Array.isArray(parsed) ? parsed : [parsed];
             } catch (e) {
-                // ถ้า Parse ไม่ได้ (แสดงว่าเป็นข้อความธรรมดา) ให้จับใส่ Array เลย เพื่อไม่ให้ระบบพัง
                 return [data];
             }
         };
 
-        // ✅ เรียกใช้ safeParse แทนการใช้ JSON.parse ตรงๆ แบบเดิม
-        const objectives = safeParse(dbData.objective);
-        const beforePlans = safeParse(dbData.before_plan);
-        const expectedOutcomes = safeParse(dbData.expected_outcome);
+        let evaluationsArray = [];
 
-        const evaluationsArray = [];
-        const maxLength = Math.max(objectives.length, beforePlans.length, expectedOutcomes.length, 1);
+        if (evalRows.length === 0) {
+            // กรณีไม่มีข้อมูลประเมิน ส่ง Row เปล่าที่มีโครงสร้างครบถ้วน
+            evaluationsArray = [{
+                evaluation_id: null,
+                objective: '',
+                before_plan: '',
+                expected_outcome: ''
+            }];
+        } else {
+            const dbData = evalRows[0];
+            const objectives = safeParse(dbData.objective);
+            const beforePlans = safeParse(dbData.before_plan);
+            const expectedOutcomes = safeParse(dbData.expected_outcome);
 
-        for (let i = 0; i < maxLength; i++) {
-            evaluationsArray.push({
-                evaluation_id: dbData.evaluation_id,
-                objective: objectives[i] || '',
-                before_plan: beforePlans[i] || '',
-                expected_outcome: expectedOutcomes[i] || ''
-            });
+            const maxLength = Math.max(objectives.length, beforePlans.length, expectedOutcomes.length, 1);
+
+            for (let i = 0; i < maxLength; i++) {
+                evaluationsArray.push({
+                    evaluation_id: dbData.evaluation_id,
+                    objective: objectives[i] || '',
+                    before_plan: beforePlans[i] || '',
+                    expected_outcome: expectedOutcomes[i] || ''
+                });
+            }
         }
 
+        // 3. ส่ง JSON กลับไป (ใช้ info ตัวแปรที่เราเช็คแล้วว่ามีค่า)
         return res.status(200).json({
-            scope_id: dbData.scope_id || scopeId, // ใช้ของ eval ถ้ามี หรือใช้ของ project
-            scope_name: scopeName,               
-            coordinator_name: coordinatorName,   
-            project_status: dbData.project_status || 'processing',
-            evaluation_status: dbData.evaluation_status || '',
-            actual_outcome: dbData.actual_outcome || '',
-            recommendation: dbData.recommendation || '',
+            scope_id: evalRows[0]?.scope_id || info.scope_id,
+            scope_name: info.scope_name || '',
+            coordinator_name: info.coordinator_name || '',
+            coordinator_email: info.email || '',
+            coordinator_phone: info.phone_number || '',
+            department_id: info.department_id || '',
+            department_name: info.department_name || '',
+            project_status: evalRows[0]?.project_status || 'processing',
+            evaluation_status: evalRows[0]?.evaluation_status || '',
+            actual_outcome: evalRows[0]?.actual_outcome || '',
+            recommendation: evalRows[0]?.recommendation || '',
+            problem: evalRows[0]?.problem || '',
             evaluations: evaluationsArray
         });
 
@@ -116,13 +113,13 @@ router.post('/evaluation-update', async (req, res) => {
         evaluation_status,
         actual_outcome,
         recommendation,
-        evaluations 
+        evaluations
     } = req.body;
 
     try {
         // ต้องหา scope_id ของ project_plan_id นี้ก่อน เพื่อไปใส่ในตาราง plan_evaluations
         const [proj] = await pool.query(
-            `SELECT scope_id FROM project_plans WHERE project_plan_id = ?`, 
+            `SELECT scope_id FROM project_plans WHERE project_plan_id = ?`,
             [project_plan_id]
         );
         const scope_id = proj.length > 0 ? proj[0].scope_id : null;
