@@ -6,17 +6,12 @@
         <h1 class="sidebar-branding-text" v-if="!isCollapsed">
           Migration Plan
         </h1>
-        
+
         <nav>
 
           <RouterLink to="/admin" class="nav-link" exact-active-class="active">
             <span class="icon">📊</span>
             <span v-if="!isCollapsed">แดชบอร์ด</span>
-          </RouterLink>
-
-          <RouterLink v-if="rawRole !== 'viewer'" to="/admin/users" class="nav-link" exact-active-class="active">
-            <span class="icon admin-icon">🛡️</span>
-            <span v-if="!isCollapsed">รายชื่อผู้ดูแล</span>
           </RouterLink>
 
           <RouterLink v-if="rawRole !== 'viewer'" to="/admin/adminproject" class="nav-link" exact-active-class="active">
@@ -29,9 +24,14 @@
             <span v-if="!isCollapsed">ขอบเขตแผนงาน</span>
           </RouterLink>
 
-          <RouterLink to="/admin/export" class="nav-link" exact-active-class="active">
+          <RouterLink v-if="rawRole !== 'viewer'" to="/admin/export" class="nav-link" exact-active-class="active">
             <span class="icon">📥</span>
             <span v-if="!isCollapsed">นำออกข้อมูล</span>
+          </RouterLink>
+
+          <RouterLink v-if="rawRole !== 'viewer'" to="/admin/users" class="nav-link" exact-active-class="active">
+            <span class="icon admin-icon">🛡️</span>
+            <span v-if="!isCollapsed">รายชื่อผู้ดูแล</span>
           </RouterLink>
 
           <RouterLink v-if="rawRole !== 'viewer'" to="/admin/log" class="nav-link" exact-active-class="active">
@@ -77,7 +77,7 @@ import './../assets/Admin/css/AdminLayout.css'
 
 const isCollapsed = ref(window.innerWidth <= 768);
 const userName = ref('กำลังโหลด...')
-const rawRole = ref('') 
+const rawRole = ref('')
 
 // ใช้ Computed เพื่อแปลง Role เป็นภาษาไทยสำหรับแสดงผลเท่านั้น
 const userRoleDisplay = computed(() => {

@@ -63,10 +63,10 @@ router.post('/projects', async (req, res) => {
             const projEndDate = proj.end_date || proj.endDate || null;
 
             const [planIns] = await conn.query(
-                `INSERT INTO project_plans (scope_id, project_plan_name, start_date, end_date, progress_percent, status) 
-         VALUES (?, ?, ?, ?, 0, 'open')`,
-                [scopeId, proj.projectName, projStartDate, projEndDate]
-            );
+    `INSERT INTO project_plans (scope_id, project_plan_name, start_date, end_date, progress_percent, status_id) 
+     VALUES (?, ?, ?, ?, 0, 1)`, 
+    [scopeId, proj.projectName, projStartDate, projEndDate]
+);
 
             const planId = planIns.insertId;
 

@@ -196,7 +196,6 @@ const handleNext = async () => {
   projects: form.value.projects.map((p) => ({
     project_plan_id: p.project_plan_id || p.id,
     projectName: p.projectName,
-    // ส่งไปทั้งสองชื่อเพื่อความชัวร์
     start_date: p.start_date, 
     end_date: p.end_date,
     startDate: p.start_date, 

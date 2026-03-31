@@ -6,9 +6,9 @@
             <table class="scope-table">
                 <thead>
                     <tr>
-                        <th>ขอบเขตงาน</th>
-                        <th>หน่วยงาน</th>
-                        <th>ผู้รายงาน</th>
+                        <th class="text-left">ขอบเขตงาน</th>
+                        <th class="text-left">หน่วยงาน</th>
+                        <th class="text-left">ผู้รายงาน</th>
                         <th>ความก้าวหน้าเฉลี่ย</th>
                     </tr>
                 </thead>
@@ -39,9 +39,9 @@
                                         <table class="detail-table">
                                             <thead>
                                                 <tr>
-                                                    <th>ชื่อแผนงานที่รับผิดชอบ</th>
-                                                    <th>รายละเอียดการดำเนินงาน</th>
-                                                    <th>ผลการวิเคราะห์ช่องว่าง (GAP Analysis)</th>
+                                                    <th class="text-left">ชื่อแผนงานที่รับผิดชอบ</th>
+                                                    <th class="text-left">รายละเอียดการดำเนินงาน</th>
+                                                    <th class="text-left">ผลการวิเคราะห์ช่องว่าง (GAP Analysis)</th>
                                                     <th>ความคืบหน้า</th>
                                                     <th>การจัดการ</th>
                                                 </tr>
@@ -55,8 +55,7 @@
                                                     <td>{{ plan.details }}</td>
                                                     <td>
                                                         <ul class="gap-list">
-                                                            <li v-for="(gap, i) in plan.gaps" :key="i">
-                                                                {{ gap }}
+                                                            <li v-for="(gap, i) in plan.gaps" :key="i"> {{ gap }}
                                                             </li>
                                                         </ul>
                                                     </td>
@@ -76,7 +75,7 @@
                                                         <div class="action-buttons">
                                                             <button class="btn-progress"
                                                                 @click.stop="goToProgress(plan.id)">
-                                                                บันทึกความก้าวหน้า
+                                                                ความก้าวหน้า
                                                             </button>
 
                                                             <button class="btn-evaluate"

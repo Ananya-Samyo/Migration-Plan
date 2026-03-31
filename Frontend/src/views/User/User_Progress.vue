@@ -68,8 +68,8 @@
             <div style="flex: 2;">
               <select v-model="gap.status"
                 style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 6px;">
-                <option value="processing_gap">กำลังดำเนินการ</option>
-                <option value="complete_gap">ดำเนินการเสร็จสิ้น</option>
+                <option value="processing_gap">ยังไม่ปิด GAP</option>
+                <option value="complete_gap">ปิด GAP เสร็จแล้ว</option>
                 <option value="acceptable_gap">ไม่สามารถปิด GAP แต่ยอมรับได้</option>
               </select>
             </div>
@@ -93,8 +93,8 @@
               <label>สถานะแผนงาน</label>
               <select v-model="project.status">
                 <option value="OPEN">ยังไม่ปิด GAP</option>
-                <option value="CLOSED">ปิด GAP แล้ว</option>
-                <option value="ACCEPTABLE">ยอมรับ GAP</option>
+                <option value="CLOSED">ปิด GAP เสร็จแล้ว</option>
+                <option value="ACCEPTABLE">ไม่สามารถปิด GAP แต่ยอมรับได้</option>
               </select>
             </div>
             <div class="form-group">
