@@ -1,8 +1,8 @@
 <div align="center">
-  <img src="https://img.icons8.com/fluency/96/null/conference-call.png" alt="Meeting Room Logo" width="80" />
-  <h1>📅 Meeting Room Booking System</h1>
-  <p><b>Web Application for Office Space Management</b></p>
-  <p><i>"Manage your meeting spaces efficiently and effortlessly."</i></p>
+  <img src="https://img.icons8.com/fluency/96/null/progress.png" alt="Migration Plan Logo" width="80" />
+  <h1>📊 Migration Plan System</h1>
+  <p><b>Web Application for Project Progress Tracking</b></p>
+  <p><i>"Track your organizational plans with clarity, control, and collaboration."</i></p>
 
   <p>
     <a href="https://laravel.com">
@@ -14,30 +14,40 @@
     <a href="https://tailwindcss.com/">
       <img src="https://img.shields.io/badge/Tailwind_CSS-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white" alt="Tailwind CSS" />
     </a>
+    <a href="https://www.mysql.com/">
+      <img src="https://img.shields.io/badge/MySQL-4479A1?style=for-the-badge&logo=mysql&logoColor=white" alt="MySQL" />
+    </a>
   </p>
 </div>
 
 <hr />
 
 ### 📖 เกี่ยวกับโปรเจกต์ (About The Project)
-**Meeting Room Booking System** เป็นระบบเว็บแอปพลิเคชันสำหรับบริหารจัดการการจองห้องประชุมภายในองค์กร พัฒนาด้วย **Laravel** ร่วมกับ **Vue.js** เพื่อให้ได้หน้าเว็บที่ตอบสนองไว (Reactive) และสวยงามด้วย **Tailwind CSS** ช่วยลดปัญหาการจองห้องซ้ำซ้อนและช่วยให้การบริหารพื้นที่ในออฟฟิศเป็นระบบมากขึ้น
+**Migration Plan System** เป็นระบบเว็บแอปพลิเคชันสำหรับ **ติดตามและจัดการความคืบหน้าของแผนงานภายในองค์กร**  
+ระบบช่วยให้ทีมสามารถ **วางแผนงาน ติดตามผล แก้ไข และประเมินผล** ของการดำเนินงานได้อย่างมีโครงสร้าง พร้อมรองรับการบันทึกเหตุผลการเปลี่ยนแปลงไฟล์แนบ และระบบแจ้งเตือนผ่านอีเมล ทำให้มองเห็นภาพรวมของการดำเนินงานแบบโปร่งใสและสามารถตรวจสอบย้อนหลังได้อย่างเป็นระบบ :contentReference[oaicite:3]{index=3}
 
 ### ✨ ฟีเจอร์หลัก (Key Features)
-🗓️ **Room Availability:** ตรวจสอบสถานะห้องว่างแบบ Real-time ผ่านปฏิทิน
-📝 **Instant Booking:** ระบบจองห้องประชุมที่รวดเร็ว ระบุเวลาและหัวข้อการประชุมได้ทันที
-🏢 **Room Management:** (สำหรับ Admin) เพิ่ม/ลบ/แก้ไข รายละเอียดห้องประชุมและอุปกรณ์ภายในห้อง
-📱 **Responsive Design:** รองรับการใช้งานทั้งบนคอมพิวเตอร์และมือถือ
+📌 **GAP Management:** จัดการช่องว่างของแผนงาน (GAP) และติดตามความคืบหน้า  
+📌 **Plan Tracking:** ดูและอัปเดตสถานะของแผนงานในแต่ละช่วงเวลา  
+📌 **Change Logs:** บันทึก log การแก้ไขพร้อมเหตุผล (edit reasons)  
+📌 **File Attachments:** แนบไฟล์ที่เกี่ยวข้องกับแผนงานเพื่อใช้อ้างอิง  
+📌 **Email Notifications:** ส่งการแจ้งเตือนผ่านอีเมลให้ทีมงานที่เกี่ยวข้อง  
+📌 **Evaluation & Reporting:** ประเมินผลและแสดงรายงานของแผนงาน
 
 ### 🛠️ เทคโนโลยีที่ใช้ (Tech Stack)
-**Backend:** Laravel (PHP)
-**Frontend:** Vue.js
-**Styling:** Tailwind CSS
-**Build Tool:** Vite
-**Database:** MySQL / PostgreSQL
+**Backend:** Laravel (PHP)  
+**Frontend:** Vue.js  
+**Styling:** Tailwind CSS  
+**Build Tool:** Vite  
+**Database:** MySQL / PostgreSQL  
 
+---
 
+## 📂 รูปตัวอย่าง (Screenshots)
+*(ใส่รูปจาก repo หรือ UI ของระบบถ้ามี)*
 
-<img width="1889" height="924" alt="image" src="https://github.com/user-attachments/assets/95b6608c-6ee2-461a-b8be-a1fbd3fdb412" />
-<img width="1867" height="917" alt="image" src="https://github.com/user-attachments/assets/38f1cd5b-7002-494c-8030-61a14af71f91" />
-<img width="1863" height="908" alt="image" src="https://github.com/user-attachments/assets/e43a9a04-2e93-4dc7-95d1-6d8073a7755b" />
-<img width="1878" height="915" alt="image" src="https://github.com/user-attachments/assets/8c2fd790-c49b-4240-8ade-6cffb5ce4ffe" />
+---
+
+## 📌 ลิงก์โปรเจกต์
+คลิกดูโค้ดต้นฉบับได้ที่:  
+https://github.com/Ananya-Samyo/Migration-Plan
