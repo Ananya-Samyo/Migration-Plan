@@ -1,19 +1,16 @@
 <div align="center">
-  <img src="https://img.icons8.com/fluency/96/combo-chart.png" width="80"/>
+  <img src="https://img.icons8.com/fluency/96/combo-chart.png" alt="Migration Plan Logo" width="80" />
   <h1>📊 Migration Plan System</h1>
-  <p><b>Web Application for Project Planning and Progress Tracking</b></p>
-  <p><i>"Monitor project progress and manage organizational plans efficiently."</i></p>
+  <p><b>Web Application for Project Progress Tracking</b></p>
+  <p><i>"Plan, Track, and Monitor organizational progress efficiently."</i></p>
 
   <p>
     <img src="https://img.shields.io/badge/Vue.js-4FC08D?style=for-the-badge&logo=vue.js&logoColor=white"/>
     <img src="https://img.shields.io/badge/Node.js-339933?style=for-the-badge&logo=nodedotjs&logoColor=white"/>
     <img src="https://img.shields.io/badge/Express.js-000000?style=for-the-badge&logo=express&logoColor=white"/>
-    <img src="https://img.shields.io/badge/JavaScript-F7DF1E?style=for-the-badge&logo=javascript&logoColor=black"/>
-    <img src="https://img.shields.io/badge/HTML5-E34F26?style=for-the-badge&logo=html5&logoColor=white"/>
-    <img src="https://img.shields.io/badge/CSS3-1572B6?style=for-the-badge&logo=css3&logoColor=white"/>
-    <img src="https://img.shields.io/badge/Nodemailer-009688?style=for-the-badge"/>
-    <img src="https://img.shields.io/badge/SweetAlert2-FF6F61?style=for-the-badge"/>
+    <img src="https://img.shields.io/badge/Redis-DC382D?style=for-the-badge&logo=redis&logoColor=white"/>
     <img src="https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white"/>
+    <img src="https://img.shields.io/badge/Nodemailer-0A66C2?style=for-the-badge"/>
   </p>
 </div>
 
@@ -21,54 +18,64 @@
 
 ## 📖 About The Project
 
-**Migration Plan System** เป็นระบบเว็บแอปพลิเคชันสำหรับ **วางแผน ติดตาม และจัดการความคืบหน้าของโครงการภายในองค์กร**
-ช่วยให้ทีมสามารถติดตามสถานะของแผนงาน วิเคราะห์ GAP ของการดำเนินงาน และบันทึกการแก้ไขข้อมูลพร้อมเหตุผล เพื่อให้การทำงานมีความโปร่งใสและตรวจสอบย้อนหลังได้
+**Migration Plan System** เป็นระบบเว็บแอปพลิเคชันสำหรับ **ติดตามความคืบหน้าและการวางแผนโครงการภายในองค์กร**  
+ช่วยให้ทีมสามารถจัดการแผนงาน วิเคราะห์ GAP บันทึกประวัติการแก้ไข และติดตามสถานะโครงการได้อย่างเป็นระบบ
 
-ระบบถูกออกแบบให้ใช้งานง่าย รองรับการทำงานร่วมกันของหลายฝ่าย พร้อมระบบแจ้งเตือนผ่านอีเมลเพื่อให้การติดตามงานมีประสิทธิภาพมากขึ้น
+ระบบถูกออกแบบให้รองรับการทำงานของหลายหน่วยงาน พร้อมระบบแจ้งเตือนและการจัดเก็บข้อมูลที่สามารถตรวจสอบย้อนหลังได้
 
 ---
 
 ## ✨ Key Features
 
-📊 **Project Progress Tracking**
-ติดตามสถานะและความคืบหน้าของแผนงานในแต่ละขั้นตอน
+📊 **Project Progress Tracking**  
+ติดตามสถานะและความคืบหน้าของแผนงานแต่ละโครงการ
 
-📌 **GAP Analysis**
-วิเคราะห์ช่องว่างของการดำเนินงานและกำหนดแนวทางปรับปรุง
+📌 **GAP Analysis**  
+วิเคราะห์ช่องว่างของการดำเนินงานเพื่อปรับปรุงแผนงาน
 
-📝 **Change Log System**
-บันทึกประวัติการแก้ไขข้อมูลพร้อมเหตุผลการเปลี่ยนแปลง
+📝 **Change Log System**  
+บันทึกประวัติการแก้ไขข้อมูลพร้อมเหตุผลการแก้ไข
 
-📎 **File Attachments**
-แนบไฟล์ประกอบแผนงานเพื่อใช้เป็นหลักฐานหรือข้อมูลอ้างอิง
+📎 **File Attachment Support**  
+แนบไฟล์ที่เกี่ยวข้องกับแผนงาน
 
-📧 **Email Notification**
-แจ้งเตือนผ่านอีเมลโดยใช้ Nodemailer
+📧 **Email Notification System**  
+แจ้งเตือนผู้ใช้งานผ่านอีเมลด้วย Nodemailer
 
-📱 **Responsive Interface**
-รองรับการใช้งานทั้ง Desktop และ Mobile
+⚡ **Fast Data Access**  
+ใช้ Redis เพื่อช่วยเพิ่มประสิทธิภาพในการจัดการข้อมูล
+
+🐳 **Containerized Deployment**  
+รองรับการ deploy ด้วย Docker
 
 ---
 
-## 🛠️ Tech Stack
+## 🛠 Tech Stack
 
-**Frontend**
+### Frontend
+- Vue.js
+- HTML
+- CSS
+- JavaScript
+- SweetAlert
 
-* Vue.js
-* HTML
-* CSS
-* JavaScript
+### Backend
+- Node.js
+- Express.js
+- Nodemailer
 
-**Backend**
+### Infrastructure
+- Redis
+- Docker
 
-* Node.js
-* Express.js
+---
 
-**Tools & Libraries**
+## 📂 Screenshots
 
-* Nodemailer (Email Notification)
-* SweetAlert2 (User Notification UI)
+*(ใส่รูป UI ของระบบที่คุณมีอยู่)*
 
-**Deployment**
+---
 
-* Docker
+## 📌 Repository
+
+🔗 https://github.com/Ananya-Samyo/Migration-Plan
