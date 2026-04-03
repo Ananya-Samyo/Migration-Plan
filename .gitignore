@@ -6,7 +6,7 @@ dist/
 build/
 .cache/
 
-# --- Environment & Secrets (ห้ามเอาขึ้นเด็ดขาด) ---
+# --- Environment & Secrets ---
 .env
 .env.local
 .env.*.local
