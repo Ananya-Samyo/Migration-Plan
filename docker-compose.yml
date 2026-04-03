@@ -1,0 +1,45 @@
+services: # ทุกอย่างที่เป็น Service ต้องอยู่ภายใต้หัวข้อนี้
+  db:
+    image: mariadb:10.11
+    container_name: migration-plan-db
+    restart: always
+    environment:
+      MARIADB_ROOT_PASSWORD: root123
+      MARIADB_DATABASE: migration_plan
+      MARIADB_USER: app
+      MARIADB_PASSWORD: app123
+    ports:
+      - "3307:3306"
+    volumes:
+      - db_data:/var/lib/mysql
+      - ./docker/db/init/migration_plan.sql:/docker-entrypoint-initdb.d/migration_plan.sql
+
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin
+    container_name: migration-plan-phpmyadmin
+    restart: always
+    environment:
+      PMA_HOST: db
+      PMA_PORT: 3306
+      MYSQL_ROOT_PASSWORD: root123
+    ports:
+      - "8080:80"
+    depends_on:
+      - db
+
+  backend: # ขยับเข้ามาให้ตรงกับ db และ phpmyadmin
+    build: ./Backend 
+    container_name: migration-plan-api
+    ports:
+      - "3000:3000" 
+    depends_on:
+      - db
+    environment:
+      DB_HOST: db
+      DB_PORT: 3306
+      DB_NAME: migration_plan
+      DB_USER: app
+      DB_PASS: app123
+
+volumes:
+  db_data:

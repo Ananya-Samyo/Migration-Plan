@@ -1,0 +1,26 @@
+# --- Dependencies ---
+node_modules/
+Frontend/node_modules/
+Backend/node_modules/
+dist/
+build/
+.cache/
+
+# --- Environment & Secrets (ห้ามเอาขึ้นเด็ดขาด) ---
+.env
+.env.local
+.env.*.local
+Backend/.env
+Frontend/.env
+
+# --- Docker Data & Databases ---
+db_data/
+mysql/
+postgres-data/
+docker/db/data/
+
+# --- OS & IDE Files ---
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
