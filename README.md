@@ -71,8 +71,13 @@
 ---
 
 ## 📂 Screenshots
+<img width="1919" height="908" alt="Screenshot 2026-04-17 090911" src="https://github.com/user-attachments/assets/cdabbc89-2901-4080-9df3-025ab286aed4" />
+<img width="1914" height="905" alt="Screenshot 2026-04-17 090942" src="https://github.com/user-attachments/assets/82230b86-1f42-41d8-a70a-7ba8474710b6" />
+<img width="1917" height="910" alt="Screenshot 2026-04-17 091758" src="https://github.com/user-attachments/assets/cf800e66-8792-4cd3-a22d-cf96ceb00dcb" />
+<img width="1919" height="904" alt="Screenshot 2026-04-17 092741" src="https://github.com/user-attachments/assets/de76fe39-39df-48d1-8737-f6815fe2457e" />
+<img width="1917" height="909" alt="Screenshot 2026-04-17 092844" src="https://github.com/user-attachments/assets/55099879-e3ab-48e7-b086-6b3f0b0164ae" />
+<img width="1919" height="904" alt="Screenshot 2026-04-17 092857" src="https://github.com/user-attachments/assets/3dcb084f-39d8-4d47-b92b-35be2463ca55" />
 
-*(ใส่รูป UI ของระบบที่คุณมีอยู่)*
 
 ---
 
