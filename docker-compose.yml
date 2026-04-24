@@ -1,4 +1,4 @@
-services: # ทุกอย่างที่เป็น Service ต้องอยู่ภายใต้หัวข้อนี้
+services: 
   db:
     image: mariadb:10.11
     container_name: migration-plan-db
@@ -27,19 +27,27 @@ services: # ทุกอย่างที่เป็น Service ต้อง�
     depends_on:
       - db
 
-  backend: # ขยับเข้ามาให้ตรงกับ db และ phpmyadmin
+  backend: 
     build: ./Backend 
     container_name: migration-plan-api
     ports:
       - "3000:3000" 
     depends_on:
       - db
+      - redis
     environment:
       DB_HOST: db
       DB_PORT: 3306
       DB_NAME: migration_plan
       DB_USER: app
       DB_PASS: app123
+
+  redis:
+    image: redis:latest
+    container_name: migration-plan-redis
+    ports:
+      - "6379:6379"
+    restart: always
 
 volumes:
   db_data:

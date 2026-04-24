@@ -189,4 +189,39 @@ userDashboardRouter.get('/user-dashboard/gap-closed-chart', verifyToken, async (
   }
 })
 
+// 6. ดึงรายละเอียดแผนงานย่อย (Gap Details / Sub-plans) สำหรับตารางด้านล่าง
+userDashboardRouter.get('/user-dashboard/gap-details', verifyToken, async (req, res) => {
+  try {
+    const userId = req.user.user_id;
+    const { startDate, endDate } = req.query;
+
+    const dateCondition = (startDate && endDate) ? `AND DATE(s.created_at) BETWEEN ? AND ?` : '';
+    const params = (startDate && endDate) 
+      ? [userId, userId, startDate, endDate] 
+      : [userId, userId];
+
+    // ดึงข้อมูลจาก project_plans โดย Join กับ scopes เพื่อใช้ USER_FILTER_SQL เช็คสิทธิ์
+    const [rows] = await db.query(`
+      SELECT 
+        pp.project_plan_id AS id,
+        pp.project_plan_name AS plan_name,
+        s.scope_name AS parent_scope,
+        pp.progress_percent AS progress,
+        pp.end_date,
+        st.status_code AS status
+      FROM project_plans pp
+      JOIN scopes s ON pp.scope_id = s.scope_id
+      LEFT JOIN status st ON pp.status_id = st.status_id
+      WHERE ${USER_FILTER_SQL}
+      ${dateCondition}
+      ORDER BY pp.created_at DESC
+    `, params)
+
+    res.json(rows)
+  } catch (err) {
+    console.error('gap-details error:', err)
+    res.status(500).json({ message: 'Server error' })
+  }
+})
+
 export default userDashboardRouter

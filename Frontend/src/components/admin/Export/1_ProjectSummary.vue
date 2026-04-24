@@ -73,9 +73,32 @@
           </tr>
           <tr v-if="filteredTasks.length === 0">
             <td colspan="5" class="empty-state">
-              <div class="empty-content">
-                <span>📂</span>
-                <p>ไม่พบข้อมูลที่ตรงกับตัวกรองของคุณ</p>
+              <div class="empty-content" style="padding: 50px 0; text-align: center;">
+
+                <div v-if="tasks.length > 0">
+                  <span style="font-size: 50px;">🔍</span>
+                  <p style="font-weight: bold; color: #4b2e83; margin-top: 15px; font-size: 18px;">
+                    ไม่พบข้อมูลที่ตรงกับตัวกรองของคุณ
+                  </p>
+                  <p style="color: #666; font-size: 14px;">
+                    กรุณาลองปรับ ปี, สถานะ หรือคำค้นหาใหม่อีกครั้ง
+                  </p>
+                  <button @click="resetFilters"
+                    style="margin-top: 15px; padding: 8px 20px; border: 1px solid #4b2e83; background: white; color: #4b2e83; border-radius: 6px; cursor: pointer; font-weight: bold;">
+                    ล้างตัวกรองทั้งหมด
+                  </button>
+                </div>
+
+                <div v-else>
+                  <span style="font-size: 50px;">📂</span>
+                  <p style="font-weight: bold; color: #999; margin-top: 15px; font-size: 18px;">
+                    ยังไม่มีข้อมูลในระบบ
+                  </p>
+                  <p style="color: #999; font-size: 14px;">
+                    ขณะนี้ยังไม่มีรายการโครงการที่สรุปผลในฐานข้อมูล
+                  </p>
+                </div>
+
               </div>
             </td>
           </tr>
@@ -85,10 +108,16 @@
 
     <div class="modern-pagination">
       <div class="pagination-info">
-        แสดง <strong>{{ Math.min(itemsPerPage, paginatedTasks.length) }}</strong> จาก <strong>{{ filteredTasks.length }}</strong> รายการ
+        แสดง <strong>{{ Math.min(itemsPerPage, paginatedTasks.length) }}</strong> จาก <strong>{{ filteredTasks.length
+        }}</strong> รายการ
       </div>
       <div class="pagination-nav">
+        <button class="nav-btn" @click="currentPage--" :disabled="currentPage <= 1">
+          ← ย้อนกลับ
+        </button>
+
         <div class="page-indicator">หน้า {{ currentPage }} / {{ totalPages }}</div>
+
         <button class="nav-btn" @click="currentPage++" :disabled="currentPage >= totalPages">
           ถัดไป →
         </button>
@@ -155,6 +184,13 @@ onMounted(fetchTasksFromSystem)
 
 const emitUpdate = () => {
   emit('update-tasks', tasks.value)
+}
+
+const resetFilters = () => {
+  filters.year = ''
+  filters.status = ''
+  filters.search = ''
+  currentPage.value = 1
 }
 
 // เลือก/ไม่เลือก ทั้งหมดเฉพาะในหน้าปัจจุบัน

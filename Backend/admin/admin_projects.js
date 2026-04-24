@@ -5,6 +5,25 @@ import { verifyToken, isAdmin } from '../middleware/auth.js';
 const router = Router();
 
 router.use(verifyToken);
+
+router.get('/available-years', async (req, res) => {
+    try {
+        const sql = `
+            SELECT DISTINCT YEAR(start_date) as year 
+            FROM scopes 
+            WHERE start_date IS NOT NULL 
+            ORDER BY year DESC
+        `;
+        const [rows] = await db.query(sql);
+        const years = rows.map(row => row.year);
+
+        res.json(years); // ส่งข้อมูลกลับไปตรงๆ
+    } catch (error) {
+        console.error('Error fetching available years:', error);
+        res.status(500).json({ error: 'Server Error' });
+    }
+});
+
 router.use(isAdmin);
 
 // ฟังก์ชันช่วยเหลือสำหรับ หา/สร้าง ผู้ใช้งาน

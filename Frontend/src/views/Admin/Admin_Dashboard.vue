@@ -31,7 +31,6 @@
             <li @click.stop="selectMode('yesterday')">เมื่อวาน</li>
             <li @click.stop="selectMode('week')">สัปดาห์นี้</li>
             <li @click.stop="selectMode('month')">เดือนนี้</li>
-            <li @click.stop="selectMode('year')">ปีนี้</li>
           </ul>
 
         </div>
@@ -46,18 +45,34 @@
       </div>
     </header>
 
-    <section class="summary-grid">
-      <SummaryCard title="ขอบเขตงานทั้งหมด" :value="total" type="warning" icon="📁"
-        @details="handleCardClick('warning')" />
+    <div class="section-divider main-scope">
+      <span class="divider-text">🏢 ภาพรวมการบริหารขอบเขตงาน (Scope Management)</span>
+    </div>
 
-      <SummaryCard title="ยังไม่ปิด GAP" :value="openCount" type="primary" icon="📌"
-        @details="handleCardClick('primary')" />
+    <section class="scope-summary-grid executive-view">
+      <div class="scope-status-card total" @click="handleScopeCardClick('all')">
+        <div class="card-icon">🗄️</div>
+        <div class="card-info">
+          <span class="label">ขอบเขตงานทั้งหมด</span>
+          <span class="value">{{ tasks.length }} </span>
+        </div>
+      </div>
 
-      <SummaryCard title="ปิด GAP เสร็จแล้ว" :value="closedCount" type="success" icon="✅"
-        @details="handleCardClick('success')" />
+      <div class="scope-status-card ongoing" @click="handleScopeCardClick('ongoing')">
+        <div class="card-icon">⚙️</div>
+        <div class="card-info">
+          <span class="label">กำลังดำเนินงาน</span>
+          <span class="value">{{ ongoingScopesCount }} </span>
+        </div>
+      </div>
 
-      <SummaryCard title="ไม่สามารถปิด GAP แต่ยอมรับได้" :value="acceptableCount" type="danger" icon="⚠️"
-        @details="handleCardClick('danger')" />
+      <div class="scope-status-card completed" @click="handleScopeCardClick('completed')">
+        <div class="card-icon">🏆</div>
+        <div class="card-info">
+          <span class="label">ดำเนินงานเสร็จสิ้น</span>
+          <span class="value">{{ completedScopesCount }} </span>
+        </div>
+      </div>
     </section>
 
     <div class="overall-progress-bar">
@@ -65,7 +80,6 @@
         ความคืบหน้าการดำเนินงานของระบบโดยรวม
         <span>{{ overallProgress }}%</span>
       </div>
-
       <div class="progress-track">
         <div class="progress-fill" :style="{
           width: overallProgress + '%',
@@ -73,6 +87,24 @@
         }" />
       </div>
     </div>
+
+    <div class="section-divider sub-plan">
+      <span class="divider-text">🔍 รายละเอียดสถานะแผนงานย่อย (Gap Analysis)</span>
+    </div>
+
+    <section class="summary-grid operational-view">
+      <SummaryCard title="แผนงานทั้งหมด" :value="planSummary.total" type="warning" icon="📁"
+        @click="handleCardClick('all_plans')" />
+
+      <SummaryCard title="แผนงานที่ยังไม่ปิด GAP" :value="planSummary.openCount" type="primary" icon="📌"
+        @click="handleCardClick('open')" />
+
+      <SummaryCard title="แผนงานที่ปิด GAP เสร็จแล้ว" :value="planSummary.closedCount" type="success" icon="✅"
+        @click="handleCardClick('closed')" />
+
+      <SummaryCard title="แผนงานที่ไม่ได้ปิด GAP แต่ยอมรับได้" :value="planSummary.acceptableCount" type="danger"
+        icon="⚠️" @click="handleCardClick('acceptable')" />
+    </section>
 
     <section class="content-layout">
       <div class="panel chart-area">
@@ -88,7 +120,7 @@
         <div class="panel table-area">
           <div class="panel-header">
             <h3>📋 รายการงานทั้งหมด</h3>
-            <span class="badge">{{ total }} รายการ</span>
+            <span class="badge">{{ tasks.length }} รายการ</span>
           </div>
           <div class="panel-body scrollable">
             <TaskTable :tasks="tasks" />
@@ -103,179 +135,6 @@
       </div>
     </section>
 
-    <div v-if="isExporting" class="export-loading">
-      <div class="spinner"></div>
-      <p>กำลังดาวน์โหลดไฟล์...</p>
-    </div>
-
-    <div class="pdf-export-container" ref="pdfTemplate">
-
-      <div class="dtg-date-right">
-        {{
-          dateMode === 'all'
-            ? `ข้อมูลอัปเดตล่าสุด ณ วันที่: ${currentExportDate}`
-            : `ข้อมูล ณ วันที่: ${buddhistDateText}`
-        }}
-      </div>
-
-      <div class="dtg-header">
-        <h2>การรายงานในคณะ DTG</h2>
-        <p class="agenda">วาระที่ 1 :</p>
-        <p class="topic">รายงานผลการดำเนินงานตามขอบเขตงาน</p>
-      </div>
-
-      <div v-if="total > 0" class="dtg-content">
-
-        <div class="dtg-col-left">
-          <div class="section-title" style="font-weight: bold; margin-bottom: 10px;">1.
-            ผลการดำเนินงานทุกขอบเขตงานในภาพรวม-รายขอบเขตงาน</div>
-          <table class="dtg-table">
-            <thead>
-              <tr>
-                <th style="width: 70%; text-align: center;">ปีที่ทำขอบเขตงาน</th>
-                <th style="width: 30%;">สถานะ</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-for="(task, index) in tasks" :key="index">
-                <td>{{ task.title || `ขอบเขตงาน ${index + 1}` }}</td>
-                <td style="text-align: center;">{{ task.year || '2568' }}</td>
-                <td>
-                  <div class="progress-wrapper">
-                    <div class="progress-bar">
-                      <div class="progress-fill" :style="{ width: (task.progress || 0) + '%' }"></div>
-                    </div>
-                    <span class="progress-text">{{ task.progress || 0 }}%</span>
-                  </div>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-
-        <div class="dtg-col-right">
-          <div class="section-title" style="font-weight: bold; margin-bottom: 10px;">2. ผลการปิด GAP รายขอบเขตงาน</div>
-
-          <div style="width: 35%; padding-top: 10px;">
-            <StatusChart :selectedDate="selectedDate" />
-          </div>
-
-          <div style="display: flex; gap: 15px; align-items: flex-start;">
-
-            <div style="width: 65%;">
-              <table class="dtg-table">
-                <thead>
-                  <tr>
-                    <th style="width: 70%;">ขอบเขตงาน</th>
-                    <th style="width: 30%; text-align: center;">สถานะ</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr v-for="(task, index) in tasks" :key="'right-' + index">
-                    <td>{{ task.title || task.name || `ขอบเขตงาน ${index + 1}` }}</td>
-                    <td style="text-align: center;">
-                      <span class="status-dot" :class="{
-                        'green': task.status === 'closed',
-                        'yellow': task.status === 'acceptable',
-                        'red': task.status === 'open' || !task.status
-                      }"></span>
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-
-      </div>
-
-      <div v-else class="pdf-empty-state">
-        <div style="font-size: 48px; margin-bottom: 15px;">📭</div>
-        <h3>ไม่มีข้อมูลสำหรับช่วงเวลานี้</h3>
-      </div>
-
-      <div class="dtg-footer-container" v-if="total > 0"
-        style="display: flex; justify-content: flex-end; margin-top: 30px;">
-        <div class="dtg-legend-box"
-          style="border: 1px solid #ccc; padding: 15px; border-radius: 4px; background: #fff; min-width: 220px;">
-          <div class="legend-title"
-            style="font-weight: bold; margin-bottom: 10px; border-bottom: 1px solid #eee; padding-bottom: 5px;">สถานะ :
-          </div>
-          <div class="legend-items-vertical" style="display: flex; flex-direction: column; gap: 8px;">
-            <div class="legend-item" style="display: flex; align-items: center; gap: 10px;"><span
-                class="status-dot green"></span> ปิด GAP เสร็จแล้ว</div>
-            <div class="legend-item" style="display: flex; align-items: center; gap: 10px;"><span
-                class="status-dot yellow"></span> ไม่สามารถปิด GAP แต่ยอมรับได้</div>
-            <div class="legend-item" style="display: flex; align-items: center; gap: 10px;"><span
-                class="status-dot red"></span> ยังไม่ปิด GAP</div>
-          </div>
-        </div>
-      </div>
-
-    </div>
-
-    <div v-if="isModalOpen" class="custom-modal-overlay" @click.self="isModalOpen = false">
-      <div class="custom-modal-content">
-        <div class="modal-header">
-          <h3>{{ modalTitle }}</h3>
-          <button @click="isModalOpen = false" class="close-btn">&times;</button>
-        </div>
-
-        <div class="modal-body">
-          <table class="modal-table">
-            <thead>
-              <tr>
-                <th>ชื่อขอบเขตแผนงาน</th>
-                <th style="text-align: center;">ความคืบหน้า</th>
-                <th style="text-align: center;">ความเร่งด่วน</th>
-                <th style="text-align: center;">จัดการ</th>
-              </tr>
-            </thead>
-
-            <tbody>
-              <template v-if="filteredTasksForModal && filteredTasksForModal.length > 0">
-                <tr v-for="(item, index) in filteredTasksForModal" :key="index" style="vertical-align: middle;">
-
-                  <td style="vertical-align: middle;">
-                    {{ item.title }}
-                  </td>
-
-                  <td style="text-align: center; vertical-align: middle;">
-                    {{ Math.round(item.progress || 0) }}%
-                  </td>
-
-                  <td style="text-align: center; vertical-align: middle;">
-                    <span :class="['urgency-badge', getUrgency(item.endDate).class]">
-                      {{ getUrgency(item.endDate).label }}
-                    </span>
-                  </td>
-
-                  <td style="text-align: center; vertical-align: middle;">
-                    <button @click="goToScopePage(item.id)" class="btn-go">
-                      ไปที่ขอบเขตงาน &#10140;
-                    </button>
-                  </td>
-
-                </tr>
-              </template>
-
-              <template v-else>
-                <tr>
-                  <td colspan="4"
-                    style="text-align: center; padding: 40px 20px; color: #94a3b8; vertical-align: middle;">
-                    <div style="display: flex; flex-direction: column; align-items: center; gap: 10px;">
-                      <span style="font-size: 2rem;">📭</span>
-                      <span style="font-size: 1rem; font-weight: 500;">ไม่มีข้อมูลรายการในหมวดหมู่นี้</span>
-                    </div>
-                  </td>
-                </tr>
-              </template>
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-
     <div v-if="isModalOpen" class="custom-modal-overlay" @click.self="closeModal">
       <div class="custom-modal-content">
         <div class="modal-header">
@@ -286,8 +145,7 @@
         <div class="modal-body">
           <div class="search-box mb-3">
             <span class="search-icon">🔍</span>
-            <input v-model="searchQuery" type="text" placeholder="ค้นหาชื่อแผนงาน หรือ กองที่รับผิดชอบ..."
-              class="form-control" />
+            <input v-model="searchQuery" type="text" placeholder="ค้นหาชื่อแผนงาน..." class="form-control" />
           </div>
 
           <div class="table-responsive">
@@ -304,60 +162,56 @@
               </thead>
               <tbody>
                 <tr v-if="paginatedData.length === 0">
-                  <td colspan="6" class="empty-state-container">
-                    <div class="empty-state-content">
-                      <span class="empty-icon">📭</span>
-                      <p class="empty-text">ไม่พบข้อมูลในหมวดหมู่นี้</p>
-                      <span class="empty-subtext">ลองเลือกช่วงเวลาอื่น หรือตรวจสอบสถานะงานอีกครั้ง</span>
-                    </div>
+                  <td colspan="6" class="text-center" style="padding: 40px;">
+                    <span style="font-size: 2rem;">📭</span>
+                    <p>ไม่พบข้อมูลในหมวดหมู่นี้</p>
                   </td>
                 </tr>
+
                 <tr v-for="(item, index) in paginatedData" :key="item.id">
                   <td class="text-center">{{ (currentPage - 1) * itemsPerPage + index + 1 }}</td>
-
-                  <td>{{ item.title || item.name || 'ไม่มีชื่อแผนงาน' }}</td>
-
-                  <td class="text-center">
-                    {{ Math.round(item.progress || 0) }} %
+                  <td>
+                    <div style="font-weight: bold;">{{ item.title || item.plan_name }}</div>
+                    <small v-if="item.parent_scope" class="text-muted">หัวข้อหลัก: {{ item.parent_scope }}</small>
                   </td>
-
+                  <td class="text-center">{{ Math.round(item.progress || 0) }} %</td>
                   <td class="text-center">
                     <span :class="['urgency-badge', getUrgency(item.endDate || item.end_date).class]">
                       {{ getUrgency(item.endDate || item.end_date).label }}
                     </span>
                   </td>
-
                   <td class="text-center">
                     <span class="badge" :class="getBadgeClass(item.status)">
-                      {{ item.status === 'closed' ? 'ปิด GAP แล้ว' : (item.status === 'acceptable' ? 'ยอมรับได้' :
-                      'ยังไม่ปิด GAP') }}
+                      {{
+                        item.progress >= 100 ? 'เสร็จสิ้น' :
+                          (item.status === 'closed' ? 'ปิด GAP แล้ว' :
+                            (item.status === 'acceptable' ? 'ยอมรับได้' : 'ยังไม่ปิด GAP'))
+                      }}
                     </span>
                   </td>
-
                   <td class="text-center">
-                    <button class="btn-detail" @click="goToScopePage(item.id)">
-                      📄 รายละเอียด
-                    </button>
+                    <button class="btn-detail" @click="goToScopePage(item.id)">📄 รายละเอียด</button>
                   </td>
                 </tr>
               </tbody>
             </table>
           </div>
+          <div class="custom-task-pagination" v-if="totalPages > 1"
+            style="display: flex; justify-content: center; align-items: center; gap: 15px; margin-top: 20px;">
+            <button class="custom-page-btn" @click="prevPage" :disabled="currentPage === 1">
+              &lt; ก่อนหน้า
+            </button>
+
+            <span class="custom-page-info">
+              หน้า {{ currentPage }} จาก {{ totalPages }}
+            </span>
+
+            <button class="custom-page-btn" @click="nextPage" :disabled="currentPage === totalPages">
+              ถัดไป &gt;
+            </button>
+          </div>
         </div>
 
-        <div class="custom-task-pagination" v-if="totalPages > 1">
-          <button class="custom-page-btn" @click="prevPage" :disabled="currentPage === 1">
-            &lt; ก่อนหน้า
-          </button>
-
-          <span class="custom-page-info">
-            หน้า {{ currentPage }} จาก {{ totalPages }}
-          </span>
-
-          <button class="custom-page-btn" @click="nextPage" :disabled="currentPage === totalPages">
-            ถัดไป &gt;
-          </button>
-        </div>
       </div>
     </div>
 
@@ -366,59 +220,66 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, onMounted, computed, watch, inject } from 'vue';
 import { useRouter } from 'vue-router'
-import html2canvas from 'html2canvas'
 import Swal from 'sweetalert2'
-import jsPDF from 'jspdf'
-import autoTable from 'jspdf-autotable'
 
 import '../../assets/Admin/css/Admin_Dashboard.css'
-
-import { thaiFontBase64 } from '@/assets/fonts/thaiFont.js'
 
 import SummaryCard from '@/components/SummaryCard.vue'
 import TaskTable from '@/components/TaskTable.vue'
 import StatusChart from '@/components/StatusChart.vue'
 import LineChart from '@/components/LineChart.vue'
 
+/* =========================================
+    1. CONSTANTS & ROUTER
+========================================= */
 const API = import.meta.env.VITE_API_BASE_URL
 const router = useRouter()
+const itemsPerPage = 10
 
-/* ===============================
-    STATE & DATE LOGIC
-================================ */
-const tasks = ref([])
-const summary = ref({ total: 0, openCount: 0, closedCount: 0, acceptableCount: 0 })
-const overallProgress = ref(0)
-
-const pdfTemplate = ref(null)
-const isExporting = ref(false)
-const dateInput = ref(null)
-const isOpen = ref(false)
-
+/* =========================================
+    2. STATE
+========================================= */
+const globalSelectedYear = inject('globalSelectedYear', ref('all'));
 const dateMode = ref('all')
 const selectedDate = ref({ start: '', end: '' })
+const isLoading = ref(false)
+const isOpen = ref(false)
+const dateInput = ref(null)
 
-const formatDateISO = (d) => d.toISOString().slice(0, 10)
+const isExporting = ref(false)
+const currentExportDate = ref(new Date().toISOString().split('T')[0])
 
-const currentExportDate = computed(() => {
-  const d = new Date()
-  return `${d.getDate()} ${d.toLocaleDateString('th-TH', { month: 'long' })} ${d.getFullYear() + 543}`
-})
+const tasks = ref([])
+const gapDetails = ref([])
+const gapChartData = ref(null)
+const overallProgress = ref(0)
+const scopeSummary = ref({ total: 0, ongoing: 0, completed: 0 });
+const planSummary = ref({ total: 0, openCount: 0, closedCount: 0, acceptableCount: 0 });
 
-// เพิ่ม State เหล่านี้ในหน้า Dashboard หลัก
-const filteredTasksForModal = ref([])
-
-// ==========================================
-// ตัวแปรและฟังก์ชันสำหรับ Modal ค้นหา & แบ่งหน้า
-// ==========================================
+// Modal State
 const isModalOpen = ref(false)
 const modalTitle = ref('')
 const modalDataList = ref([])
 const searchQuery = ref('')
 const currentPage = ref(1)
-const itemsPerPage = 10
+
+/* =========================================
+    3. COMPUTED PROPERTIES
+========================================= */
+const total = computed(() => planSummary.value.total)
+const openCount = computed(() => planSummary.value.openCount)
+const closedCount = computed(() => planSummary.value.closedCount)
+const acceptableCount = computed(() => planSummary.value.acceptableCount)
+
+const ongoingScopesCount = computed(() =>
+  tasks.value.filter(t => (t.progress || 0) < 100).length
+);
+
+const completedScopesCount = computed(() =>
+  tasks.value.filter(t => (t.progress || 0) >= 100).length
+);
 
 const filteredData = computed(() => {
   if (!searchQuery.value) return modalDataList.value
@@ -440,68 +301,6 @@ const paginatedData = computed(() => {
   return filteredData.value.slice(start, end)
 })
 
-const prevPage = () => {
-  if (currentPage.value > 1) {
-    currentPage.value--
-  }
-}
-
-const nextPage = () => {
-  if (currentPage.value < totalPages.value) {
-    currentPage.value++
-  }
-}
-// =====================================
-
-const closeModal = () => {
-  isModalOpen.value = false
-}
-
-const getBadgeClass = (status) => {
-  if (status === 'closed') return 'badge-success'
-  if (status === 'acceptable') return 'badge-warning'
-  return 'badge-danger'
-}
-
-// นำมาแทนที่ handleCardClick เดิม
-const handleCardClick = (type) => {
-  searchQuery.value = ''
-  currentPage.value = 1
-
-  const titles = {
-    warning: 'ขอบเขตงานทั้งหมด',
-    primary: 'รายการที่ยังไม่ปิด GAP',
-    success: 'รายการที่ปิด GAP เสร็จแล้ว',
-    danger: 'รายการที่ไม่สามารถปิด GAP แต่ยอมรับได้'
-  }
-  modalTitle.value = titles[type] || 'รายละเอียด'
-
-  if (type === 'warning') {
-    modalDataList.value = [...tasks.value]
-  } else if (type === 'primary') {
-    modalDataList.value = tasks.value.filter(t => t.status !== 'closed' && t.status !== 'acceptable')
-  } else if (type === 'success') {
-    modalDataList.value = tasks.value.filter(t => t.status === 'closed')
-  } else if (type === 'danger') {
-    modalDataList.value = tasks.value.filter(t => t.status === 'acceptable')
-  }
-
-  isModalOpen.value = true
-}
-
-const goToScopePage = (scopeId) => {
-  isModalOpen.value = false
-  router.push({ path: '/admin/scopeproject', query: { scope_id: scopeId } })
-}
-
-/* ===============================
-    COMPUTED PROPERTIES
-================================ */
-const total = computed(() => summary.value.total)
-const openCount = computed(() => summary.value.openCount)
-const closedCount = computed(() => summary.value.closedCount)
-const acceptableCount = computed(() => summary.value.acceptableCount)
-
 const overallProgressColor = computed(() => {
   if (overallProgress.value < 50) return '#ef4444'
   if (overallProgress.value < 80) return '#6d28d9'
@@ -519,9 +318,11 @@ const buddhistDateText = computed(() => {
     : `${formatTH(selectedDate.value.start)} - ${formatTH(selectedDate.value.end)}`
 })
 
-/* ===============================
-    ฟังก์ชันคำนวณช่วงเวลา (Ranges)
-================================ */
+/* =========================================
+    4. HELPERS
+========================================= */
+const formatDateISO = (d) => d.toISOString().slice(0, 10)
+
 const setDateRange = (mode) => {
   const now = new Date()
   let start = ''
@@ -562,243 +363,100 @@ const setDateRange = (mode) => {
   selectedDate.value = { start, end }
 }
 
-/* ===============================
-    FETCH DATA
-================================ */
-const fetchDashboard = async () => {
-  const token = localStorage.getItem('token')
-  if (!token) return
-
-  const headers = { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }
-
-  try {
-    const query = `?startDate=${selectedDate.value.start}&endDate=${selectedDate.value.end}`
-
-    const [summaryRes, tasksRes, progressRes] = await Promise.all([
-      fetch(`${API}/api/admin/dashboard/gap-summary${query}`, { headers }),
-      fetch(`${API}/api/admin/dashboard/tasks${query}`, { headers }),
-      fetch(`${API}/api/admin/dashboard/overall-progress${query}`, { headers })
-    ])
-
-    const summaryData = await summaryRes.json()
-    const tasksData = await tasksRes.json()
-    const progressData = await progressRes.json()
-
-    summary.value = {
-      total: summaryData.total || 0,
-      openCount: summaryData.open_gap || 0,
-      closedCount: summaryData.closed_gap || 0,
-      acceptableCount: summaryData.accepted_gap || 0
-    }
-    tasks.value = tasksData
-    overallProgress.value = progressData.progress || 0
-
-  } catch (err) {
-    console.error('❌ Fetch Dashboard Error:', err)
-  }
+const getBadgeClass = (status) => {
+  const closedStatuses = ['closed', 'Completed', 'complete_gap'];
+  const acceptableStatuses = ['acceptable', 'acceptable_gap'];
+  if (closedStatuses.includes(status)) return 'badge-success';
+  if (acceptableStatuses.includes(status)) return 'badge-warning';
+  return 'badge-danger';
 }
 
 const getUrgency = (endDate) => {
   if (!endDate) return { label: 'ไม่ระบุ', class: 'gray' };
-
   const today = new Date();
   const target = new Date(endDate);
   const diffDays = Math.ceil((target - today) / (1000 * 60 * 60 * 24));
-
   if (diffDays < 0) return { label: 'เลยกำหนด', class: 'urgent-critical' };
   if (diffDays <= 7) return { label: 'ด่วนมาก (ใน 7 วัน)', class: 'urgent-high' };
   if (diffDays <= 30) return { label: 'เร่งด่วน (ใน 1 เดือน)', class: 'urgent-medium' };
   return { label: 'ปกติ', class: 'urgent-low' };
 }
 
-/* ===============================
-    EXPORT PDF LOGIC (DTG FORMAL)
-================================ */
-const openExportSettings = () => {
-  if (tasks.value.length === 0) {
-    Swal.fire('ไม่พบข้อมูล', 'กรุณารอให้ข้อมูลโหลดเสร็จก่อน', 'warning');
-    return;
-  }
-  if (document.activeElement instanceof HTMLElement) {
-    document.activeElement.blur();
-  }
+/* =========================================
+    5. DATA FETCHING
+========================================= */
+const fetchDashboard = async () => {
+  const token = localStorage.getItem('token');
+  if (!token) return;
 
-  Swal.fire({
-    title: 'เลือกขอบเขตงานที่ต้องการรายงาน',
-    returnFocus: false,
-    html: `
-      <div style="margin-bottom: 15px;">
-        <input type="text" id="swal-search-task" placeholder="🔍 ค้นหาขอบเขตงาน..." 
-          style="width: 100%; padding: 10px 15px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 14px; outline: none; box-sizing: border-box;"
-        >
-      </div>
+  const headers = {
+    'Content-Type': 'application/json',
+    'Authorization': `Bearer ${token}`
+  };
 
-      <div id="task-selector" style="text-align: left; max-height: 400px; overflow-y: auto; padding: 15px; border: 1px solid #e2e8f0; border-radius: 10px; background: #f8fafc;">
-        ${tasks.value.map(task => `
-          <div class="task-row" data-title="${(task.title || '').toLowerCase()}" 
-               style="margin-bottom: 12px; display: flex; align-items: flex-start; gap: 12px; padding: 8px; background: white; border-radius: 6px; border: 1px solid #f1f5f9;">
-            <input type="checkbox" id="task-${task.id}" value="${task.id}" class="task-cb" checked style="width: 20px; height: 20px; cursor: pointer;">
-            <label for="task-${task.id}" style="cursor: pointer; font-size: 14px; color: #1e293b;">${task.title}</label>
-          </div>
-        `).join('')}
-      </div>
-    `,
-    showCancelButton: true,
-    confirmButtonText: 'สร้างรายงาน PDF',
-    didOpen: () => {
-      const searchInput = document.getElementById('swal-search-task');
-      const taskRows = document.querySelectorAll('.task-row');
-
-      searchInput.addEventListener('input', (e) => {
-        const searchTerm = e.target.value.toLowerCase();
-        taskRows.forEach(row => {
-          const title = row.getAttribute('data-title');
-          if (title.includes(searchTerm)) {
-            row.style.display = 'flex';
-          } else {
-            row.style.display = 'none';
-          }
-        });
-      });
-    },
-    preConfirm: () => {
-      const checkboxes = document.querySelectorAll('.task-cb:checked');
-      if (checkboxes.length === 0) {
-        Swal.showValidationMessage('กรุณาเลือกอย่างน้อย 1 รายการ');
-        return false;
-      }
-      return Array.from(checkboxes).map(cb => cb.value);
-    }
-  }).then((result) => {
-    if (result.isConfirmed) {
-      const filteredTasks = tasks.value.filter(t => result.value.includes(t.id.toString()));
-      generateDTGReport(filteredTasks);
-    }
-  });
-}
-
-const generateDTGReport = async (selectedTasks) => {
-  isExporting.value = true;
-  const doc = new jsPDF('l', 'mm', 'a4');
+  isLoading.value = true;
 
   try {
+    const query = new URLSearchParams({
+      year: globalSelectedYear.value || 'all',
+      startDate: selectedDate.value?.start || '',
+      endDate: selectedDate.value?.end || ''
+    }).toString();
 
-    const fontName = 'Sarabun-Regular.ttf';
-    doc.addFileToVFS(fontName, thaiFontBase64);
-    doc.addFont(fontName, 'Sarabun', 'normal');
-    doc.addFont(fontName, 'Sarabun', 'bold');
-    doc.setFont('Sarabun');
+    const chartQuery = new URLSearchParams({
+      year: globalSelectedYear.value || 'all',
+      startDate: selectedDate.value?.start || '',
+      endDate: selectedDate.value?.end || '',
+      mode: dateMode.value === 'all' ? 'year' : (dateMode.value || 'day')
+    }).toString();
 
-    let chartImage = null;
-    try {
-      const chartCanvas = document.querySelector('.chart-area canvas');
-      if (chartCanvas) {
-        chartImage = chartCanvas.toDataURL('image/png');
-      } else {
-        const chartDOM = document.querySelector('.chart-area .panel-body');
-        if (chartDOM) {
-          const canvasObj = await html2canvas(chartDOM, { scale: 2, useCORS: true, backgroundColor: '#ffffff' });
-          chartImage = canvasObj.toDataURL('image/png');
-        }
-      }
-    } catch (err) {
-      console.warn('ข้ามการดึงรูปภาพ:', err);
-    }
+    const [summaryRes, tasksRes, progressRes, chartRes, gapDetailsRes] = await Promise.all([
+      fetch(`${API}/api/admin/dashboard/gap-summary?${query}`, { headers }),
+      fetch(`${API}/api/admin/dashboard/tasks?${query}`, { headers }),
+      fetch(`${API}/api/admin/dashboard/overall-progress?${query}`, { headers }),
+      fetch(`${API}/api/admin/dashboard/gap-closed-chart?${chartQuery}`, { headers }),
+      fetch(`${API}/api/admin/dashboard/gap-details?${query}`, { headers })
+    ]);
 
-    doc.setFontSize(10);
-    const dateTitle = dateMode.value === 'all'
-      ? `ข้อมูลอัปเดตล่าสุด ณ วันที่: ${currentExportDate.value}`
-      : `ข้อมูล ณ วันที่: ${buddhistDateText.value}`;
-    doc.text(dateTitle, 285, 15, { align: 'right' });
+    const summaryData = await summaryRes.json();
+    const tasksData = await tasksRes.json();
+    const progressData = await progressRes.json();
+    const chartData = await chartRes.json();
+    const gapDetailsData = await gapDetailsRes.json();
 
-    doc.setFontSize(22);
-    doc.text('การรายงานในคณะ DTG', 15, 25);
-    doc.setFontSize(16);
-    doc.text('วาระที่ 1 :', 15, 35);
-    doc.setFontSize(14);
-    doc.text('รายงานผลการดำเนินงานตามขอบเขตงาน', 15, 42);
+    gapDetails.value = gapDetailsData;
 
-    // ตารางฝั่งซ้าย 
-    autoTable(doc, {
-      startY: 50,
-      margin: { left: 15, right: 155 },
-      head: [['ชื่อขอบเขตงาน', 'ปีที่ทำ', 'สถานะ (%)']],
-      body: selectedTasks.map(t => [t.title || t.name || 'ไม่ระบุ', t.year || '2568', `${t.progress || 0}%`]),
-      styles: { font: 'Sarabun', fontStyle: 'normal', fontSize: 10, cellPadding: 3 },
-      headStyles: {
-        fillColor: [79, 70, 229],
-        halign: 'center'
-      },
-      columnStyles: {
-        1: { halign: 'center', cellWidth: 25 },
-        2: { halign: 'center', cellWidth: 25 }
-      }
-    });
+    overallProgress.value = progressData.progress || 0;
+    gapChartData.value = chartData;
 
-    // ตารางฝั่งขวา 
-    autoTable(doc, {
-      startY: 50,
-      margin: { left: 155, right: 15 },
-      head: [['กราฟสัดส่วน', 'ชื่อขอบเขตงาน', 'สถานะ GAP']],
-      body: selectedTasks.map(t => ['', t.title || t.name || 'ไม่ระบุ', '']),
-      styles: { font: 'Sarabun', fontStyle: 'normal', fontSize: 10, cellPadding: 3 }, // <--- ย้าย fontStyle มาที่นี่
-      headStyles: {
-        fillColor: [109, 40, 217],
-        halign: 'center'
-      },
-      columnStyles: {
-        0: { cellWidth: 40 },
-        2: { halign: 'center', cellWidth: 30 }
-      },
-      didDrawCell: (data) => {
-        if (data.column.index === 2 && data.cell.section === 'body') {
-          const task = selectedTasks[data.row.index];
-          let dotColor = [239, 68, 68];
-          if (task.status === 'closed') dotColor = [22, 163, 74];
-          else if (task.status === 'acceptable') dotColor = [234, 179, 8];
+    planSummary.value = {
+      total: summaryData.total || 0,
+      openCount: summaryData.open_gap || 0,
+      closedCount: summaryData.closed_gap || 0,
+      acceptableCount: summaryData.accepted_gap || 0
+    };
 
-          doc.setFillColor(...dotColor);
-          doc.circle(data.cell.x + 15, data.cell.y + (data.cell.height / 2), 2, 'F');
-        }
-      }
-    });
+    tasks.value = tasksData;
 
-    // แปะรูปกราฟ
-    if (chartImage) {
-      doc.addImage(chartImage, 'PNG', 158, 60, 35, 35);
-    }
+    scopeSummary.value = {
+      total: tasksData.length,
+      ongoing: tasksData.filter(t => (t.progress || 0) < 100).length,
+      completed: tasksData.filter(t => (t.progress || 0) >= 100).length
+    };
 
-    const finalY = 185;
-    const startX = 210;
+    overallProgress.value = progressData.progress || 0;
+    gapChartData.value = chartData;
 
-    doc.setFontSize(11);
-    doc.text('สถานะ :', startX, finalY);
-
-    const legends = [
-      { color: [22, 163, 74], text: 'ปิด GAP เสร็จแล้ว' },
-      { color: [234, 179, 8], text: 'ไม่สามารถปิด GAP แต่ยอมรับได้' },
-      { color: [239, 68, 68], text: 'ยังไม่ปิด GAP' }
-    ];
-
-    legends.forEach((item, i) => {
-      doc.setFillColor(...item.color);
-      doc.circle(startX + 5, finalY + 8 + (i * 7), 2, 'F');
-      doc.text(item.text, startX + 10, finalY + 10 + (i * 7));
-    });
-    doc.save(`DTG_Formal_Report_${new Date().getTime()}.pdf`);
-    Swal.fire({ title: 'สำเร็จ!', text: 'ดาวน์โหลดรายงาน PDF เรียบร้อยแล้ว', icon: 'success', timer: 2000 });
-
-  } catch (error) {
-    console.error('❌ Export Error:', error);
-    Swal.fire('เกิดข้อผิดพลาด', 'ไม่สามารถสร้างไฟล์ PDF ได้', 'error');
+  } catch (err) {
+    console.error('❌ Fetch Dashboard Error:', err);
   } finally {
-    isExporting.value = false;
+    isLoading.value = false;
   }
-}
+};
 
-/* ===============================
-    UI EVENTS
-================================ */
+/* =========================================
+    6. UI EVENTS & ACTIONS
+========================================= */
 const selectMode = (mode) => {
   dateMode.value = mode
   setDateRange(mode)
@@ -815,6 +473,73 @@ const onManualDateChange = () => {
 const openDate = () => {
   dateInput.value?.showPicker()
 }
+
+const handleCardClick = (type) => {
+  searchQuery.value = ''
+  currentPage.value = 1
+
+  const titles = {
+    all_plans: 'แผนงานทั้งหมด',
+    open: 'รายการที่ยังไม่ปิด GAP',
+    closed: 'รายการที่ปิด GAP เสร็จแล้ว',
+    acceptable: 'รายการที่ไม่สามารถปิด GAP แต่ยอมรับได้'
+  }
+  modalTitle.value = titles[type] || 'รายละเอียดแผนงานย่อย'
+
+  const closedStatuses = ['closed', 'Completed', 'complete_gap']
+  const acceptableStatuses = ['acceptable', 'acceptable_gap']
+
+  if (type === 'all_plans') {
+    modalDataList.value = [...gapDetails.value]
+  } else if (type === 'open') {
+    modalDataList.value = gapDetails.value.filter(t =>
+      !closedStatuses.includes(t.status) && !acceptableStatuses.includes(t.status)
+    )
+  } else if (type === 'closed') {
+    modalDataList.value = gapDetails.value.filter(t => closedStatuses.includes(t.status))
+  } else if (type === 'acceptable') {
+    modalDataList.value = gapDetails.value.filter(t => acceptableStatuses.includes(t.status))
+  }
+
+  isModalOpen.value = true
+}
+
+const handleScopeCardClick = (type) => {
+  searchQuery.value = ''
+  currentPage.value = 1
+
+  const titles = {
+    all: 'รายการขอบเขตงานทั้งหมด',
+    ongoing: 'รายการขอบเขตงานที่กำลังดำเนินงาน',
+    completed: 'รายการขอบเขตงานที่ดำเนินการเสร็จสิ้น'
+  }
+  modalTitle.value = titles[type] || 'รายละเอียด'
+
+  if (type === 'all') {
+    modalDataList.value = [...tasks.value]
+  } else if (type === 'ongoing') {
+    modalDataList.value = tasks.value.filter(t => (t.progress || 0) < 100)
+  } else if (type === 'completed') {
+    modalDataList.value = tasks.value.filter(t => (t.progress || 0) >= 100)
+  }
+  isModalOpen.value = true
+}
+
+const prevPage = () => { if (currentPage.value > 1) currentPage.value-- }
+const nextPage = () => { if (currentPage.value < totalPages.value) currentPage.value++ }
+const closeModal = () => { isModalOpen.value = false }
+
+const goToScopePage = (scopeId) => {
+  isModalOpen.value = false
+  router.push({ path: '/admin/scopeproject', query: { scope_id: scopeId } })
+}
+
+/* =========================================
+    7. WATCHERS & LIFECYCLE
+========================================= */
+watch([() => globalSelectedYear.value, () => selectedDate.value], () => {
+  fetchDashboard();
+}, { deep: true });
 
 onMounted(() => {
   setDateRange('all')

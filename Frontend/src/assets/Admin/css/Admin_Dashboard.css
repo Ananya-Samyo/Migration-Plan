@@ -1265,3 +1265,200 @@
   font-size: 0.9rem;
   color: #94a3b8;
 }
+
+/* เพิ่มต่อท้ายไฟล์ CSS ของคุณ */
+
+.section-divider {
+  display: flex;
+  align-items: center;
+  margin: 25px 0 15px 0;
+  padding: 0 5px;
+}
+
+.divider-text {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #64748b;
+  background: #f8fafc;
+  padding-right: 15px;
+}
+
+.section-divider::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: #e2e8f0;
+}
+
+.scope-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 20px;
+  margin-bottom: 20px;
+}
+
+.scope-status-card {
+  display: flex;
+  align-items: center;
+  padding: 20px;
+  background: #ffffff;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+}
+
+.scope-status-card.ongoing { border-left: 5px solid #3b82f6; }
+.scope-status-card.completed { border-left: 5px solid #10b981; }
+
+.card-icon {
+  font-size: 2rem;
+  margin-right: 15px;
+}
+
+.card-info .label {
+  display: block;
+  font-size: 0.9rem;
+  color: #64748b;
+  margin-bottom: 4px;
+}
+
+.card-info .value {
+  font-size: 1.8rem;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.card-info .value small {
+  font-size: 1rem;
+  font-weight: 400;
+  color: #94a3b8;
+}
+
+.scope-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr); /* ปรับเป็น 3 คอลัมน์เท่ากัน */
+  gap: 20px;
+  margin-bottom: 20px;
+}
+
+/* เพิ่มสีสำหรับกล่อง Total */
+.scope-status-card.total {
+  border-left: 5px solid #94a3b8; /* สีเทาเข้ม */
+  background: #f1f5f9;
+}
+
+/* --- เพิ่มต่อท้ายไฟล์ CSS ของคุณ --- */
+
+/* 1. สไตล์สำหรับเส้นแบ่งส่วน (Divider) */
+.section-divider {
+  display: flex;
+  align-items: center;
+  margin: 30px 0 15px 0; /* เพิ่ม Margin บนให้ห่างขึ้น */
+  padding: 0 10px;
+}
+
+.section-divider.main-scope .divider-text {
+  color: #1e293b; /* สีเข้มกว่าสำหรับส่วนหัวหน้า */
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.section-divider.sub-plan .divider-text {
+  color: #64748b; /* สีเทาสำหรับส่วนรายละเอียด */
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.divider-text {
+  background: #f8fafc; /* สีพื้นหลัง Dashboard ของคุณ */
+  padding-right: 15px;
+}
+
+.section-divider::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: #e2e8f0;
+}
+
+/* 2. สไตล์สำหรับกล่องแถวบน (Executive View) */
+.scope-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 25px; /* เพิ่ม Gap ให้ดูโปร่งระดับผู้บริหาร */
+  margin-bottom: 25px;
+}
+
+.scope-status-card {
+  display: flex;
+  align-items: center;
+  padding: 25px; /* เพิ่ม Padding ให้กล่องดูใหญ่ขึ้น */
+  background: #ffffff;
+  border-radius: 16px; /* ขอบมนกว่าเดิม */
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -2px rgba(0, 0, 0, 0.02); /* Shadow ที่ลึกกว่า บอกถึงตำแหน่งที่สูงกว่า */
+  transition: transform 0.2s ease;
+}
+
+.scope-status-card:hover {
+  transform: translateY(-3px); /* เอฟเฟกต์ลอยตัวเมื่อ Hover */
+}
+
+/* สี Border-left ที่นิ่งและน่าเชื่อถือ */
+.scope-status-card.total { border-left: 6px solid #94a3b8; background: #ffffff; } /* สีเทาบริหาร */
+.scope-status-card.ongoing { border-left: 6px solid #3b82f6; } /* สีน้ำเงินเข้ม */
+.scope-status-card.completed { border-left: 6px solid #10b981; } /* สีเขียวเข้ม */
+
+.executive-view .card-icon {
+  font-size: 2.8rem; /* Icon ใหญ่กว่าแถวล่างชัดเจน */
+  margin-right: 20px;
+  opacity: 0.8;
+}
+
+.executive-view .card-info .label {
+  display: block;
+  font-size: 0.95rem; /* ตัวหนังสือหัวข้อใหญ่ขึ้นเล็กน้อย */
+  font-weight: 500;
+  color: #475569;
+  margin-bottom: 6px;
+}
+
+.executive-view .card-info .value {
+  font-size: 2.2rem; /* ตัวเลขใหญ่กว่าแถวล่างชัดเจน */
+  font-weight: 800; /* หนาขึ้น */
+  color: #1e293b;
+  line-height: 1;
+}
+
+.executive-view .card-info .value small {
+  font-size: 1.1rem;
+  font-weight: 400;
+  color: #94a3b8;
+  margin-left: 5px;
+}
+
+/* 3. ปรับสไตล์แถวล่าง (Operational View) ให้น้อยลง */
+.summary-grid.operational-view {
+  gap: 15px; /* Gap เล็กกว่าแถวบน */
+}
+
+.summary-card {
+  padding: 15px;
+  border-radius: 10px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.02); /* Shadow ตื้นๆ */
+}
+
+.scope-status-card {
+  cursor: pointer; /* เพิ่มเพื่อให้รู้ว่ากดได้ */
+  transition: all 0.2s ease;
+}
+
+.scope-status-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 12px 20px -5px rgba(0, 0, 0, 0.1);
+  filter: brightness(0.98); /* ให้เข้มขึ้นนิดหน่อยตอน hover */
+}
+
+.scope-status-card:active {
+  transform: translateY(-2px);
+}

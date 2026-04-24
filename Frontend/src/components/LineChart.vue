@@ -15,7 +15,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch } from 'vue' 
+import { ref, computed, onMounted, watch, inject } from 'vue'
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -50,7 +50,8 @@ const props = defineProps({
   }
 })
 
-const API = import.meta.env.VITE_API_BASE_URL
+const API = import.meta.env.VITE_API_BASE_URLฃ
+const globalSelectedYear = inject('globalSelectedYear')
 
 /* ===============================
    STATE
@@ -68,9 +69,12 @@ const fetchChartData = async () => {
     const token = localStorage.getItem('token')
     if (!token) return
 
-    // ส่ง startDate และ endDate ไปยัง Backend
-    const query = `?mode=day&startDate=${props.selectedDate.start}&endDate=${props.selectedDate.end}`
+    let query = `?mode=day&startDate=${props.selectedDate.start}&endDate=${props.selectedDate.end}`
     
+    if (globalSelectedYear && globalSelectedYear.value && globalSelectedYear.value !== 'all') {
+      query += `&year=${globalSelectedYear.value}`
+    }
+
     const res = await fetch(`${API}/api/admin/dashboard/gap-closed-chart${query}`, {
       headers: {
         'Authorization': `Bearer ${token}`,
@@ -93,11 +97,14 @@ const fetchChartData = async () => {
   }
 }
 
-/* ===============================
-   WATCHER (เพิ่มใหม่)
-================================ */
-// เมื่อวันที่จาก Dashboard เปลี่ยน ให้โหลดกราฟเส้นใหม่
+/* =====================
+   WATCHER 
+===================== */
 watch(() => props.selectedDate, fetchChartData, { deep: true })
+
+watch(globalSelectedYear, () => {
+  fetchChartData()
+})
 
 onMounted(fetchChartData)
 

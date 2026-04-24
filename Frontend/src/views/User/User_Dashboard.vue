@@ -44,18 +44,34 @@
       </div>
     </header>
 
-    <section class="summary-grid">
-      <SummaryCard title="ขอบเขตงานทั้งหมด" :value="total" type="warning" icon="📁"
-        @details="handleCardClick('warning', tasks)" />
+    <div class="section-divider main-scope">
+      <span class="divider-text">🏢 ภาพรวมการบริหารขอบเขตงาน (Scope Management)</span>
+    </div>
 
-      <SummaryCard title="ยังไม่ปิด GAP" :value="openCount" type="primary" icon="📌"
-        @details="handleCardClick('primary', tasks)" />
+    <section class="scope-summary-grid executive-view">
+      <div class="scope-status-card total" @click="handleScopeCardClick('all')">
+        <div class="card-icon">🗄️</div>
+        <div class="card-info">
+          <span class="label">ขอบเขตงานทั้งหมด</span>
+          <span class="value">{{ tasks.length }} </span>
+        </div>
+      </div>
 
-      <SummaryCard title="ปิด GAP เสร็จแล้ว" :value="closedCount" type="success" icon="✅"
-        @details="handleCardClick('success', tasks)" />
+      <div class="scope-status-card ongoing" @click="handleScopeCardClick('ongoing')">
+        <div class="card-icon">⚙️</div>
+        <div class="card-info">
+          <span class="label">กำลังดำเนินงาน</span>
+          <span class="value">{{ ongoingScopesCount }} </span>
+        </div>
+      </div>
 
-      <SummaryCard title="ไม่สามารถปิด GAP แต่ยอมรับได้" :value="acceptableCount" type="danger" icon="⚠️"
-        @details="handleCardClick('danger', tasks)" />
+      <div class="scope-status-card completed" @click="handleScopeCardClick('completed')">
+        <div class="card-icon">🏆</div>
+        <div class="card-info">
+          <span class="label">ดำเนินการเสร็จสิ้น</span>
+          <span class="value">{{ completedScopesCount }} </span>
+        </div>
+      </div>
     </section>
 
     <div class="overall-progress-bar">
@@ -72,6 +88,24 @@
       </div>
     </div>
 
+    <div class="section-divider sub-plan">
+      <span class="divider-text">🔍 รายละเอียดสถานะแผนงานย่อย (Gap Analysis)</span>
+    </div>
+
+    <section class="summary-grid operational-view">
+      <SummaryCard title="แผนงานทั้งหมด" :value="planSummary.total" type="warning" icon="📁"
+        @click="handleCardClick('all_plans')" />
+
+      <SummaryCard title="แผนงานที่ยังไม่ปิด GAP" :value="planSummary.openCount" type="primary" icon="📌"
+        @click="handleCardClick('open')" />
+
+      <SummaryCard title="แผนงานที่ปิด GAP เสร็จแล้ว" :value="planSummary.closedCount" type="success" icon="✅"
+        @click="handleCardClick('closed')" />
+
+      <SummaryCard title="แผนงานที่ไม่ได้ปิด GAP แต่ยอมรับได้" :value="planSummary.acceptableCount" type="danger"
+        icon="⚠️" @click="handleCardClick('acceptable')" />
+    </section>
+
     <section class="content-layout">
       <div class="panel chart-area">
         <div class="panel-header">
@@ -87,7 +121,7 @@
         <div class="panel table-area">
           <div class="panel-header">
             <h3>📋 รายการงานล่าสุด</h3>
-            <span class="badge">{{ total }} รายการ</span>
+            <span class="badge">{{ planSummary.total }} รายการ</span>
           </div>
           <div class="panel-body scrollable">
             <TaskTable :tasks="tasks" />
@@ -102,13 +136,6 @@
       </div>
     </section>
 
-    <div v-if="isExporting" class="export-loading">
-      <div class="spinner"></div>
-      <p>กำลังเตรียมไฟล์ PDF...</p>
-    </div>
-
-    <div class="pdf-export-container" ref="pdfTemplate" style="position: absolute; left: -9999px;">
-    </div>
   </div>
 
   <div v-if="isModalOpen" class="custom-modal-overlay" @click.self="closeModal">
@@ -121,7 +148,7 @@
       <div class="modal-body">
         <div class="search-box mb-3">
           <span class="search-icon">🔍</span>
-          <input v-model="searchQuery" type="text" placeholder="ค้นหาชื่อแผนงาน หรือ กองที่รับผิดชอบ..."
+          <input v-model="searchQuery" type="text" placeholder="ค้นหาชื่องาน..."
             class="form-control" />
         </div>
 
@@ -130,7 +157,7 @@
             <thead>
               <tr>
                 <th width="5%" class="text-center">ลำดับ</th>
-                <th width="35%">ชื่อแผนงาน</th>
+                <th width="35%">ชื่องาน</th>
                 <th width="15%" class="text-center">ความคืบหน้า</th>
                 <th width="15%" class="text-center">ความเร่งด่วน</th>
                 <th width="15%" class="text-center">สถานะ</th>
@@ -148,7 +175,10 @@
               </tr>
               <tr v-for="(item, index) in paginatedData" :key="item.id">
                 <td class="text-center">{{ (currentPage - 1) * itemsPerPage + index + 1 }}</td>
-                <td>{{ item.title || item.name || 'ไม่มีชื่อแผนงาน' }}</td>
+                <td>
+                  <div style="font-weight: bold;">{{ item.title || item.plan_name }}</div>
+                  <small v-if="item.parent_scope" class="text-muted">หัวข้อหลัก: {{ item.parent_scope }}</small>
+                </td>
                 <td class="text-center">{{ Math.round(item.progress || 0) }} %</td>
                 <td class="text-center">
                   <span :class="['urgency-badge', getUrgency(item.endDate || item.end_date).class]">
@@ -157,8 +187,11 @@
                 </td>
                 <td class="text-center">
                   <span class="badge" :class="getBadgeClass(item.status)">
-                    {{ item.status === 'closed' ? 'ปิด GAP แล้ว' : (item.status === 'acceptable' ? 'ยอมรับได้' :
-                    'ยังไม่ปิด GAP') }}
+                    {{
+                      item.progress >= 100 ? 'เสร็จสิ้น' :
+                        (item.status === 'closed' || item.status === 'complete_gap' ? 'ปิด GAP แล้ว' :
+                          (item.status === 'acceptable' || item.status === 'acceptable_gap' ? 'ยอมรับได้' : 'ยังไม่ปิด GAP'))
+                    }}
                   </span>
                 </td>
                 <td class="text-center">
@@ -191,21 +224,23 @@ import StatusChart from '@/components/user/u_StatusChart.vue'
 import LineChart from '@/components/user/u_LineChart.vue'
 
 const API = import.meta.env.VITE_API_BASE_URL
-
 const router = useRouter()
 
 /* ===============================
-    STATE & DATE LOGIC
+    STATE & DATA VARIABLES
 ================================ */
-const tasks = ref([])
-const summary = ref({ total: 0, openCount: 0, closedCount: 0, acceptableCount: 0 })
+const tasks = ref([])        // เก็บข้อมูล Scope
+const gapDetails = ref([])   // เก็บข้อมูล Gap (Sub-plans)
 const overallProgress = ref(0)
-const isExporting = ref(false)
+const planSummary = ref({ total: 0, openCount: 0, closedCount: 0, acceptableCount: 0 })
+
+// Date & UI State
 const dateInput = ref(null)
 const isOpen = ref(false)
 const dateMode = ref('all')
 const selectedDate = ref({ start: '', end: '' })
 
+// Modal State
 const isModalOpen = ref(false)
 const modalTitle = ref('')
 const modalDataList = ref([])
@@ -213,88 +248,16 @@ const searchQuery = ref('')
 const currentPage = ref(1)
 const itemsPerPage = 10
 
-const formatDateISO = (d) => d.toISOString().slice(0, 10)
-
-const currentExportDate = computed(() => {
-  const d = new Date()
-  return `${d.getDate()} ${d.toLocaleDateString('th-TH', { month: 'long' })} ${d.getFullYear() + 543}`
-})
-
-// --- Logic การค้นหาและแบ่งหน้า ---
-const filteredData = computed(() => {
-  if (!searchQuery.value) return modalDataList.value
-  const query = searchQuery.value.toLowerCase()
-  return modalDataList.value.filter(item => {
-    const name = (item.title || item.name || '').toLowerCase()
-    const dept = (item.department_name || '').toLowerCase()
-    return name.includes(query) || dept.includes(query)
-  })
-})
-
-const totalPages = computed(() => Math.ceil(filteredData.value.length / itemsPerPage) || 1)
-
-const paginatedData = computed(() => {
-  const start = (currentPage.value - 1) * itemsPerPage
-  return filteredData.value.slice(start, start + itemsPerPage)
-})
-
-// --- Functions ---
-const closeModal = () => { isModalOpen.value = false }
-const prevPage = () => { if (currentPage.value > 1) currentPage.value-- }
-const nextPage = () => { if (currentPage.value < totalPages.value) currentPage.value++ }
-
-const getBadgeClass = (status) => {
-  if (status === 'closed') return 'badge-success'
-  if (status === 'acceptable') return 'badge-warning'
-  return 'badge-danger'
-}
-
-const getUrgency = (endDate) => {
-  if (!endDate) return { label: 'ไม่ระบุ', class: 'gray' }
-  const today = new Date()
-  const target = new Date(endDate)
-  const diffDays = Math.ceil((target - today) / (1000 * 60 * 60 * 24))
-  if (diffDays < 0) return { label: 'เลยกำหนด', class: 'urgent-critical' }
-  if (diffDays <= 7) return { label: 'ด่วนมาก', class: 'urgent-high' }
-  if (diffDays <= 30) return { label: 'เร่งด่วน', class: 'urgent-medium' }
-  return { label: 'ปกติ', class: 'urgent-low' }
-}
-
-const handleCardClick = (type, allTasks) => {
-  if (!allTasks || allTasks.length === 0) return; 
-  
-  searchQuery.value = ''
-  currentPage.value = 1
-  
-  const titles = {
-    warning: 'ขอบเขตงานทั้งหมด',
-    primary: 'รายการที่ยังไม่ปิด GAP',
-    success: 'รายการที่ปิด GAP เสร็จแล้ว',
-    danger: 'รายการที่ไม่สามารถปิด GAP แต่ยอมรับได้'
-  }
-  modalTitle.value = titles[type] || 'รายละเอียด'
-
-  // กรองข้อมูล
-  if (type === 'warning') modalDataList.value = [...allTasks]
-  else if (type === 'primary') modalDataList.value = allTasks.filter(t => t.status !== 'closed' && t.status !== 'acceptable')
-  else if (type === 'success') modalDataList.value = allTasks.filter(t => t.status === 'closed')
-  else if (type === 'danger') modalDataList.value = allTasks.filter(t => t.status === 'acceptable')
-
-  isModalOpen.value = true
-}
-
-const goToScopePage = (scopeId) => {
-  isModalOpen.value = false
-  router.push({ path: '/user/user_scopeproject', query: { scope_id: scopeId } })
-}
-
 /* ===============================
     COMPUTED PROPERTIES
 ================================ */
-const total = computed(() => summary.value.total)
-const openCount = computed(() => summary.value.openCount)
-const closedCount = computed(() => summary.value.closedCount)
-const acceptableCount = computed(() => summary.value.acceptableCount)
+const openCount = computed(() => planSummary.value.openCount)
+const closedCount = computed(() => planSummary.value.closedCount)
+const acceptableCount = computed(() => planSummary.value.acceptableCount)
+
+// นับจำนวน Scope
+const ongoingScopesCount = computed(() => tasks.value.filter(t => (t.progress || 0) < 100).length);
+const completedScopesCount = computed(() => tasks.value.filter(t => (t.progress || 0) >= 100).length);
 
 const overallProgressColor = computed(() => {
   if (overallProgress.value < 50) return '#ef4444'
@@ -313,64 +276,29 @@ const buddhistDateText = computed(() => {
     : `${formatTH(selectedDate.value.start)} - ${formatTH(selectedDate.value.end)}`
 })
 
-/* ===============================
-    FETCH DATA (ปรับเป็นแบบ User)
-================================ */
-const fetchDashboard = async () => {
-  const userId = localStorage.getItem('user_id') // ดึง User ID เหมือนใน User_Dashboard
-  const token = localStorage.getItem('token')
-
-  if (!userId || !token) {
-    console.error('Missing userId or token')
-    return
-  }
-
-  const headers = {
-    'Content-Type': 'application/json',
-    'Authorization': `Bearer ${token}`
-  }
-
-  try {
-    // แก้ไข Endpoint ให้เป็นของฝั่ง User และส่ง user_id ไปด้วย
-    const query = `?user_id=${userId}&startDate=${selectedDate.value.start}&endDate=${selectedDate.value.end}`
-
-    const [summaryRes, tasksRes, progressRes] = await Promise.all([
-      fetch(`${API}/api/user/user-dashboard/gap-summary${query}`, { headers }),
-      fetch(`${API}/api/user/user-dashboard/tasks${query}`, { headers }),
-      fetch(`${API}/api/user/user-dashboard/overall-progress${query}`, { headers })
-    ])
-
-    if (summaryRes.status === 401) {
-      console.error("Token หมดอายุ")
-      return
-    }
-
-    const summaryData = await summaryRes.json()
-    const tasksData = await tasksRes.json()
-    const progressData = await progressRes.json()
-
-    summary.value = {
-      total: summaryData.total || 0,
-      openCount: summaryData.open_gap || 0,
-      closedCount: summaryData.closed_gap || 0,
-      acceptableCount: summaryData.accepted_gap || 0
-    }
-    tasks.value = tasksData
-    overallProgress.value = progressData.progress || 0
-
-  } catch (err) {
-    console.error('❌ Fetch Dashboard Error:', err)
-  }
-}
+// Modal Pagination & Filter
+const filteredData = computed(() => {
+  if (!searchQuery.value) return modalDataList.value
+  const query = searchQuery.value.toLowerCase()
+  return modalDataList.value.filter(item => {
+    const name = (item.title || item.plan_name || '').toLowerCase()
+    return name.includes(query)
+  })
+})
+const totalPages = computed(() => Math.ceil(filteredData.value.length / itemsPerPage) || 1)
+const paginatedData = computed(() => {
+  const start = (currentPage.value - 1) * itemsPerPage
+  return filteredData.value.slice(start, start + itemsPerPage)
+})
 
 /* ===============================
-    DATE RANGE & UI EVENTS
+    FUNCTIONS & HELPERS
 ================================ */
+const formatDateISO = (d) => d.toISOString().slice(0, 10)
+
 const setDateRange = (mode) => {
   const now = new Date()
-  let start = ''
-  let end = ''
-
+  let start = '', end = ''
   switch (mode) {
     case 'today': start = end = formatDateISO(now); break
     case 'yesterday':
@@ -405,6 +333,154 @@ const onManualDateChange = () => {
 }
 
 const openDate = () => { dateInput.value?.showPicker() }
+
+const closeModal = () => { isModalOpen.value = false }
+const prevPage = () => { if (currentPage.value > 1) currentPage.value-- }
+const nextPage = () => { if (currentPage.value < totalPages.value) currentPage.value++ }
+
+const getBadgeClass = (status) => {
+  const closedStatuses = ['closed', 'Completed', 'complete_gap'];
+  const acceptableStatuses = ['acceptable', 'acceptable_gap'];
+  if (closedStatuses.includes(status)) return 'badge-success';
+  if (acceptableStatuses.includes(status)) return 'badge-warning';
+  return 'badge-danger';
+}
+
+const getUrgency = (endDate) => {
+  if (!endDate) return { label: 'ไม่ระบุ', class: 'gray' }
+  const today = new Date()
+  const target = new Date(endDate)
+  const diffDays = Math.ceil((target - today) / (1000 * 60 * 60 * 24))
+  if (diffDays < 0) return { label: 'เลยกำหนด', class: 'urgent-critical' }
+  if (diffDays <= 7) return { label: 'ด่วนมาก', class: 'urgent-high' }
+  if (diffDays <= 30) return { label: 'เร่งด่วน', class: 'urgent-medium' }
+  return { label: 'ปกติ', class: 'urgent-low' }
+}
+
+/* ===============================
+    MODAL CLICK HANDLERS
+================================ */
+// 1. กดการ์ดด้านล่าง (แผนงานย่อย)
+const handleCardClick = (type) => {
+  searchQuery.value = ''
+  currentPage.value = 1
+  
+  const titles = {
+    all_plans: 'แผนงานทั้งหมดของคุณ',
+    open: 'รายการที่ยังไม่ปิด GAP',
+    closed: 'รายการที่ปิด GAP เสร็จแล้ว',
+    acceptable: 'รายการที่ไม่สามารถปิด GAP แต่ยอมรับได้'
+  }
+  modalTitle.value = titles[type] || 'รายละเอียดแผนงานย่อย'
+
+  const closedStatuses = ['closed', 'Completed', 'complete_gap']
+  const acceptableStatuses = ['acceptable', 'acceptable_gap']
+
+  if (type === 'all_plans') {
+    modalDataList.value = [...gapDetails.value]
+  } else if (type === 'open') {
+    modalDataList.value = gapDetails.value.filter(t => 
+      !closedStatuses.includes(t.status) && !acceptableStatuses.includes(t.status)
+    )
+  } else if (type === 'closed') {
+    modalDataList.value = gapDetails.value.filter(t => closedStatuses.includes(t.status))
+  } else if (type === 'acceptable') {
+    modalDataList.value = gapDetails.value.filter(t => acceptableStatuses.includes(t.status))
+  }
+  
+  isModalOpen.value = true
+}
+
+// 2. กดการ์ดด้านบน (ขอบเขตงาน)
+const handleScopeCardClick = (type) => {
+  searchQuery.value = ''
+  currentPage.value = 1
+
+  const titles = {
+    all: 'รายการขอบเขตงานที่คุณรับผิดชอบ',
+    ongoing: 'ขอบเขตงานที่กำลังดำเนินงาน',
+    completed: 'ขอบเขตงานที่ดำเนินการเสร็จสิ้น'
+  }
+  modalTitle.value = titles[type] || 'รายละเอียดขอบเขตงาน'
+
+  if (type === 'all') {
+    modalDataList.value = [...tasks.value]
+  } else if (type === 'ongoing') {
+    modalDataList.value = tasks.value.filter(t => (t.progress || 0) < 100)
+  } else if (type === 'completed') {
+    modalDataList.value = tasks.value.filter(t => (t.progress || 0) >= 100)
+  }
+  isModalOpen.value = true
+}
+
+const goToScopePage = (scopeId) => {
+  isModalOpen.value = false
+  // นำทางไปหน้า scope project ของ user
+  router.push({ path: '/user/user_scopeproject', query: { scope_id: scopeId } })
+}
+
+/* ===============================
+    FETCH DATA (สำหรับ User)
+================================ */
+const fetchDashboard = async () => {
+  const userId = localStorage.getItem('user_id')
+  const token = localStorage.getItem('token')
+
+  if (!userId || !token) {
+    console.error('Missing userId or token')
+    return
+  }
+
+  const headers = {
+    'Content-Type': 'application/json',
+    'Authorization': `Bearer ${token}`
+  }
+
+  try {
+    const query = `?user_id=${userId}&startDate=${selectedDate.value.start}&endDate=${selectedDate.value.end}`
+
+    // 🌟 ดึงข้อมูล API (ถ้า backend ของ User มี gap-details ให้เรียกใช้งานเลย)
+    // ถ้า API ตัวไหนไม่มี (เช่น gap-details) คุณอาจจะต้องให้ backend สร้าง Route เพิ่มแบบเดียวกับ Admin ครับ
+    const [summaryRes, tasksRes, progressRes, gapDetailsRes] = await Promise.all([
+      fetch(`${API}/api/user/user-dashboard/gap-summary${query}`, { headers }),
+      fetch(`${API}/api/user/user-dashboard/tasks${query}`, { headers }), // ดึง Scopes
+      fetch(`${API}/api/user/user-dashboard/overall-progress${query}`, { headers }),
+      // ถ้า Backend ฝั่ง User ไม่มี API นี้ ให้ใช้ fetch(`/tasks${query}`) ชั่วคราวไปก่อน หรือไปเขียน Backend เพิ่ม
+      fetch(`${API}/api/user/user-dashboard/gap-details${query}`, { headers }).catch(() => null) 
+    ])
+
+    if (summaryRes.status === 401) {
+      console.error("Token หมดอายุ")
+      return
+    }
+
+    const summaryData = await summaryRes.json()
+    const tasksData = await tasksRes.json()
+    const progressData = await progressRes.json()
+    
+    // จัดการข้อมูล Gap Details (ถ้า API ไม่ Error)
+    if (gapDetailsRes && gapDetailsRes.ok) {
+        const gapData = await gapDetailsRes.json()
+        gapDetails.value = gapData
+    } else {
+        // Fallback: ถ้ายังไม่มี API gap-details ฝั่ง User ให้ใช้ข้อมูล tasks ไปพลางๆ ก่อน
+        gapDetails.value = tasksData 
+    }
+
+    planSummary.value = {
+      total: summaryData.total || 0,
+      openCount: summaryData.open_gap || 0,
+      closedCount: summaryData.closed_gap || 0,
+      acceptableCount: summaryData.accepted_gap || 0
+    }
+    
+    tasks.value = tasksData
+    overallProgress.value = progressData.progress || 0
+
+  } catch (err) {
+    console.error('❌ Fetch Dashboard Error:', err)
+  }
+}
 
 onMounted(() => {
   setDateRange('all')

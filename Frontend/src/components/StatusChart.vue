@@ -1,14 +1,14 @@
 <template>
   <div class="charts-container">
     <div class="chart-wrapper">
-      <h3>📊 สัดส่วนสถานะ GAP</h3>
+      <h3>📊 สัดส่วนสถานะขอบเขตงาน</h3>
       <div class="canvas-box">
         <Pie :data="pieChartData" :options="pieOptions" />
       </div>
     </div>
 
     <div class="chart-wrapper">
-      <h3>📈 จำนวนงานตามระดับความคืบหน้า</h3>
+      <h3>📈 จำนวนขอบเขตงานตามความคืบหน้า</h3>
       <div class="canvas-box">
         <Bar :data="barChartData" :options="barOptions" />
       </div>
@@ -17,7 +17,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch } from 'vue' // เพิ่ม watch ตรงนี้
+import { ref, computed, onMounted, watch, inject } from 'vue'
 import { Pie, Bar } from 'vue-chartjs'
 import axios from 'axios'
 import {
@@ -53,6 +53,7 @@ const props = defineProps({
 })
 
 const API = import.meta.env.VITE_API_BASE_URL
+const globalSelectedYear = inject('globalSelectedYear')
 
 /* ===============================
    State
@@ -71,12 +72,16 @@ const progressRange = ref({
 })
 
 /* ===============================
-   Fetch Backend (แก้ไขให้ส่ง Query String)
+   Fetch Backend 
 ================================ */
 const fetchCharts = async () => {
   try {
     // สร้าง query จาก props ที่ได้รับมา
-    const query = `?startDate=${props.selectedDate.start}&endDate=${props.selectedDate.end}`
+    let query = `?startDate=${props.selectedDate.start}&endDate=${props.selectedDate.end}`
+    
+    if (globalSelectedYear && globalSelectedYear.value && globalSelectedYear.value !== 'all') {
+      query += `&year=${globalSelectedYear.value}`
+    }
     
     const [gapRes, progressRes] = await Promise.all([
       axios.get(`${API}/api/admin/dashboard/gap-summary${query}`),
@@ -102,24 +107,35 @@ watch(
   { deep: true }
 )
 
+watch(globalSelectedYear, () => {
+  fetchCharts()
+})
+
 /* ===============================
-   Pie Chart (Computed จะทำงานอัตโนมัติเมื่อ State เปลี่ยน)
+   Pie Chart (แสดงสัดส่วน ขอบเขตงาน)
 ================================ */
-const pieChartData = computed(() => ({
-  labels: ['ยังไม่ปิด GAP', 'ปิด GAP เสร็จแล้ว', 'ไม่สามารถปิด GAP แต่ยอมรับได้'],
-  datasets: [
-    {
-      data: [
-        gapSummary.value.open_gap,
-        gapSummary.value.closed_gap,
-        gapSummary.value.accepted_gap
-      ],
-      backgroundColor: ['#6b7280', '#16a34a', '#dc2626'],
-      borderColor: '#fff',
-      borderWidth: 2
-    }
-  ]
-}))
+const pieChartData = computed(() => {
+  // ใช้ Number() ครอบเพื่อให้แน่ใจว่าเป็นตัวเลขก่อนบวกกัน
+  const low = Number(progressRange.value.low || 0)
+  const mid = Number(progressRange.value.mid || 0)
+  const high = Number(progressRange.value.high || 0)
+  const done = Number(progressRange.value.done || 0)
+
+  const ongoingScopes = low + mid + high
+  const completedScopes = done
+
+  return {
+    labels: ['กำลังดำเนินงาน', 'ดำเนินการเสร็จสิ้น'],
+    datasets: [
+      {
+        data: [ongoingScopes, completedScopes],
+        backgroundColor: ['#6C757D', '#16a34a'], 
+        borderColor: '#fff',
+        borderWidth: 2
+      }
+    ]
+  }
+})
 
 /* ===============================
    Bar Chart

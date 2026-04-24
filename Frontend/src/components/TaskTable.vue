@@ -202,10 +202,10 @@ const statusColor = (status) => {
 const statusText = (status) => {
   switch (status) {
     case 'processing_gap':
-      return 'อยู่ระหว่างดำเนินการ'
+      return 'กำลังดำเนินงาน'
 
     case 'complete_gap':
-      return 'ปิด GAP เสร็จแล้ว'
+      return 'ดำเนินงานเสร็จสิ้น'
 
     case 'acceptable_gap':
       return 'ไม่สามารถปิด GAP แต่ยอมรับได้'

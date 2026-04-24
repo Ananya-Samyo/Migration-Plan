@@ -39,7 +39,6 @@ const routes = [
         name: 'AdminUsers',
         component: () => import('../views/Admin/Admin_List.vue')
       },
-      // 🟢 จุดที่แก้ไข: หน้าสำหรับเพิ่มโปรเจกต์ (Step 1)
 
       {
         path: 'adminproject',

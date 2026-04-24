@@ -479,7 +479,7 @@ input:focus, select:focus, textarea:focus {
    ========================================= */
 
 .main-container {
-  padding: 20px;
+  padding: 10px 20px;
   max-width: 1100px;
   margin: 0 auto;
   animation: fadeIn 0.5s ease;
@@ -490,7 +490,7 @@ input:focus, select:focus, textarea:focus {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 25px;
+  margin-bottom: 10px;
 }
 
 .page-title {

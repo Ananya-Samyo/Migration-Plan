@@ -102,7 +102,7 @@
                                                         {{ plan.name || plan.plan_name }}
                                                     </td>
                                                     <td class="text-left"
-                                                        style="padding: 10px; border: 1px solid #ddd;">{{ plan.detail }}
+                                                        style="padding: 10px; border: 1px solid #ddd;">{{ plan.details || plan.detail }}
                                                     </td>
                                                     <td class="text-center"
                                                         style="padding: 10px; border: 1px solid #ddd;">
@@ -146,21 +146,35 @@
                     </template>
 
                     <tr v-else>
-                        <td colspan="4" style="text-align: center; padding: 50px; background: #fafafa;">
-                            <div style="display: flex; flex-direction: column; align-items: center; gap: 12px;">
-                                <span style="font-size: 48px; filter: grayscale(1);">🔍</span>
-                                <p style="margin: 0; font-size: 18px; font-weight: bold; color: #4b2e83;">
-                                    ไม่พบข้อมูลที่ท่านค้นหา</p>
-                                <p style="margin: 0; font-size: 14px; color: #666;">
-                                    กรุณาลองเปลี่ยนคำค้นหา หรือเลือกหน่วยงานอื่น
-                                </p>
-                                <button @click="resetFilter"
-                                    style="margin-top: 10px; padding: 5px 15px; border: 1px solid #4b2e83; background: none; color: #4b2e83; border-radius: 4px; cursor: pointer;">
-                                    ล้างการค้นหา
-                                </button>
+                        <td colspan="4" style="text-align: center; padding: 60px; background: #fafafa;">
+                            <div style="display: flex; flex-direction: column; align-items: center; gap: 15px;">
+                                <span style="font-size: 64px;">{{ isFiltering ? '🔍' : '📦' }}</span>
+
+                                <div v-if="isFiltering">
+                                    <p style="margin: 0; font-size: 20px; font-weight: bold; color: #4b2e83;">
+                                        ไม่พบข้อมูลที่ท่านค้นหา
+                                    </p>
+                                    <p style="margin: 5px 0 0; font-size: 14px; color: #666;">
+                                        ไม่พบข้อมูลที่ตรงกับคำค้นหาหรือหน่วยงานที่ท่านเลือก
+                                    </p>
+                                    <button @click="resetFilter"
+                                        style="margin-top: 15px; padding: 8px 20px; border: 1px solid #4b2e83; background: white; color: #4b2e83; border-radius: 4px; cursor: pointer; font-weight: bold;">
+                                        ล้างการค้นหาทั้งหมด
+                                    </button>
+                                </div>
+
+                                <div v-else>
+                                    <p style="margin: 0; font-size: 20px; font-weight: bold; color: #999;">
+                                        ยังไม่มีข้อมูลในระบบ
+                                    </p>
+                                    <p style="margin: 5px 0 0; font-size: 14px; color: #999;">
+                                        ขณะนี้ยังไม่มีการลงบันทึกขอบเขตแผนงานในฐานข้อมูล
+                                    </p>
+                                </div>
                             </div>
                         </td>
                     </tr>
+
                 </tbody>
             </table>
         </div>
@@ -178,7 +192,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, nextTick, watch } from 'vue'
+import { ref, onMounted, nextTick, watch, computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import '../../assets/Admin/css/Admin_Scopeproject.css'
 
@@ -309,7 +323,7 @@ const fetchScopes = async (page = 1) => {
         console.error('Fetch Error:', err)
         scopes.value = []
     } finally {
-        loading.value = false 
+        loading.value = false
     }
 }
 
@@ -318,11 +332,16 @@ const applyFilter = () => {
     fetchScopes(1);
 };
 
+const isFiltering = computed(() => {
+    return searchQuery.value.trim() !== '' || selectedDepartment.value !== '';
+});
+
 // ฟังก์ชันสำหรับล้างค่าการค้นหาทั้งหมด
 const resetFilter = () => {
     searchQuery.value = '';
     selectedDepartment.value = '';
     currentPage.value = 1;
+    loading.value = true; 
     fetchScopes(1);
 };
 

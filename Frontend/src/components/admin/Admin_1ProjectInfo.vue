@@ -7,12 +7,24 @@
     </header>
 
     <div class="card" style="margin-bottom: 20px; border-left: 5px solid #3498db;">
-      <div class="field">
+      <div class="field" style="margin-bottom: 15px;">
         <label style="font-weight: bold;">ชื่อขอบเขตงาน / โครงการหลัก</label>
         <input v-model="form.scopeName" type="text" placeholder="ระบุชื่อขอบเขตงาน" class="input-main" />
       </div>
+      
+      <div class="field">
+        <div class="grid-2">
+          <div>
+            <label style="font-weight: bold;">วันที่เริ่มต้น</label>
+            <input v-model="form.start_date" type="date" class="input-main" />
+          </div>
+          <div>
+            <label style="font-weight: bold;">วันที่สิ้นสุด</label>
+            <input v-model="form.end_date" type="date" class="input-main" />
+          </div>
+        </div>
+      </div>
     </div>
-
     <div v-for="(project, pIndex) in form.projects" :key="pIndex" class="card" style="margin-bottom: 20px;">
 
       <div class="field" style="margin-bottom: 20px;">
@@ -144,8 +156,11 @@ const validatePhoneNumber = (value, type, pIndex, mIndex = null) => {
   }
 };
 
+// เพิ่ม start_date และ end_date ใน form object เริ่มต้น
 const form = ref(props.modelValue && props.modelValue.projects ? props.modelValue : {
   scopeName: '',
+  start_date: '',
+  end_date: '',
   projects: [
     {
       projectName: '',
@@ -189,8 +204,8 @@ const addProject = () => {
   form.value.projects.push({
     projectName: '',
     department_id: '',
-    startDate: '',
-    endDate: '',
+    startDate: '', // ค่านี้คือของราย project (เผื่อคุณมีใช้แยกระดับแผนงาน)
+    endDate: '',   // ค่านี้คือของราย project 
     coordinator: { name: '', email: '', phone_number: '' },
     teamMembers: [{ name: '', email: '', phone_number: '' }],
     gaps: [{ detail: '' }],
@@ -212,12 +227,25 @@ const handleNext = async () => {
   if (!form.value.scopeName) {
     return Swal.fire('ข้อมูลไม่ครบ', 'กรุณากรอกชื่อขอบเขตงานหลัก', 'warning');
   }
+  
+  // เพิ่มเงื่อนไขตรวจสอบว่ากรอกวันที่ครบหรือไม่
+  if (!form.value.start_date || !form.value.end_date) {
+    return Swal.fire('ข้อมูลไม่ครบ', 'กรุณาระบุวันที่เริ่มต้นและวันที่สิ้นสุดของขอบเขตงาน', 'warning');
+  }
+
+  // ป้องกันไม่ให้วันที่สิ้นสุดมาก่อนวันที่เริ่มต้น
+  if (new Date(form.value.end_date) < new Date(form.value.start_date)) {
+    return Swal.fire('วันที่ไม่ถูกต้อง', 'วันที่สิ้นสุดต้องไม่น้อยกว่าวันที่เริ่มต้น', 'warning');
+  }
+
   if (Object.keys(phoneErrors.value).length > 0) {
     return Swal.fire('ข้อมูลไม่ถูกต้อง', 'กรุณาแก้ไขเบอร์โทรศัพท์ให้ถูกต้อง', 'warning');
   }
 
   try {
     Swal.fire({ title: 'กำลังบันทึก...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+    
+    // ข้อมูลที่จะถูกส่งไปมี start_date และ end_date พ่วงไปด้วยแล้วใน JSON.stringify(form.value)
     const res = await fetch(`${BASE_API}/api/admin/projects`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('token')}` },

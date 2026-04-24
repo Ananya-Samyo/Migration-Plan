@@ -157,7 +157,14 @@ const swalConfig = {
 const saveEvaluation = async () => {
   const s1 = props.masterData?.step1 || {};
   const s2 = props.masterData?.step2 || {};
-  const s3 = evaluation.value;
+  const s3 = {
+    ...evaluation.value,
+    projectStatus: evaluation.value.projectStatus === 'finish' ? 'finish' : 'processing',
+
+    // เช็คเจาะจงไปเลย ป้องกันกรณีติดค่า null หรือ undefined
+    evaluation: evaluation.value.evaluation === 'pass' ? 'pass' :
+      evaluation.value.evaluation === 'fail' ? 'fail' : ''
+  };
 
   console.log("เช็คข้อมูลก่อน Save Step 3:", s2.projects);
 
@@ -198,7 +205,7 @@ const saveEvaluation = async () => {
     return 'กำลังดำเนินการ';
   };
 
-  const gapsHtml = (s2.projects && s2.projects.length > 0) 
+  const gapsHtml = (s2.projects && s2.projects.length > 0)
     ? s2.projects.map((p, pIdx) => `
         <div style="margin-bottom:8px;">
           <b>แผนงานที่ ${pIdx + 1}:</b>
@@ -263,7 +270,10 @@ const saveEvaluation = async () => {
             </div>
             <table style="width: 100%; border-collapse: collapse;">
               <tr><td style="width: 160px; padding: 4px 0;"><b>สถานะโครงการ:</b></td><td>${s3.projectStatus === 'finish' ? 'เสร็จสิ้นการดำเนินงาน' : 'อยู่ระหว่างดำเนินการ'}</td></tr>
-              <tr><td style="padding: 4px 0;"><b>ผลการประเมิน:</b></td><td>${s3.evaluation === 'pass' ? 'บรรลุเป้าหมาย' : s3.evaluation === 'fail' ? 'ไม่บรรลุเป้าหมาย' : 'ยังไม่ได้ระบุ'}</td></tr>
+              <tr><td style="padding: 4px 0;"><b>ผลการประเมิน:</b></td><td>${s3.evaluation === 'pass' ? 'บรรลุเป้าหมาย' :
+        s3.evaluation === 'fail' ? 'ไม่บรรลุเป้าหมาย' :
+          'ยังไม่บรรลุเป้าหมาย (กำลังดำเนินการ)'
+      }</td></tr>
               <tr><td style="padding: 4px 0; vertical-align: top;"><b>ผลที่ได้รับจริง:</b></td><td style="white-space: pre-wrap; background: #fff; padding: 8px; border: 1px solid #e2e8f0; border-radius: 4px;">${s3.actualResult || '-'}</td></tr>
             </table>
           </div>
@@ -306,10 +316,10 @@ const saveEvaluation = async () => {
   if (!finalData) return;
 
   // 4. แสดง Loading
-  Swal.fire({ 
-    title: 'กำลังบันทึกข้อมูล...', 
-    allowOutsideClick: false, 
-    didOpen: () => Swal.showLoading() 
+  Swal.fire({
+    title: 'กำลังบันทึกข้อมูล...',
+    allowOutsideClick: false,
+    didOpen: () => Swal.showLoading()
   });
 
   // 🚩 จุดที่แก้ไข: ดึงค่า ID ที่ถูกต้อง และสร้าง FormData เพียงชุดเดียว
@@ -348,7 +358,7 @@ const saveEvaluation = async () => {
     // ✅ ส่งข้อมูลไปยัง API
     const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/admin/complete-workflow`, {
       method: 'POST',
-      headers: { 
+      headers: {
         'Authorization': `Bearer ${localStorage.getItem('token')}`
       },
       body: fd
@@ -368,7 +378,7 @@ const saveEvaluation = async () => {
       confirmButtonColor: '#4b2e83',
       confirmButtonText: 'ตกลง'
     });
-    
+
     emit('complete');
 
   } catch (err) {
