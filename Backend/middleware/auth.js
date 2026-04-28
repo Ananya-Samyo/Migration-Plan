@@ -39,12 +39,13 @@ export const isAdmin = (req, res, next) => {
 // ส่วนที่ 2: สำหรับสิทธิ์ที่ Viewer เข้าถึงได้ (Admin, Viewer, User, Coordinator)
 // ใช้กับ: แดชบอร์ด และ ขอบเขตแผนงาน
 export const canViewBasic = (req, res, next) => {
-    const role = req.user?.role?.toLowerCase();
+    const role = req.user?.role?.toLowerCase().trim();
     const allowedRoles = ['admin', 'user', 'coordinator', 'viewer'];
-
+    
     if (req.user && allowedRoles.includes(role)) {
         next();
     } else {
+        console.log("🚫 Role not allowed:", role);
         return res.status(403).json({ message: "คุณไม่มีสิทธิ์เข้าถึงข้อมูลในส่วนนี้" });
     }
 };

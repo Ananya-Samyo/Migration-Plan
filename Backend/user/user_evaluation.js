@@ -19,180 +19,181 @@ const getDiffRow = (label, before, after) => {
         </tr>`;
 };
 
-// ================= GET Route =================
+// ==========================================
+// 1. GET: ดึงข้อมูลการประเมิน
+// ==========================================
 router.get('/evaluations/:id', verifyToken, async (req, res) => {
+    const projectPlanId = req.params.id;
+
     try {
-        const { id } = req.params;
+        // ดึงข้อมูลพื้นฐานของโครงการและผู้รับผิดชอบ
+        const [projectInfo] = await db.query(
+            `SELECT 
+                s.scope_id, 
+        s.scope_name, 
+        p.project_plan_name,       
+        u.user_name AS coordinator_name,
+        u.email, 
+        u.phone_number,
+        d.department_id,     
+        d.department_name
+     FROM project_plans p 
+     LEFT JOIN scopes s ON p.scope_id = s.scope_id 
+     LEFT JOIN users u ON s.coordinator_id = u.user_id 
+     LEFT JOIN departments d ON u.department_id = d.department_id
+     WHERE p.project_plan_id = ?`,
+            [projectPlanId]
+        );
 
-        const sql = `
-            SELECT 
-                p.project_plan_name AS scope_name,
-                e.project_status,
-                e.objective,
-                e.before_plan,
-                e.expected_outcome,
-                e.actual_outcome,
-                e.recommendation,
-                e.evaluation_status,
-                prob.problem_detail,
-                u.user_name AS owner
-            FROM project_plans p
-            LEFT JOIN plan_evaluations e ON p.project_plan_id = e.project_plan_id 
-            LEFT JOIN (
-                SELECT project_plan_id, GROUP_CONCAT(problem_detail SEPARATOR '\n') as problem_detail 
-                FROM problems GROUP BY project_plan_id
-            ) prob ON p.project_plan_id = prob.project_plan_id
-            LEFT JOIN scopes s ON p.scope_id = s.scope_id
-            LEFT JOIN users u ON s.coordinator_id = u.user_id
-            WHERE p.project_plan_id = ?
-        `;
-
-        const [rows] = await db.query(sql, [id]);
-
-        if (rows.length === 0) {
-            return res.status(404).json({ message: 'ไม่พบข้อมูลแผนงานที่ระบุ' });
+        if (projectInfo.length === 0) {
+            return res.status(404).json({ message: 'ไม่พบข้อมูลโครงการ' });
         }
 
-        res.json(rows[0]);
-    } catch (err) {
-        console.error("SQL Error:", err);
-        res.status(500).json({ message: err.message });
+        const info = projectInfo[0];
+
+        // ดึงข้อมูลจากตาราง plan_evaluations
+        const [evalRows] = await db.query(
+            `SELECT * FROM plan_evaluations WHERE project_plan_id = ? LIMIT 1`,
+            [projectPlanId]
+        );
+
+        // ฟังก์ชันช่วยจัดการ JSON Parse ป้องกัน Error กรณีข้อมูลใน DB ไม่ใช่ JSON
+        const safeParse = (data) => {
+            if (!data) return [];
+            if (typeof data !== 'string') return Array.isArray(data) ? data : [data];
+            try {
+                const parsed = JSON.parse(data);
+                return Array.isArray(parsed) ? parsed : [parsed];
+            } catch (e) {
+                // ถ้าไม่ใช่ JSON (เช่น ข้อมูลเก่าที่ใช้ ||) ให้แยกด้วย || หรือส่งเป็นค่าเดียวใน Array
+                if (data.includes('||')) return [data];
+                return [data];
+            }
+        };
+
+        let evaluationsArray = [];
+
+        if (evalRows.length === 0) {
+            // กรณีใหม่กิ๊ก ยังไม่มีการประเมิน ส่งโครงสร้างว่างไปให้ Frontend
+            evaluationsArray = [{
+                objective: '',
+                before_plan: '',
+                expected_outcome: ''
+            }];
+        } else {
+            const dbData = evalRows[0];
+            const objectives = safeParse(dbData.objective);
+            const beforePlans = safeParse(dbData.before_plan);
+            const expectedOutcomes = safeParse(dbData.expected_outcome);
+
+            // รวมข้อมูลกลับเป็น Array ของ Object เพื่อให้ Frontend ใช้ง่าย (v-for)
+            const maxLength = Math.max(objectives.length, beforePlans.length, expectedOutcomes.length, 1);
+            for (let i = 0; i < maxLength; i++) {
+                evaluationsArray.push({
+                    objective: objectives[i] || '',
+                    before_plan: beforePlans[i] || '',
+                    expected_outcome: expectedOutcomes[i] || ''
+                });
+            }
+        }
+
+        // ส่งข้อมูลกลับไปหา Frontend
+        return res.status(200).json({
+            // ข้อมูลฝั่งแผนงาน (ReadOnly)
+            scope_id: info.scope_id,
+            scope_name: info.scope_name,
+            coordinator_name: info.coordinator_name,
+            department_name: info.department_name,
+
+            // ข้อมูลฝั่งประเมิน (Editable)
+            project_status: evalRows[0]?.project_status || 'processing',
+            evaluation_status: evalRows[0]?.evaluation_status || 'pass',
+            actual_outcome: evalRows[0]?.actual_outcome || '',
+            recommendation: evalRows[0]?.recommendation || '',
+            problem: evalRows[0]?.problem || '',
+            evaluations: evaluationsArray // ส่งตัวนี้ไปทำ v-for ในหน้า User_Evaluation
+        });
+
+    } catch (error) {
+        console.error('Error fetching evaluation:', error);
+        return res.status(500).json({ message: 'Server Error: ดึงข้อมูลไม่สำเร็จ' });
     }
 });
 
-// --- API: UPDATE Evaluation & Send Email ---
-router.put('/evaluations/:id', verifyToken, upload.array('attachments'), async (req, res) => {
-    const conn = await db.getConnection();
+// ==========================================
+// 2. POST: บันทึก/อัปเดตข้อมูล (Update Logic)
+// ==========================================
+router.post('/evaluation-update', verifyToken, async (req, res) => {
+    const {
+        project_plan_id,
+        project_status,
+        evaluation_status,
+        actual_outcome,
+        recommendation,
+        problem, // ถ้ารองรับฟิลด์ปัญหาด้วย
+        evaluations // นี่คือ Array [{objective, before_plan, expected_outcome}, ...]
+    } = req.body;
+
     try {
-        await conn.beginTransaction();
-        const { id } = req.params;
-        const { actual_outcome, recommendation, project_status, evaluation_status, problem, edit_reason } = req.body;
-        const files = req.files;
-
-        // 1. ดึงข้อมูลเดิม (เพิ่มการ Join scope เพื่อเอา department_id มาทำ Log)
-        const [oldRows] = await conn.query(`
-            SELECT p.project_plan_name, p.scope_id, s.department_id, e.*, 
-                   (SELECT GROUP_CONCAT(problem_detail SEPARATOR '\n') FROM problems WHERE project_plan_id = p.project_plan_id) as problem_detail
-            FROM project_plans p 
-            LEFT JOIN scopes s ON p.scope_id = s.scope_id
-            LEFT JOIN plan_evaluations e ON p.project_plan_id = e.project_plan_id 
-            WHERE p.project_plan_id = ?`, [id]);
-        
-        if (oldRows.length === 0) {
-            throw new Error('ไม่พบข้อมูลแผนงานที่ต้องการอัปเดต');
-        }
-        const old = oldRows[0];
-
-        // 2. บันทึกข้อมูลการประเมิน (Upsert)
-        await conn.query(`
-            INSERT INTO plan_evaluations (project_plan_id, scope_id, actual_outcome, recommendation, project_status, evaluation_status)
-            VALUES (?, ?, ?, ?, ?, ?)
-            ON DUPLICATE KEY UPDATE 
-                actual_outcome = VALUES(actual_outcome), 
-                recommendation = VALUES(recommendation),
-                project_status = VALUES(project_status), 
-                evaluation_status = VALUES(evaluation_status)
-        `, [id, old.scope_id, actual_outcome, recommendation, project_status, evaluation_status]);
-
-        // 3. จัดการข้อมูลปัญหา (ลบของเก่าแล้วเพิ่มใหม่ถ้าเป็น 'fail')
-        await conn.query('DELETE FROM problems WHERE project_plan_id = ?', [id]);
-        if (evaluation_status === 'fail' && problem) {
-            await conn.query('INSERT INTO problems (project_plan_id, problem_detail) VALUES (?, ?)', [id, problem]);
-        }
-
-        // 4. บันทึก Log การเปลี่ยนแปลง
-        const [logResult] = await conn.query(
-            `INSERT INTO change_logs (user_id, scope_id, project_plan_id, department_id, change_type, change_date)
-             VALUES (?, ?, ?, ?, 'evaluation', NOW())`,
-            [req.user.id, old.scope_id, id, old.department_id]
+        // 1. หา scope_id มาเก็บไว้ก่อน (DB บังคับใช้)
+        const [proj] = await db.query(
+            `SELECT scope_id FROM project_plans WHERE project_plan_id = ?`,
+            [project_plan_id]
         );
-        const logId = logResult.insertId;
 
-        const changes = [
-            { field: 'evaluation_status', before: old.evaluation_status, after: evaluation_status },
-            { field: 'actual_outcome', before: old.actual_outcome, after: actual_outcome },
-            { field: 'recommendation', before: old.recommendation, after: recommendation },
-            { field: 'project_status', before: old.project_status, after: project_status },
-            { field: 'problem_detail', before: old.problem_detail, after: problem }
-        ];
+        if (proj.length === 0) return res.status(400).json({ message: 'ไม่พบ ID แผนงานที่ระบุ' });
+        const scope_id = proj[0].scope_id;
 
-        for (const change of changes) {
-            if (String(change.before || '') !== String(change.after || '')) {
-                await conn.query(
-                    `INSERT INTO change_log_details (log_id, field_name, before_value, after_value)
-                     VALUES (?, ?, ?, ?)`,
-                    [logId, change.field, String(change.before || ''), String(change.after || '')]
-                );
-            }
-        }
+        // 2. รวมข้อมูลจาก Array แยกเข้าเป็น JSON String รายคอลัมน์
+        const objectiveJSON = JSON.stringify(evaluations.map(item => item.objective || ''));
+        const beforePlanJSON = JSON.stringify(evaluations.map(item => item.before_plan || ''));
+        const expectedOutcomeJSON = JSON.stringify(evaluations.map(item => item.expected_outcome || ''));
 
-        // บันทึกเหตุผลการแก้ไข (ลงตาราง edit_reasons ตาม Schema)
-        if (edit_reason) {
-            await conn.query(
-                `INSERT INTO edit_reasons (ref_type, ref_id, reason_text) VALUES ('evaluation', ?, ?)`,
-                [id, edit_reason]
+        // 3. ตรวจสอบว่าเคยมีข้อมูลในตาราง plan_evaluations หรือยัง
+        const [checkExist] = await db.query(
+            `SELECT evaluation_id FROM plan_evaluations WHERE project_plan_id = ?`,
+            [project_plan_id]
+        );
+
+        if (checkExist.length > 0) {
+            // --- กรณีมีแล้วให้ UPDATE ---
+            await db.query(
+                `UPDATE plan_evaluations 
+                 SET scope_id = ?, 
+                     objective = ?, 
+                     before_plan = ?, 
+                     expected_outcome = ?, 
+                     actual_outcome = ?, 
+                     recommendation = ?, 
+                     project_status = ?, 
+                     evaluation_status = ?,
+                     problem = ?
+                 WHERE project_plan_id = ?`,
+                [
+                    scope_id, objectiveJSON, beforePlanJSON, expectedOutcomeJSON,
+                    actual_outcome, recommendation, project_status, evaluation_status,
+                    problem || '', project_plan_id
+                ]
+            );
+        } else {
+            // --- กรณีใหม่ให้ INSERT ---
+            await db.query(
+                `INSERT INTO plan_evaluations 
+                 (project_plan_id, scope_id, objective, before_plan, expected_outcome, 
+                  actual_outcome, recommendation, project_status, evaluation_status, problem) 
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                [
+                    project_plan_id, scope_id, objectiveJSON, beforePlanJSON, expectedOutcomeJSON,
+                    actual_outcome, recommendation, project_status, evaluation_status, problem || ''
+                ]
             );
         }
 
-        // 5. บันทึกข้อมูลไฟล์แนบ (ถ้ามี)
-        if (files && files.length > 0) {
-            for (const file of files) {
-                // หมายเหตุ: เนื่องจากเป็น memoryStorage file.path จะไม่มี 
-                // ในที่นี้จะเก็บชื่อไฟล์แทน หรือคุณควรย้ายไฟล์ลง Folder ก่อนแล้วเก็บ Path จริง
-                const savedPath = `/uploads/${Date.now()}_${file.originalname}`; 
-                await conn.query(
-                    `INSERT INTO attachments (ref_type, ref_id, file_path, file_type) 
-                     VALUES ('evaluation', ?, ?, ?)`,
-                    [id, savedPath, file.mimetype.split('/')[1]]
-                );
-            }
-        }
+        return res.status(200).json({ message: 'บันทึกข้อมูลการประเมินสำเร็จ' });
 
-        // 6. ส่งอีเมลแจ้งเตือน
-        const emailHtml = `
-            <div style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; padding: 20px; color: #333;">
-                <h2 style="color: #1e3a8a; border-bottom: 2px solid #1e3a8a; padding-bottom: 10px;">
-                    อัปเดตผลการประเมิน: ${old.project_plan_name}
-                </h2>
-                <p style="font-size: 14px;"><strong>ผู้ดำเนินการ:</strong> ${req.user.user_name || req.user.email}</p>
-                <table style="width: 100%; border-collapse: collapse; margin-top: 20px;">
-                    <thead>
-                        <tr style="background-color: #f3f4f6;">
-                            <th style="padding: 10px; border: 1px solid #ddd; text-align: left;">หัวข้อ</th>
-                            <th style="padding: 10px; border: 1px solid #ddd; text-align: left;">ข้อมูลเดิม</th>
-                            <th style="padding: 10px; border: 1px solid #ddd; text-align: left;">ข้อมูลใหม่</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        ${getDiffRow('สถานะการประเมิน', old.evaluation_status, evaluation_status)}
-                        ${getDiffRow('ผลที่ได้รับจริง', old.actual_outcome, actual_outcome)}
-                        ${getDiffRow('ข้อเสนอแนะ', old.recommendation, recommendation)}
-                        ${getDiffRow('สถานะโครงการ', old.project_status, project_status)}
-                        ${getDiffRow('ปัญหา/อุปสรรค', old.problem_detail, problem)}
-                    </tbody>
-                </table>
-                ${edit_reason ? `<div style="margin-top: 20px; padding: 10px; background: #fffbeb; border-left: 4px solid #f59e0b;">
-                    <strong>เหตุผลในการแก้ไข:</strong> ${edit_reason}
-                </div>` : ''}
-                <p style="margin-top: 20px; color: #666; font-size: 12px;">ระบบแจ้งเตือนอัตโนมัติจาก Migration Plan System</p>
-            </div>`;
-
-        await sendMail({
-            to: 'manager@example.com', // หรือดึงเมลจากหัวหน้าแผนกใน DB
-            subject: `[Update] ผลการประเมิน: ${old.project_plan_name}`,
-            html: emailHtml,
-            attachments: files?.map(f => ({ filename: f.originalname, content: f.buffer }))
-        });
-
-        await conn.commit();
-        res.json({ message: 'บันทึกข้อมูลและส่งอีเมลแจ้งเตือนเรียบร้อยแล้ว' });
-
-    } catch (err) {
-        await conn.rollback();
-        console.error("Update Error:", err);
-        res.status(500).json({ message: 'เกิดข้อผิดพลาดในการบันทึกข้อมูล', error: err.message });
-    } finally {
-        conn.release();
+    } catch (error) {
+        console.error('Error saving evaluation:', error);
+        return res.status(500).json({ message: 'Server Error: บันทึกไม่สำเร็จ' });
     }
 });
 

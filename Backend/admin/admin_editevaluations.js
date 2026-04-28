@@ -1,5 +1,5 @@
 import { Router } from 'express'
-import pool from '../db.js' // หรือ import db from '../db.js' (ให้ใช้ชื่อตรงกับในไฟล์ db.js ของคุณ)
+import pool from '../db.js' 
 
 const router = Router()
 

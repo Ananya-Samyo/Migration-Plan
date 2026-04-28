@@ -46,12 +46,13 @@ app.use(express.json())
 app.use('/api', login)
 
 // 2. Global Routes 
-app.use('/api/departments', verifyToken, departmentRoutes)
+app.use('/api/departments', verifyToken, canViewBasic, departmentRoutes)
 
 // 3. User API Group (สิทธิ์สำหรับ User / Coordinator)
 // 🟢 Dashboard และ Scopes (ทุกคนเข้าได้ รวมถึง Viewer)
 app.use('/api/user', verifyToken, canViewBasic, userDashboardRouter)
 app.use('/api/user', verifyToken, canViewBasic, userScopesRouter)
+app.use('/api/user', verifyToken, canViewBasic, userEvaluationRouter)
 
 // 🟡 Log และข้อมูลอื่นๆ (Admin, User, Coordinator เข้าได้ | Viewer ห้ามเข้า)
 app.use('/api/user', verifyToken, canAccessLog, userLogRouter)
